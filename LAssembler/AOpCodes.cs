@@ -100,6 +100,7 @@ namespace SputnikAsm.LAssembler
                 new AOpCode { mnemonic = "BTS", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_rm32, paramtype2 = AParam.par_r32, bytes = 2, bt1 = 0x0f, bt2 = 0xab },
                 new AOpCode { mnemonic = "BTS", opcode1 = AExtraOpCode.eo_reg5, opcode2 = AExtraOpCode.eo_ib, paramtype1 = AParam.par_rm16, paramtype2 = AParam.par_imm8, bytes = 3, bt1 = 0x66, bt2 = 0x0f, bt3 = 0xba },
                 new AOpCode { mnemonic = "BTS", opcode1 = AExtraOpCode.eo_reg5, opcode2 = AExtraOpCode.eo_ib, paramtype1 = AParam.par_rm32, paramtype2 = AParam.par_imm8, bytes = 2, bt1 = 0x0f, bt2 = 0xba },
+                
                 //no 0x66 0xE8 because it makes the address it jumps to 16 bit
                 new AOpCode { mnemonic = "CALL", opcode1 = AExtraOpCode.eo_cd, paramtype1 = AParam.par_rel32, bytes = 1, bt1 = 0xe8 },
                 //also no 0x66 0xff /2
@@ -175,15 +176,12 @@ namespace SputnikAsm.LAssembler
                 new AOpCode { mnemonic = "CMOVZ", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_r16, paramtype2 = AParam.par_rm16, bytes = 3, bt1 = 0x66, bt2 = 0x0f, bt3 = 0x44 },
                 new AOpCode { mnemonic = "CMOVZ", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_r32, paramtype2 = AParam.par_rm32, bytes = 2, bt1 = 0x0f, bt2 = 0x44 },
 
-
-
                 new AOpCode { mnemonic = "CMP", opcode1 = AExtraOpCode.eo_ib, paramtype1 = AParam.par_al, paramtype2 = AParam.par_imm8, bytes = 1, bt1 = 0x3C }, //2 bytes
                 new AOpCode { mnemonic = "CMP", opcode1 = AExtraOpCode.eo_iw, paramtype1 = AParam.par_ax, paramtype2 = AParam.par_imm16, bytes = 2, bt1 = 0x66, bt2 = 0x3D }, //4 bytes
                 new AOpCode { mnemonic = "CMP", opcode1 = AExtraOpCode.eo_id, paramtype1 = AParam.par_eax, paramtype2 = AParam.par_imm32, bytes = 1, bt1 = 0x3D }, //5 bytes
                 new AOpCode { mnemonic = "CMP", opcode1 = AExtraOpCode.eo_reg7, opcode2 = AExtraOpCode.eo_ib, paramtype1 = AParam.par_rm8, paramtype2 = AParam.par_imm8, bytes = 1, bt1 = 0x80 },
                 new AOpCode { mnemonic = "CMP", opcode1 = AExtraOpCode.eo_reg7, opcode2 = AExtraOpCode.eo_ib, paramtype1 = AParam.par_rm16, paramtype2 = AParam.par_imm8, bytes = 2, bt1 = 0x66, bt2 = 0x83, signed = true },
                 new AOpCode { mnemonic = "CMP", opcode1 = AExtraOpCode.eo_reg7, opcode2 = AExtraOpCode.eo_ib, paramtype1 = AParam.par_rm32, paramtype2 = AParam.par_imm8, bytes = 1, bt1 = 0x83, signed = true },
-
 
                 new AOpCode { mnemonic = "CMP", opcode1 = AExtraOpCode.eo_reg7, opcode2 = AExtraOpCode.eo_iw, paramtype1 = AParam.par_rm16, paramtype2 = AParam.par_imm16, bytes = 2, bt1 = 0x66, bt2 = 0x81 },
                 new AOpCode { mnemonic = "CMP", opcode1 = AExtraOpCode.eo_reg7, opcode2 = AExtraOpCode.eo_id, paramtype1 = AParam.par_rm32, paramtype2 = AParam.par_imm32, bytes = 1, bt1 = 0x81 },
@@ -386,7 +384,6 @@ namespace SputnikAsm.LAssembler
                 new AOpCode { mnemonic = "FMULP", opcode1 = AExtraOpCode.eo_pi, paramtype1 = AParam.par_st, bytes = 2, bt1 = 0xde, bt2 = 0xC8 },
                 new AOpCode { mnemonic = "FMULP", bytes = 2, bt1 = 0xde, bt2 = 0xc9 },
 
-
                 new AOpCode { mnemonic = "FNINIT", bytes = 2, bt1 = 0xdb, bt2 = 0xe3 },
                 new AOpCode { mnemonic = "FNLEX", bytes = 2, bt1 = 0xDb, bt2 = 0xe2 },
                 new AOpCode { mnemonic = "FNOP", bytes = 2, bt1 = 0xd9, bt2 = 0xd0 },
@@ -397,7 +394,6 @@ namespace SputnikAsm.LAssembler
 
                 new AOpCode { mnemonic = "FNSTSW", paramtype1 = AParam.par_ax, bytes = 2, bt1 = 0xdf, bt2 = 0xe0 },
                 new AOpCode { mnemonic = "FNSTSW", opcode1 = AExtraOpCode.eo_reg7, paramtype1 = AParam.par_m16, bytes = 1, bt1 = 0xdd },
-
 
                 new AOpCode { mnemonic = "FPATAN", bytes = 2, bt1 = 0xd9, bt2 = 0xf3 },
                 new AOpCode { mnemonic = "FPREM", bytes = 2, bt1 = 0xd9, bt2 = 0xf8 },
@@ -423,10 +419,8 @@ namespace SputnikAsm.LAssembler
                 new AOpCode { mnemonic = "FSTP", opcode1 = AExtraOpCode.eo_reg7, paramtype1 = AParam.par_m80, bytes = 1, bt1 = 0xdb },
                 new AOpCode { mnemonic = "FSTP", opcode1 = AExtraOpCode.eo_pi, paramtype1 = AParam.par_st, bytes = 2, bt1 = 0xdd, bt2 = 0xd8 },
 
-
                 new AOpCode { mnemonic = "FSTSW", opcode1 = AExtraOpCode.eo_reg7, paramtype1 = AParam.par_m16, bytes = 2, bt1 = 0x9b, bt2 = 0xdd },
                 new AOpCode { mnemonic = "FSTSW", paramtype1 = AParam.par_ax, bytes = 3, bt1 = 0x9b, bt2 = 0xdf, bt3 = 0xe0 },
-
 
                 new AOpCode { mnemonic = "FSUB", opcode1 = AExtraOpCode.eo_reg4, paramtype1 = AParam.par_m32, bytes = 1, bt1 = 0xd8 },
                 new AOpCode { mnemonic = "FSUB", opcode1 = AExtraOpCode.eo_reg4, paramtype1 = AParam.par_m64, bytes = 1, bt1 = 0xdc },
@@ -549,8 +543,6 @@ namespace SputnikAsm.LAssembler
                 new AOpCode { mnemonic = "JMP", opcode1 = AExtraOpCode.eo_cb, paramtype1 = AParam.par_rel8, bytes = 1, bt1 = 0xeb },
                 new AOpCode { mnemonic = "JMP", opcode1 = AExtraOpCode.eo_cd, paramtype1 = AParam.par_rel32, bytes = 1, bt1 = 0xe9 },
                 new AOpCode { mnemonic = "JMP", opcode1 = AExtraOpCode.eo_reg4, paramtype1 = AParam.par_rm32, bytes = 1, bt1 = 0xff, norexw = true },
-
-
 
                 new AOpCode { mnemonic = "JNA", opcode1 = AExtraOpCode.eo_cb, paramtype1 = AParam.par_rel8, bytes = 1, bt1 = 0x76 },
                 new AOpCode { mnemonic = "JNA", opcode1 = AExtraOpCode.eo_cd, paramtype1 = AParam.par_rel32, bytes = 2, bt1 = 0x0f, bt2 = 0x86 },
@@ -742,8 +734,6 @@ namespace SputnikAsm.LAssembler
                 new AOpCode { mnemonic = "MOVQ", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_mm, paramtype2 = AParam.par_rm32, bytes = 2, bt1 = 0x0f, bt2 = 0x6e },
                 new AOpCode { mnemonic = "MOVQ", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_xmm, paramtype2 = AParam.par_rm32, bytes = 3, bt1 = 0xf3, bt2 = 0x0f, bt3 = 0x7e },
 
-
-
                 new AOpCode { mnemonic = "MOVQ2DQ", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_xmm, paramtype2 = AParam.par_mm, bytes = 3, bt1 = 0x66, bt2 = 0x0f, bt3 = 0xd6 },
 
                 new AOpCode { mnemonic = "MOVSB", bytes = 1, bt1 = 0xa4 },
@@ -827,7 +817,6 @@ namespace SputnikAsm.LAssembler
                 new AOpCode { mnemonic = "PACKSSWB", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_mm, paramtype2 = AParam.par_mm_m64, bytes = 2, bt1 = 0x0f, bt2 = 0x63 },
                 new AOpCode { mnemonic = "PACKSSWB", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_xmm, paramtype2 = AParam.par_xmm_m128, bytes = 3, bt1 = 0x66, bt2 = 0x0f, bt3 = 0x63 },
 
-
                 new AOpCode { mnemonic = "PACKUSWB", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_mm, paramtype2 = AParam.par_mm_m64, bytes = 2, bt1 = 0x0f, bt2 = 0x67 },
                 new AOpCode { mnemonic = "PACKUSWB", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_xmm, paramtype2 = AParam.par_xmm_m128, bytes = 3, bt1 = 0x66, bt2 = 0x0f, bt3 = 0x67 },
 
@@ -854,7 +843,6 @@ namespace SputnikAsm.LAssembler
 
                 new AOpCode { mnemonic = "PADDW", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_mm, paramtype2 = AParam.par_mm_m64, bytes = 2, bt1 = 0x0f, bt2 = 0xfd },
                 new AOpCode { mnemonic = "PADDW", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_xmm, paramtype2 = AParam.par_xmm_m128, bytes = 3, bt1 = 0x66, bt2 = 0x0f, bt3 = 0xfd },
-
 
                 new AOpCode { mnemonic = "PAND", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_mm, paramtype2 = AParam.par_mm_m64, bytes = 2, bt1 = 0x0f, bt2 = 0xdb },
                 new AOpCode { mnemonic = "PAND", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_xmm, paramtype2 = AParam.par_xmm_m128, bytes = 3, bt1 = 0x66, bt2 = 0x0f, bt3 = 0xdb },
@@ -963,7 +951,6 @@ namespace SputnikAsm.LAssembler
                 new AOpCode { mnemonic = "PSHUFLW", opcode1 = AExtraOpCode.eo_reg, opcode2 = AExtraOpCode.eo_ib, paramtype1 = AParam.par_xmm, paramtype2 = AParam.par_xmm_m128, paramtype3 = AParam.par_imm8, bytes = 3, bt1 = 0xf2, bt2 = 0x0f, bt3 = 0x70 },
                 new AOpCode { mnemonic = "PSHUFW", opcode1 = AExtraOpCode.eo_reg, opcode2 = AExtraOpCode.eo_ib, paramtype1 = AParam.par_mm, paramtype2 = AParam.par_mm_m64, paramtype3 = AParam.par_imm8, bytes = 2, bt1 = 0x0f, bt2 = 0x70 },
 
-
                 new AOpCode { mnemonic = "PSLLD", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_mm, paramtype2 = AParam.par_mm_m64, bytes = 2, bt1 = 0x0f, bt2 = 0xf2 },
                 new AOpCode { mnemonic = "PSLLD", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_xmm, paramtype2 = AParam.par_xmm_m128, bytes = 3, bt1 = 0x66, bt2 = 0x0f, bt3 = 0xf2 },
 
@@ -988,7 +975,6 @@ namespace SputnikAsm.LAssembler
                 new AOpCode { mnemonic = "PSQRTPS", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_xmm, paramtype2 = AParam.par_xmm_m128, bytes = 2, bt1 = 0x0f, bt2 = 0x52 },
                 new AOpCode { mnemonic = "PSQRTSS", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_xmm, paramtype2 = AParam.par_xmm_m32, bytes = 3, bt1 = 0xf3, bt2 = 0x0f, bt3 = 0x52 },
 
-
                 new AOpCode { mnemonic = "PSRAD", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_mm, paramtype2 = AParam.par_mm_m64, bytes = 2, bt1 = 0x0f, bt2 = 0xe2 },
                 new AOpCode { mnemonic = "PSRAD", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_xmm, paramtype2 = AParam.par_xmm_m128, bytes = 3, bt1 = 0x66, bt2 = 0x0f, bt3 = 0xe2 },
 
@@ -1000,8 +986,6 @@ namespace SputnikAsm.LAssembler
 
                 new AOpCode { mnemonic = "PSRAW", opcode1 = AExtraOpCode.eo_reg4, opcode2 = AExtraOpCode.eo_ib, paramtype1 = AParam.par_mm, paramtype2 = AParam.par_imm8, bytes = 2, bt1 = 0x0f, bt2 = 0x71 },
                 new AOpCode { mnemonic = "PSRAW", opcode1 = AExtraOpCode.eo_reg4, opcode2 = AExtraOpCode.eo_ib, paramtype1 = AParam.par_xmm, paramtype2 = AParam.par_imm8, bytes = 3, bt1 = 0x66, bt2 = 0x0f, bt3 = 0x71 },
-
-
 
                 new AOpCode { mnemonic = "PSRLD", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_mm, paramtype2 = AParam.par_mm_m64, bytes = 2, bt1 = 0x0f, bt2 = 0xd2 },
                 new AOpCode { mnemonic = "PSRLD", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_xmm, paramtype2 = AParam.par_xmm_m128, bytes = 3, bt1 = 0x66, bt2 = 0x0f, bt3 = 0xd2 },
@@ -1022,8 +1006,6 @@ namespace SputnikAsm.LAssembler
                 new AOpCode { mnemonic = "PSRLW", opcode1 = AExtraOpCode.eo_reg2, opcode2 = AExtraOpCode.eo_ib, paramtype1 = AParam.par_mm, paramtype2 = AParam.par_imm8, bytes = 2, bt1 = 0x0f, bt2 = 0x71 },
                 new AOpCode { mnemonic = "PSRLW", opcode1 = AExtraOpCode.eo_reg2, opcode2 = AExtraOpCode.eo_ib, paramtype1 = AParam.par_xmm, paramtype2 = AParam.par_imm8, bytes = 3, bt1 = 0x66, bt2 = 0x0f, bt3 = 0x71 },
 
-
-
                 new AOpCode { mnemonic = "PSUBB", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_mm, paramtype2 = AParam.par_mm_m64, bytes = 2, bt1 = 0x0f, bt2 = 0xf8 },
                 new AOpCode { mnemonic = "PSUBB", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_xmm, paramtype2 = AParam.par_xmm_m128, bytes = 3, bt1 = 0x66, bt2 = 0x0f, bt3 = 0xf8 },
 
@@ -1039,17 +1021,14 @@ namespace SputnikAsm.LAssembler
                 new AOpCode { mnemonic = "PSUBUSW", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_mm, paramtype2 = AParam.par_mm_m64, bytes = 2, bt1 = 0x0f, bt2 = 0xd9 },
                 new AOpCode { mnemonic = "PSUBUSW", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_xmm, paramtype2 = AParam.par_xmm_m128, bytes = 3, bt1 = 0x66, bt2 = 0x0f, bt3 = 0xd9 },
 
-
                 new AOpCode { mnemonic = "PSUBW", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_mm, paramtype2 = AParam.par_mm_m64, bytes = 2, bt1 = 0x0f, bt2 = 0xf9 },
                 new AOpCode { mnemonic = "PSUBW", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_xmm, paramtype2 = AParam.par_xmm_m128, bytes = 3, bt1 = 0x66, bt2 = 0x0f, bt3 = 0xf9 },
-
 
                 new AOpCode { mnemonic = "PSUSB", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_mm, paramtype2 = AParam.par_mm_m64, bytes = 2, bt1 = 0x0f, bt2 = 0xe8 },
                 new AOpCode { mnemonic = "PSUSB", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_xmm, paramtype2 = AParam.par_xmm_m128, bytes = 3, bt1 = 0x66, bt2 = 0x0f, bt3 = 0xe8 },
 
                 new AOpCode { mnemonic = "PSUSW", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_mm, paramtype2 = AParam.par_mm_m64, bytes = 2, bt1 = 0x0f, bt2 = 0xe9 },
                 new AOpCode { mnemonic = "PSUSW", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_xmm, paramtype2 = AParam.par_xmm_m128, bytes = 3, bt1 = 0x66, bt2 = 0x0f, bt3 = 0xe9 },
-
 
                 new AOpCode { mnemonic = "PUNPCKHBW", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_mm, paramtype2 = AParam.par_mm_m64, bytes = 2, bt1 = 0x0f, bt2 = 0x68 },
                 new AOpCode { mnemonic = "PUNPCKHBW", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_xmm, paramtype2 = AParam.par_xmm_m128, bytes = 3, bt1 = 0x66, bt2 = 0x0f, bt3 = 0x68 },
@@ -1076,15 +1055,13 @@ namespace SputnikAsm.LAssembler
 
                 new AOpCode { mnemonic = "PUSH", opcode1 = AExtraOpCode.eo_ib, paramtype1 = AParam.par_imm8, bytes = 1, bt1 = 0x6a },
                 new AOpCode { mnemonic = "PUSH", opcode1 = AExtraOpCode.eo_id, paramtype1 = AParam.par_imm32, bytes = 1, bt1 = 0x68 },
-                //  new topcode(){ mnemonic="PUSH", opcode1=textraopcode.eo_iw, paramtype1=tparam.par_imm16, bytes=2, bt1=0x66, bt2=0x68 },
-
+                //  new topcode(){ mnemonic="PUSH", opcode1=textraopcode.eo_iw, paramtype1=tparam.par_imm16, bytes=2, bt1=0x66, bt2=0x68 }, todo do we need this?
 
                 new AOpCode { mnemonic = "PUSH", opcode1 = AExtraOpCode.eo_prd, paramtype1 = AParam.par_r32, bytes = 1, bt1 = 0x50, norexw = true },
                 new AOpCode { mnemonic = "PUSH", opcode1 = AExtraOpCode.eo_prw, paramtype1 = AParam.par_r16, bytes = 2, bt1 = 0x66, bt2 = 0x50 },
 
                 new AOpCode { mnemonic = "PUSH", opcode1 = AExtraOpCode.eo_reg6, paramtype1 = AParam.par_rm32, bytes = 1, bt1 = 0xff },
                 new AOpCode { mnemonic = "PUSH", opcode1 = AExtraOpCode.eo_reg6, paramtype1 = AParam.par_rm16, bytes = 2, bt1 = 0x66, bt2 = 0xff },
-
 
                 new AOpCode { mnemonic = "PUSH", paramtype1 = AParam.par_cs, bytes = 1, bt1 = 0x0e },
                 new AOpCode { mnemonic = "PUSH", paramtype1 = AParam.par_ss, bytes = 1, bt1 = 0x16 },
@@ -1115,7 +1092,6 @@ namespace SputnikAsm.LAssembler
                 new AOpCode { mnemonic = "RCL", opcode1 = AExtraOpCode.eo_reg2, paramtype1 = AParam.par_rm32, paramtype2 = AParam.par_cl, bytes = 1, bt1 = 0xd3 },
                 new AOpCode { mnemonic = "RCL", opcode1 = AExtraOpCode.eo_reg2, opcode2 = AExtraOpCode.eo_ib, paramtype1 = AParam.par_rm32, paramtype2 = AParam.par_imm8, bytes = 1, bt1 = 0xc1 },
 
-
                 new AOpCode { mnemonic = "RCR", opcode1 = AExtraOpCode.eo_reg3, paramtype1 = AParam.par_rm32, paramtype2 = AParam.par_1, bytes = 1, bt1 = 0xd1 },
                 new AOpCode { mnemonic = "RCR", opcode1 = AExtraOpCode.eo_reg3, paramtype1 = AParam.par_rm32, paramtype2 = AParam.par_cl, bytes = 1, bt1 = 0xd3 },
                 new AOpCode { mnemonic = "RCR", opcode1 = AExtraOpCode.eo_reg3, opcode2 = AExtraOpCode.eo_ib, paramtype1 = AParam.par_rm32, paramtype2 = AParam.par_imm8, bytes = 1, bt1 = 0xc1 },
@@ -1128,9 +1104,6 @@ namespace SputnikAsm.LAssembler
                 new AOpCode { mnemonic = "RCR", opcode1 = AExtraOpCode.eo_reg3, paramtype1 = AParam.par_rm8, paramtype2 = AParam.par_cl, bytes = 1, bt1 = 0xd2 },
                 new AOpCode { mnemonic = "RCR", opcode1 = AExtraOpCode.eo_reg3, opcode2 = AExtraOpCode.eo_ib, paramtype1 = AParam.par_rm8, paramtype2 = AParam.par_imm8, bytes = 1, bt1 = 0xc0 },
 
-
-
-
                 new AOpCode { mnemonic = "RDMSR", bytes = 2, bt1 = 0x0f, bt2 = 0x32 },
                 new AOpCode { mnemonic = "RDPMC", bytes = 2, bt1 = 0x0f, bt2 = 0x33 },
                 new AOpCode { mnemonic = "RDTSC", bytes = 2, bt1 = 0x0f, bt2 = 0x31 },
@@ -1140,10 +1113,7 @@ namespace SputnikAsm.LAssembler
                 new AOpCode { mnemonic = "RET", opcode1 = AExtraOpCode.eo_iw, paramtype1 = AParam.par_imm16, bytes = 1, bt1 = 0xc2 },
                 new AOpCode { mnemonic = "RETN", bytes = 1, bt1 = 0xc3 },
                 new AOpCode { mnemonic = "RETN", opcode1 = AExtraOpCode.eo_iw, paramtype1 = AParam.par_imm16, bytes = 1, bt1 = 0xc2 },
-
-
-
-
+                
                 new AOpCode { mnemonic = "ROL", opcode1 = AExtraOpCode.eo_reg0, paramtype1 = AParam.par_rm32, paramtype2 = AParam.par_1, bytes = 1, bt1 = 0xd1 },
                 new AOpCode { mnemonic = "ROL", opcode1 = AExtraOpCode.eo_reg0, paramtype1 = AParam.par_rm32, paramtype2 = AParam.par_cl, bytes = 1, bt1 = 0xd3 },
                 new AOpCode { mnemonic = "ROL", opcode1 = AExtraOpCode.eo_reg0, opcode2 = AExtraOpCode.eo_ib, paramtype1 = AParam.par_rm32, paramtype2 = AParam.par_imm8, bytes = 1, bt1 = 0xc1 },
@@ -1168,10 +1138,7 @@ namespace SputnikAsm.LAssembler
                 new AOpCode { mnemonic = "ROR", opcode1 = AExtraOpCode.eo_reg1, paramtype1 = AParam.par_rm8, paramtype2 = AParam.par_cl, bytes = 1, bt1 = 0xd2 },
                 new AOpCode { mnemonic = "ROR", opcode1 = AExtraOpCode.eo_reg1, opcode2 = AExtraOpCode.eo_ib, paramtype1 = AParam.par_rm8, paramtype2 = AParam.par_imm8, bytes = 1, bt1 = 0xc0 },
 
-
-
                 new AOpCode { mnemonic = "RSM", bytes = 2, bt1 = 0x0f, bt2 = 0xaa },
-
 
                 new AOpCode { mnemonic = "SAHF", bytes = 1, bt1 = 0x9e },
 
@@ -1217,7 +1184,6 @@ namespace SputnikAsm.LAssembler
                 new AOpCode { mnemonic = "SCASB", bytes = 1, bt1 = 0xae },
                 new AOpCode { mnemonic = "SCASD", bytes = 1, bt1 = 0xaf },
                 new AOpCode { mnemonic = "SCASW", bytes = 2, bt1 = 0x66, bt2 = 0xaf },
-
 
                 new AOpCode { mnemonic = "SETA", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_rm8, bytes = 2, bt1 = 0x0f, bt2 = 0x97 },
                 new AOpCode { mnemonic = "SETAE", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_rm8, bytes = 2, bt1 = 0x0f, bt2 = 0x93 },
@@ -1268,14 +1234,11 @@ namespace SputnikAsm.LAssembler
                 new AOpCode { mnemonic = "SHL", opcode1 = AExtraOpCode.eo_reg4, paramtype1 = AParam.par_rm32, paramtype2 = AParam.par_cl, bytes = 1, bt1 = 0xd3 },
                 new AOpCode { mnemonic = "SHL", opcode1 = AExtraOpCode.eo_reg4, opcode2 = AExtraOpCode.eo_ib, paramtype1 = AParam.par_rm32, paramtype2 = AParam.par_imm8, bytes = 1, bt1 = 0xc1 },
 
-
-
                 new AOpCode { mnemonic = "SHLD", opcode1 = AExtraOpCode.eo_reg, opcode2 = AExtraOpCode.eo_ib, paramtype1 = AParam.par_rm16, paramtype2 = AParam.par_r16, paramtype3 = AParam.par_imm8, bytes = 3, bt1 = 0x66, bt2 = 0x0f, bt3 = 0xa4 },
                 new AOpCode { mnemonic = "SHLD", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_rm16, paramtype2 = AParam.par_r16, paramtype3 = AParam.par_cl, bytes = 3, bt1 = 0x66, bt2 = 0x0f, bt3 = 0xa5 },
 
                 new AOpCode { mnemonic = "SHLD", opcode1 = AExtraOpCode.eo_reg, opcode2 = AExtraOpCode.eo_ib, paramtype1 = AParam.par_rm32, paramtype2 = AParam.par_r32, paramtype3 = AParam.par_imm8, bytes = 2, bt1 = 0x0f, bt2 = 0xa4 },
                 new AOpCode { mnemonic = "SHLD", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_rm32, paramtype2 = AParam.par_r32, paramtype3 = AParam.par_cl, bytes = 2, bt1 = 0x0f, bt2 = 0xa5 },
-
 
                 new AOpCode { mnemonic = "SHR", opcode1 = AExtraOpCode.eo_reg5, paramtype1 = AParam.par_rm8, paramtype2 = AParam.par_1, bytes = 1, bt1 = 0xd0 },
                 new AOpCode { mnemonic = "SHR", opcode1 = AExtraOpCode.eo_reg5, paramtype1 = AParam.par_rm8, paramtype2 = AParam.par_cl, bytes = 1, bt1 = 0xd2 },
@@ -1317,7 +1280,6 @@ namespace SputnikAsm.LAssembler
 
                 new AOpCode { mnemonic = "STR", opcode1 = AExtraOpCode.eo_reg1, paramtype1 = AParam.par_rm16, bytes = 2, bt1 = 0x0f, bt2 = 0x00 },
 
-
                 new AOpCode { mnemonic = "SUB", opcode1 = AExtraOpCode.eo_ib, paramtype1 = AParam.par_al, paramtype2 = AParam.par_imm8, bytes = 1, bt1 = 0x2c },
                 new AOpCode { mnemonic = "SUB", opcode1 = AExtraOpCode.eo_iw, paramtype1 = AParam.par_ax, paramtype2 = AParam.par_imm16, bytes = 2, bt1 = 0x66, bt2 = 0x2d },
                 new AOpCode { mnemonic = "SUB", opcode1 = AExtraOpCode.eo_id, paramtype1 = AParam.par_eax, paramtype2 = AParam.par_imm32, bytes = 1, bt1 = 0x2d },
@@ -1342,7 +1304,6 @@ namespace SputnikAsm.LAssembler
                 new AOpCode { mnemonic = "SYSENTER", bytes = 2, bt1 = 0x0f, bt2 = 0x34 },
                 new AOpCode { mnemonic = "SYSEXIT", bytes = 2, bt1 = 0x0f, bt2 = 0x35 },
 
-
                 new AOpCode { mnemonic = "TEST", opcode1 = AExtraOpCode.eo_ib, paramtype1 = AParam.par_al, paramtype2 = AParam.par_imm8, bytes = 1, bt1 = 0xa8 },
                 new AOpCode { mnemonic = "TEST", opcode1 = AExtraOpCode.eo_iw, paramtype1 = AParam.par_ax, paramtype2 = AParam.par_imm16, bytes = 2, bt1 = 0x66, bt2 = 0xa9 },
                 new AOpCode { mnemonic = "TEST", opcode1 = AExtraOpCode.eo_id, paramtype1 = AParam.par_eax, paramtype2 = AParam.par_imm32, bytes = 1, bt1 = 0xa9 },
@@ -1354,7 +1315,6 @@ namespace SputnikAsm.LAssembler
                 new AOpCode { mnemonic = "TEST", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_rm8, paramtype2 = AParam.par_r8, bytes = 1, bt1 = 0x84 },
                 new AOpCode { mnemonic = "TEST", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_rm16, paramtype2 = AParam.par_r16, bytes = 2, bt1 = 0x66, bt2 = 0x85 },
                 new AOpCode { mnemonic = "TEST", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_rm32, paramtype2 = AParam.par_r32, bytes = 1, bt1 = 0x85 },
-
 
                 new AOpCode { mnemonic = "UCOMISD", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_xmm, paramtype2 = AParam.par_xmm_m64, bytes = 3, bt1 = 0x66, bt2 = 0x0f, bt3 = 0x2e },
                 new AOpCode { mnemonic = "UCOMISS", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_xmm, paramtype2 = AParam.par_xmm_m32, bytes = 2, bt1 = 0x0f, bt2 = 0x2e },
@@ -1380,10 +1340,6 @@ namespace SputnikAsm.LAssembler
                 new AOpCode { mnemonic = "VMWRITE", opcode1 = AExtraOpCode.eo_reg, paramtype1 = AParam.par_r32, paramtype2 = AParam.par_rm32, bytes = 2, bt1 = 0x0f, bt2 = 0x79 },
                 new AOpCode { mnemonic = "VMXOFF", bytes = 3, bt1 = 0x0f, bt2 = 0x01, bt3 = 0xc4 },
                 new AOpCode { mnemonic = "VMXON", opcode1 = AExtraOpCode.eo_reg6, paramtype1 = AParam.par_m64, bytes = 3, bt1 = 0xf3, bt2 = 0x0f, bt3 = 0xc7 },
-
-
-
-
 
                 new AOpCode { mnemonic = "WAIT", bytes = 1, bt1 = 0x9b },
                 new AOpCode { mnemonic = "WBINVD", bytes = 2, bt1 = 0x0f, bt2 = 0x09 },
