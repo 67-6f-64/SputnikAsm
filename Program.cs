@@ -26,32 +26,37 @@ namespace SputnikAsm
             
             
             var cc = @"
-            registersymbol(cat);
+registersymbol(cat);
             [ENABLE]
-            cat:
-            400300:
-            jmp 600700
-            mov eax, edx
-            inc esi
-            jmp cat
+label(cat);
+400300:
+jmp 600700
+mov eax, edx
+inc esi
+cat:
+jmp cat
 
-            [DISABLE]
-            400300:
-            mov eax, edx
+40030E:
+readmem(400310,2);
+
+[DISABLE]
+400300:
+mov eax, edx
             ".Trim();
-            var aa = new AAutoAssembler();
+            var aa = new AAutoAssembler(a);
             var code = new ARefStringArray();
             code.Assign(UStringUtils.GetLines(cc).ToArray());
             aa.RemoveComments(code);
 
             var scr = new ARefStringArray();
+            //var ret = aa.AutoAssemble(pacWin, code, false, true, false, new AAllocArray(), new AStringArray(), true, scr);
             var ret = aa.AutoAssemble(pacWin, code, false, true, false, new AAllocArray(), new AStringArray(), false, scr);
             Console.WriteLine("Result: " + ret);
             foreach (var o in scr.Raw)
             {
                 Console.WriteLine("Line: " + o.Value);
             }
-            Console.WriteLine(a.SymHandler.GetAddressFromName("pacwin.exe+11C88+2").ToUInt64().ToString("X"));
+            Console.WriteLine("Cat Loc: " + a.SymHandler.GetUserDefinedSymbolByName("cat").ToUInt64().ToString("X"));
 
             // Console.WriteLine(proc.ReadMem((IntPtr)0x411C88, ReadType.Int32));
             // proc.Poke(scr.ToString());

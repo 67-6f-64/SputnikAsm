@@ -185,9 +185,9 @@ namespace SputnikAsm.LAutoAssembler
         public AAssembler Assembler;
         #endregion
         #region Constructor
-        public AAutoAssembler()
+        public AAutoAssembler(AAssembler assembler)
         {
-            Assembler = new AAssembler();
+            Assembler = assembler;
         }
         #endregion
         #region RemoveComments
@@ -727,7 +727,6 @@ namespace SputnikAsm.LAutoAssembler
             UInt32 bw = 0;
             UInt64 bw2 = 0;
             var testPtr = UIntPtr.Zero;
-            var bytebuf = new AByteArray();
             var bytes = new ATByteArray();
             UIntPtr prefered = UIntPtr.Zero;
             var intPtrSize = 0;
@@ -803,13 +802,13 @@ namespace SputnikAsm.LAutoAssembler
                             assemblerlines.SetLength(assemblerlines.Length + 1);
                             assemblerlines.Last = currentline;
                             //do this first. Do not touch register symbol with any kind of define/label/whatsoever
-                            #region RegisterSymbol()
+                            #region Command REGISTERSYMBOL()
                             if (AStringUtils.Copy(currentline, 0, 15).ToUpper() == "REGISTERSYMBOL(")
                             {
                                 //add this symbol to the register symbol list
                                 a = AStringUtils.Pos("(", currentline);
                                 b = AStringUtils.Pos(")", currentline);
-                                if ((a > 0) && (b > 0))
+                                if (a > 0 && b > 0)
                                 {
                                     s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
                                     addsymbollist.SetLength(addsymbollist.Length + 1);
@@ -830,8 +829,7 @@ namespace SputnikAsm.LAutoAssembler
                             }
                             //otherwise it hasn't been handled, or it has been handled and the string is a compatible string that passes the phase1 tests (so variable names converted to 00000000 and whatever else is needed)
                             //plugins^^^
-                            #region hidden
-                            /*
+                            #region Command ASSERT()
                             if (AStringUtils.Copy(currentline, 0, 7).ToUpper() == "ASSERT(")  //assert(address,aob)
                             {
                                 if (!syntaxCheckOnly)
@@ -839,14 +837,12 @@ namespace SputnikAsm.LAutoAssembler
                                     a = AStringUtils.Pos("(", currentline);
                                     b = AStringUtils.Pos(",", currentline);
                                     c = AStringUtils.Pos(")", currentline);
-                                    if ((a > 0) && (b > 0) && (c > 0))
+                                    if (a > 0 && b > 0 && c > 0)
                                     {
                                         s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim(); //address
                                         s2 = AStringUtils.Copy(currentline, b + 1, c - b - 1).Trim(); //aob
-                                        // UBERFOX BELOW -- ignore assert
                                         if (createScript)
                                             continue;
-                                        // UBERFOX ABOVE
                                         testPtr = symHandler.GetAddressFromName(s1, false);
                                         bytes.SetLength(0);
                                         try
@@ -859,38 +855,66 @@ namespace SputnikAsm.LAutoAssembler
                                         }
                                         if (bytes.Length > 0)
                                         {
-                                            GetMem(bytebuf, bytes.Length);
-                                            //try
-                                            if (ReadProcessMemory(processHandle, UIntToPtr(testPtr), bytebuf, length(bytes), x))
+                                            var byteBuf = (Byte[])process.ReadMem((IntPtr)testPtr.ToUInt64(), ReadType.Binary, bytes.Length);
+                                            if (byteBuf.Length == bytes.Length)
                                             {
-                                                for (j = 0; j <= length(bytes) - 1; j++)
+                                                for (j = 0; j < bytes.Length; j++)
                                                 {
-                                                    if (bytes[j] != bytebuf[j])
+                                                    if (bytes[j] != byteBuf[j])
                                                     {
-                                                        if (AMathUtils.InRangeX(bytes[j], 0, 0xff))
-                                                            throw new Exception(UStringUtils.Sprintf(rsTheBytesAtAreNotWhatWasExpected, set::of(s1, eos)));
+                                                        if (AMathUtils.InRangeX(bytes[j], Byte.MinValue, Byte.MaxValue))
+                                                            throw new Exception(UStringUtils.Sprintf(rsTheBytesAtAreNotWhatWasExpected, s1));
                                                     }
                                                 }
                                             }
                                             else
-                                                throw new Exception(UStringUtils.Sprintf(rsTheMemoryAtCanNotBeRead, set::of(s1, eos)));
-                                            //finally
-                                            FreeMem(bytebuf);
-                                            //end;
-
+                                                throw new Exception(UStringUtils.Sprintf(rsTheMemoryAtCanNotBeRead, s1));
                                         }
                                         else
-                                            throw new Exception(UStringUtils.Sprintf(rsIsNotAvalidByteString, set::of(s2, eos)));
+                                            throw new Exception(UStringUtils.Sprintf(rsIsNotAvalidByteString, s2));
 
                                     }
                                     else
                                         throw new Exception(rsWrongSyntaxASSERTAddress1122335566);
                                 }
-
-                                setlength(assemblerlines, length(assemblerlines) - 1);
-                                continue_;
+                                assemblerlines.SetLength(assemblerlines.Length - 1);
+                                continue;
                             }
+                            #endregion
+                            #region Command SHAREDALLOC() -- todo
+                            /*
+                            if (uppercase(copy(currentline, 1, 12)) == "SHAREDALLOC(")
+                            {
+                                a = pos("(", currentline);
+                                b = pos(",", currentline);
+                                c = pos(")", currentline);
+                                if ((a > 0) && (b > 0) && (c > 0))
+                                {
+                                    s1 = trim(copy(currentline, a + 1, b - a - 1));
+                                    s2 = trim(copy(currentline, b + 1, c - b - 1));
 
+                                    //try
+                                    x = strtoint(s2);
+                                    //except
+                                    Create(Format(rsIsNotAValidSize, set::of(s2, eos)));
+                                    //end;
+
+                                    setlength(sallocs, length(sallocs) + 1);
+                                    sallocs[length(sallocs) - 1].address = allocateSharedMemoryIntoTargetProcess(s1, x);
+                                    sallocs[length(sallocs) - 1].varname = s1;
+                                    sallocs[length(sallocs) - 1].size = x;
+
+                                    setlength(assemblerlines, length(assemblerlines) - 1);
+                                    continue_;
+
+                                }
+                                else
+                                    Create(rsWrongSyntaxSHAREDALLOCNameSize);
+                            }
+                            */
+                            #endregion
+                            #region Command GLOBALALLOC() -- todo
+                            /*
                             if (uppercase(copy(currentline, 1, 12)) == "GLOBALALLOC(")
                             {
                                 a = pos("(", currentline);
@@ -925,7 +949,10 @@ namespace SputnikAsm.LAutoAssembler
                                 else throw new Exception(rsWrongSyntaxGLOBALALLOCNameSize);
 
                             }
-
+                            */
+                            #endregion
+                            #region Command INCLUDE() -- todo
+                            /*
                             if (uppercase(copy(currentline, 1, 8)) == "INCLUDE(")
                             {
                                 a = pos("(", currentline);
@@ -962,7 +989,10 @@ namespace SputnikAsm.LAutoAssembler
                                 }
                                 else throw new Exception(rsWrongSyntaxIncludeFilenameCea);
                             }
-
+                            */
+                            #endregion
+                            #region Command CREATETHREAD() -- todo
+                            /*
                             if (uppercase(copy(currentline, 1, 13)) == "CREATETHREAD(")
                             {
                                 //load a binary file into memory , this one already executes BEFORE the 2nd pass to get addressnames correct
@@ -980,7 +1010,10 @@ namespace SputnikAsm.LAutoAssembler
                                 }
                                 else throw new Exception(rsWrongSyntaxCreateThreadAddress);
                             }
-
+                            */
+                            #endregion
+                            #region Command READMEM() -- todo
+                            /*
                             if (uppercase(copy(currentline, 1, 8)) == "READMEM(")
                             {
                                 //read memory and place it here (readmem(address,size) )
@@ -1048,7 +1081,10 @@ namespace SputnikAsm.LAutoAssembler
 
                                 continue_;
                             }
-
+                            */
+                            #endregion
+                            #region Command LOADBINARY() -- todo
+                            /*
                             if (uppercase(copy(currentline, 1, 11)) == "LOADBINARY(")
                             {
                                 //load a binary file into memory
@@ -1071,9 +1107,10 @@ namespace SputnikAsm.LAutoAssembler
                                 }
                                 else throw new Exception(rsWrongSyntaxLoadBinaryAddressFilename);
                             }
-
-
-
+                            */
+                            #endregion
+                            #region Command UNREGISTERSYMBOL() -- todo
+                            /*
                             if (uppercase(copy(currentline, 1, 17)) == "UNREGISTERSYMBOL(")
                             {
                                 //add this symbol to the register symbollist
@@ -1092,9 +1129,10 @@ namespace SputnikAsm.LAutoAssembler
                                 setlength(assemblerlines, length(assemblerlines) - 1);
                                 continue_;
                             }
-
-
-                            //define
+                            */
+                            #endregion
+                            #region Command DEFINE() -- todo
+                            /*
                             if (uppercase(copy(currentline, 1, 7)) == "DEFINE(")
                             {
                                 //syntax: alloc(x,size)    x=variable name size=bytes
@@ -1120,8 +1158,10 @@ namespace SputnikAsm.LAutoAssembler
                                 }
                                 else throw new Exception(rsWrongSyntaxDEFINENameWhatever);
                             }
-
-                            //STRUCT
+                            */
+                            #endregion
+                            #region Command STRUCT() -- todo
+                            /*
                             if (uppercase(copy(currentline, 1, 7)) == "STRUCT ")
                             {
                                 replaceStructWithDefines(code, i);
@@ -1129,8 +1169,10 @@ namespace SputnikAsm.LAutoAssembler
                                 i -= 1; //repeat from this line
                                 continue_;
                             }
-
-                            //FULLACCESS
+                            */
+                            #endregion
+                            #region Command FULLACCESS() -- todo
+                            /*
                             if (uppercase(copy(currentline, 1, 11)) == "FULLACCESS(")
                             {
                                 a = pos("(", currentline);
@@ -1151,65 +1193,61 @@ namespace SputnikAsm.LAutoAssembler
                                 setlength(assemblerlines, length(assemblerlines) - 1);
                                 continue_;
                             }
-
-                            if (uppercase(copy(currentline, 1, 6)) == "LABEL(")
+                            */
+                            #endregion
+                            #region Command LABEL()
+                            if (AStringUtils.Copy(currentline, 0, 6).ToUpper() == "LABEL(")
                             {
                                 //syntax: label(x)  x=name of the label
                                 //later on in the code there has to be a line with "labelname:"
-                                a = pos("(", currentline);
-                                b = pos(")", currentline);
-
-                                if ((a > 0) && (b > 0))
+                                a = AStringUtils.Pos("(", currentline);
+                                b = AStringUtils.Pos(")", currentline);
+                                if (a != -1 && b != -1)
                                 {
-                                    s1 = trim(copy(currentline, a + 1, b - a - 1));
-
-
-                                    val(string('$') + s1, j, a);
-                                    if (a == 0) throw new Exception(UStringUtils.Sprintf(rsIsNotAValidIdentifier, set::of(s1, eos)));
-
-                                    varsize = length(s1);
-
-                                    while ((j < length(labels)) && (length(labels[j].labelname) > varsize))
+                                    s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
+                                    AStringUtils.Val("0x" + s1, out j, out a);
+                                    if (a == 0)
+                                        throw new Exception(UStringUtils.Sprintf(rsIsNotAValidIdentifier, s1));
+                                    varsize = s1.Length;
+                                    while (j < labels.Length && labels[j].Name.Length > varsize)
                                     {
-                                        if (labels[j].labelname == s1)
-                                            throw new Exception(UStringUtils.Sprintf(rsIsBeingRedeclared, set::of(s1, eos)));
+                                        if (labels[j].Name == s1)
+                                            throw new Exception(UStringUtils.Sprintf(rsIsBeingRedeclared, s1));
                                         j += 1;
                                     }
-
-                                    j = length(labels);//quickfix
+                                    j = labels.Length;//quickfix
                                     l = j;
-
-
                                     //check for the line "labelname:"
                                     ok1 = false;
-                                    for (j = 0; j <= code.Count - 1; j++)
-                                        if (trim(code[j]) == s1 + ':')
+                                    for (j = 0; j <= code.Length - 1; j++)
+                                    {
+                                        if (code[j].Value.Trim() == s1 + ':')
                                         {
-                                            if (ok1) throw new Exception(UStringUtils.Sprintf(rsLabelIsBeingDefinedMoreThanOnce, set::of(s1, eos)));
+                                            if (ok1)
+                                                throw new Exception(UStringUtils.Sprintf(rsLabelIsBeingDefinedMoreThanOnce, s1));
                                             ok1 = true;
                                         }
-
-                                    if (~ok1) throw new Exception(UStringUtils.Sprintf(rsLabelIsNotDefinedInTheScript, set::of(s1, eos)));
-
-
+                                    }
+                                    if (!ok1)
+                                        throw new Exception(UStringUtils.Sprintf(rsLabelIsNotDefinedInTheScript, s1));
                                     //still here so ok
                                     //insert it
-                                    setlength(labels, length(labels) + 1);
-                                    for (k = length(labels) - 1; k >= j + 1; k--)
+                                    labels.SetLength(labels.Length + 1);
+                                    for (k = labels.Length - 1; k >= j + 1; k--)
                                         labels[k] = labels[k - 1];
-
-
-                                    labels[l].labelname = s1;
-                                    labels[l].defined = false;
-                                    setlength(assemblerlines, length(assemblerlines) - 1);
-                                    setlength(labels[l].references, 0);
-                                    setlength(labels[l].references2, 0);
-
-                                    continue_;
+                                    labels[l].Name = s1;
+                                    labels[l].Defined = false;
+                                    assemblerlines.SetLength(assemblerlines.Length - 1);
+                                    labels[l].References.SetLength(0);
+                                    labels[l].References2.SetLength(0);
+                                    continue;
                                 }
-                                else throw new Exception(rsSyntaxError);
+                                else
+                                    throw new Exception(rsSyntaxError);
                             }
-
+                            #endregion
+                            #region Command DEALLOC() -- todo
+                            /*
                             if (uppercase(copy(currentline, 1, 8)) == "DEALLOC(")
                             {
                                 if (allocArray != nil) //memory dealloc=possible
@@ -1238,8 +1276,10 @@ namespace SputnikAsm.LAutoAssembler
                                 setlength(assemblerlines, length(assemblerlines) - 1);
                                 continue_;
                             }
-
-                            //memory alloc
+                            */
+                            #endregion
+                            #region Command ALLOC() -- todo
+                            /*
                             if (uppercase(copy(currentline, 1, 6)) == "ALLOC(")
                             {
                                 //syntax: alloc(x,size)    x=variable name size=bytes
@@ -1321,6 +1361,63 @@ namespace SputnikAsm.LAutoAssembler
                                 for (j = 0; j < allocs.Length; j++)
                                     currentline = ReplaceToken(currentline, allocs[j].Name, "00000000");
                             }
+                            #region Command KALLOC() -- todo
+                            /*
+                            if (uppercase(copy(currentline, 1, 7)) == "KALLOC(")
+                            {
+                                if (~DBKReadWrite)
+                                    Create(rsNeedToUseKernelmodeReadWriteprocessmemory);
+
+                                if (DBKLoaded == false)
+                                    Create(rsSorryButWithoutTheDriverKALLOCWillNotFunction);
+
+                                //syntax: kalloc(x,size)    x=variable name size=bytes
+                                //kallocate memory
+                                a = pos("(", currentline);
+                                b = pos(",", currentline);
+                                c = pos(")", currentline);
+
+                                if ((a > 0) && (b > 0) && (c > 0))
+                                {
+                                    s1 = trim(copy(currentline, a + 1, b - a - 1));
+                                    s2 = trim(copy(currentline, b + 1, c - b - 1));
+
+                                    val(string('$') + s1, j, a);
+                                    if (a == 0)
+                                        Create(Format(rsIsNotAValidIdentifier, set::of(s1, eos)));
+
+                                    varsize = length(s1);
+
+                                    //check for duplicate identifiers
+                                    j = 0;
+                                    while ((j < length(kallocs)) && (length(kallocs[j].varname) > varsize))
+                                    {
+                                        if (kallocs[j].varname == s1)
+                                            Create(Format(rsTheIdentifierHasAlreadyBeenDeclared, set::of(s1, eos)));
+
+                                        j += 1;
+                                    }
+
+                                    j = length(kallocs);//quickfix
+
+                                    setlength(kallocs, length(kallocs) + 1);
+
+                                    //longest varnames first so the rename of a shorter matching var wont override the longer one
+                                    //move up the other kallocs so I can inser this element (A linked list might have been better)
+                                    for (k = length(kallocs) - 1; k >= j + 1; k--)
+                                        kallocs[k] = kallocs[k - 1];
+
+                                    kallocs[j].varname = s1;
+                                    kallocs[j].size = StrToInt(s2);
+
+                                    setlength(assemblerlines, length(assemblerlines) - 1);   //don't bother with this in the 2nd pass
+                                    continue_;
+                                }
+                                else
+                                    Create(rsWrongSyntaxKallocIdentifierSizeinbytes);
+                            }
+                            */
+                            #endregion
                             //replace KALLOC identifiers with values so the assemble error check doesnt crash on that
                             if (process.IsX64)
                             {
@@ -1395,7 +1492,6 @@ namespace SputnikAsm.LAutoAssembler
                     }
                     catch (Exception ex)
                     {
-                        //on E:exception do
                         throw new Exception(UStringUtils.Sprintf(rsErrorInLine, currentlinenr, currentline, ex.Message));
                     }
                 }
@@ -1568,8 +1664,7 @@ namespace SputnikAsm.LAutoAssembler
                     return result;
                     //Code is injectable ,but Do not inject it!
                 }
-                #region hidden
-                //allocate the memory
+                #region Allocate The Memory
                 // if (length(allocs) > 0)
                 // {
                 //     j = 0; //entry to go from
@@ -1746,7 +1841,7 @@ namespace SputnikAsm.LAutoAssembler
                     else
                         process.FullAccess((IntPtr)fullaccess[i].Address.ToUInt64(), (int)fullaccess[i].Size);
                 }
-                #region hidden
+                #region Load Binaries
                 //load binaries
                 //if (length(loadbinary) > 0)
                 //{
