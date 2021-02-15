@@ -13,6 +13,7 @@ using SputnikAsm.LDisassembler;
 using SputnikAsm.LDisassembler.LEnums;
 using SputnikAsm.LExtensions;
 using SputnikAsm.LGenerics;
+using SputnikAsm.LMemScan.LEnums;
 using SputnikAsm.LProcess;
 using SputnikAsm.LProcess.LAssembly;
 using SputnikAsm.LProcess.LAssembly.LAssemblers;
@@ -66,6 +67,7 @@ namespace SputnikAsm
             using (var bip = new UBytePtr(bp))
             {
                 Console.WriteLine("Found dataType: " + bi.FindTypeOfData((UIntPtr)0x411C88, bip, 8));
+                Console.WriteLine("Found dataType: " + bi.DataToString(bp, 8, AVariableType.Double));
             }
 
             // aa.Assembler.SymHandler.Process = m;

@@ -38,21 +38,15 @@ namespace SputnikAsm.LBinary.LByteInterpreter
         }
         #endregion
         #region FindTypeOfData
-        public AVariableType FindTypeOfData(UIntPtr address, UBytePtr buf, int size)
+        public AVariableType FindTypeOfData(UIntPtr address, UBytePtr buf, int size, AFindTypeOption findOption = AFindTypeOption.None)
         {
-            return FindTypeOfData(address, buf, size, AFindTypeOption.None);
-        }
-        public AVariableType FindTypeOfData(UIntPtr address, UBytePtr buf, int size, /*pcustomtype customtype,*/ AFindTypeOption findOption)
-        {
-            var x = "";
-            var i = 0;
-            var e = 0;
             var v = 0UL;
             //check if it matches a string
             var result = AVariableType.DWord;
             try
             {
                 var floatHasSeparator = false;
+                int i;
                 if (!UEnumUtils.HasFlag(findOption, AFindTypeOption.NoString))
                 {
                     var isString = true;
@@ -63,7 +57,7 @@ namespace SputnikAsm.LBinary.LByteInterpreter
                         //check if the first 4 characters match with a standard ascii values (32 to 127)
                         if (i < size)
                         {
-                            if ((buf[i] < 32) || (buf[i] > 127))
+                            if (buf[i] < 32 || buf[i] > 127)
                             {
                                 isString = false;
                                 if (i > 0)
@@ -140,21 +134,23 @@ namespace SputnikAsm.LBinary.LByteInterpreter
                 if (size >= Proc.PointerSize)
                 {
                     //named addresses
+                    int n;
                     if (Proc.IsX64)
                     {
                         if ((int)(address.ToUInt64() % 8) == 0)
-                            AStringUtils.Val("0x" + SymbolHandler.GetNameFromAddress((UIntPtr)buf.ReadUInt64(), true, true, false, null, out _, 8, false), out v, out e);
+                            AStringUtils.Val("0x" + SymbolHandler.GetNameFromAddress((UIntPtr)buf.ReadUInt64(), true, true, false, null, out _, 8, false), out v, out n);
                         else
-                            e = 0;
+                            n = 0;
                     }
                     else
-                        AStringUtils.Val("0x" + SymbolHandler.GetNameFromAddress((UIntPtr)buf.ReadUInt32(), true, true, false, null, out _, 8, false), out v, out e);
-                    if (e > 0)  //named
+                        AStringUtils.Val("0x" + SymbolHandler.GetNameFromAddress((UIntPtr)buf.ReadUInt32(), true, true, false, null, out _, 8, false), out v, out n);
+                    if (n > 0)  //named
                     {
                         result = AVariableType.Pointer;
                         return result;
                     }
                 }
+                String x;
                 if (size >= 2 && size < 4)
                 {
                     result = AVariableType.Word;
@@ -204,7 +200,7 @@ namespace SputnikAsm.LBinary.LByteInterpreter
                                         x = buf.ReadFloat().ToString(CultureInfo.InvariantCulture);
                                         if (AStringUtils.Pos("E", x) == -1)   //no exponent
                                         {
-                                            //if 4 bytes after this address is a float then override thise double to a single type
+                                            //if 4 bytes after this address is a float then override this double to a single type
                                             if (FindTypeOfData(address + 4, buf.Shift(4), size - 4) == AVariableType.Single)
                                                 result = AVariableType.Single;
                                         }
@@ -274,6 +270,118 @@ namespace SputnikAsm.LBinary.LByteInterpreter
                 // todo implement custom types
                 // if (assigned(onautoguessroutine))
                 //     result = onautoguessroutine(address, result);
+            }
+            return result;
+        }
+        #endregion
+        #region IsHumanReadableInteger
+        public Boolean IsHumanReadableInteger(int v)
+        {
+            //check if the value is a human usable value (between 0 and 10000 or dividable by at least 100)
+            //Human readable if:
+            //The value is in the range of -10000 and 10000
+            //The value is dividable by 100
+            var result = AMathUtils.InRange(v, -10000, 10000) | (v % 100 == 0);
+            return result;
+        }
+        #endregion
+        #region DataToString
+        public String DataToString(UBytePtr buf, int size, AVariableType varType, Boolean clean = false)
+            /*note: If type is of string unicode, the last 2 bytes will get set to 0, so watch what you're calling*/
+        {
+            String result;
+            switch (varType)
+            {
+                case AVariableType.Byte:
+                {
+                    if (clean)
+                        result = AStringUtils.IntToHex(buf[0], 2);
+                    else
+                        result = "(byte)" + AStringUtils.IntToHex(buf[0], 2) + '(' + buf[0] + ')';
+                    break;
+                }
+                case AVariableType.Word:
+                {
+                    if (clean)
+                        result = AStringUtils.IntToHex(buf.ReadUInt16(), 4);
+                    else
+                        result = "(word)" + AStringUtils.IntToHex(buf.ReadUInt16(), 4) + '(' + buf.ReadUInt16() + ')';
+                    break;
+                }
+                case AVariableType.DWord:
+                {
+                    if (clean)
+                        result = AStringUtils.IntToHex(buf.ReadUInt32(), 8);
+                    else
+                        result = "(dword)" + AStringUtils.IntToHex(buf.ReadUInt32(), 8) + '(' + buf.ReadUInt32() + ')';
+                    break;
+                }
+                case AVariableType.QWord:
+                {
+                    if (clean)
+                        result = AStringUtils.IntToHex(buf.ReadUInt64(), 16);
+                    else
+                        result = "(qword)" + AStringUtils.IntToHex(buf.ReadUInt64(), 16) + '(' + buf.ReadUInt64() + ')';
+                    break;
+                }
+                case AVariableType.Single:
+                {
+                    if (clean)
+                        result = UStringUtils.Sprintf("%.2f", buf.ReadFloat());
+                    else
+                        result = "(float)" + UStringUtils.Sprintf("%.2f", buf.ReadFloat());
+                    break;
+                }
+                case AVariableType.Double:
+                {
+                    if (clean)
+                        result = UStringUtils.Sprintf("%.2f", buf.ReadDouble());
+                    else
+                        result = "(double)" + UStringUtils.Sprintf("%.2f", buf.ReadDouble());
+                    break;
+                }
+                case AVariableType.String:
+                {
+                    using (var p = new UBytePtr(size + 1))
+                    {
+                        AArrayUtils.CopyMemory(p, buf, size);
+                        p[size] = 0;
+                        result = UBitConverter.UnpackSingle("z1", 0, p.ToByteArray());
+                    }
+                    break;
+                }
+                case AVariableType.UnicodeString:
+                {
+                    using (var p = new UBytePtr(size + 2))
+                    {
+                        AArrayUtils.CopyMemory(p, buf, size);
+                        p[size] = 0;
+                        p[size + 1] = 0;
+                        result = UBitConverter.UnpackSingle("z7", 0, p.ToByteArray());
+                    }
+                    break;
+                }
+                case AVariableType.Pointer:
+                {
+                    UIntPtr a;
+                    if (Proc.IsX64)
+                        a = (UIntPtr)buf.ReadUInt64();
+                    else
+                        a = (UIntPtr)buf.ReadUInt32();
+                    if (clean)
+                        result = "";
+                    else
+                        result = "(pointer)";
+                    result += SymbolHandler.GetNameFromAddress(a, true, true, false);
+                    break;
+                }
+                default:
+                {
+                    result = "(...)";
+                    for (var i = 0; i <= Math.Min(size, 8) - 1; i++)
+                        result = result + AStringUtils.IntToHex(buf[i], 2) + ' ';
+                    break;
+                }
             }
             return result;
         }

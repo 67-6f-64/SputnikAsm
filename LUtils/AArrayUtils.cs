@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using Sputnik.LBinary;
 using Sputnik.LMarshal;
 using SputnikAsm.LCollections;
 
@@ -22,6 +23,14 @@ namespace SputnikAsm.LUtils
         }
         #endregion
         #region CopyMemory
+        public static int CopyMemory(UBytePtr dest, int destStart, UBytePtr src, int size)
+        {
+            return CopyMemory(dest.ToIntPtr(), destStart, src.ToIntPtr(), 0, size);
+        }
+        public static int CopyMemory(UBytePtr dest, UBytePtr src, int size)
+        {
+            return CopyMemory(dest.ToIntPtr(), 0, src.ToIntPtr(), 0, size);
+        }
         public static int CopyMemory(AByteArray dest, int destStart, AByteArray src, int size)
         {
             return CopyMemory(dest.Buffer, destStart, src.Buffer, 0, size);
