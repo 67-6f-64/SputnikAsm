@@ -85,7 +85,11 @@
     <Compile Include="LAssembler\ASingleLineAssembler.cs" />
     <Compile Include="LAutoAssembler\AAutoAssembler.cs" />
     <Compile Include="LDisassembler\ADisassembler.cs" />
-    <Compile Include="LDisassembler\ADisassemblerProcessor.cs" />
+    <Compile Include="LDisassembler\ADisassemblerCases1.cs" />
+    <Compile Include="LDisassembler\ADisassemblerCases3.cs" />
+    <Compile Include="LDisassembler\ADisassemblerCases5.cs" />
+    <Compile Include="LDisassembler\ADisassemblerCases4.cs" />
+    <Compile Include="LDisassembler\ADisassemblerCases2.cs" />
     <Compile Include="LDisassembler\LEnums\ADisassemblerClass.cs" />
     <Compile Include="LDisassembler\LEnums\ADisassemblerValueType.cs" />
     <Compile Include="LDisassembler\LEnums\ATmrPos.cs" />

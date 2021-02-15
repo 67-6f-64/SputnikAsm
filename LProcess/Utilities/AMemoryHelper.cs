@@ -372,5 +372,10 @@ namespace SputnikAsm.LProcess.Utilities
             return address.ToIntPtr();
         }
         #endregion
+        public static Boolean IsAddress(ASafeMemoryHandle processHandle, UIntPtr address)
+        {
+            var ret = Kernel32.VirtualQueryEx(processHandle, address.ToIntPtr(), out var memoryInfo, MarshalType<MemoryBasicInformation>.Size);
+            return ret != 0 && memoryInfo.State == MemoryStateFlags.Commit;
+        }
     }
 }

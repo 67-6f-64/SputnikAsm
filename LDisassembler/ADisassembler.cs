@@ -1,13 +1,17 @@
 ﻿using System;
+using System.Windows.Forms;
 using Process.NET.Marshaling;
 using Sputnik.LBinary;
 using Sputnik.LString;
+using Sputnik.LUtils;
+using SputnikAsm.LBinary;
 using SputnikAsm.LDisassembler.LEnums;
 using SputnikAsm.LExtensions;
 using SputnikAsm.LProcess;
 using SputnikAsm.LProcess.LMemory;
 using SputnikAsm.LProcess.LNative;
 using SputnikAsm.LProcess.LNative.LTypes;
+using SputnikAsm.LProcess.Utilities;
 using SputnikAsm.LSymbolHandler;
 using SputnikAsm.LUtils;
 
@@ -1776,12 +1780,6 @@ namespace SputnikAsm.LDisassembler
             return result;
         }
         #endregion
-        public Boolean IsAddress(UIntPtr address)
-        {
-            // Get the next memory page
-            var ret = Kernel32.VirtualQueryEx(SymbolHandler.Process.Handle, address.ToIntPtr(), out var memoryInfo, MarshalType<MemoryBasicInformation>.Size);
-            return ret != 0 && memoryInfo.State == MemoryStateFlags.Commit;
-        }
         #region HasAddress
         public Boolean HasAddress(String d, ref UIntPtr address, Object context = null)
         {
@@ -1806,7 +1804,7 @@ namespace SputnikAsm.LDisassembler
                 if (Has4ByteHexString(d, ref s))
                 {
                     address = (UIntPtr)AStringUtils.StrToQWordEx(s); //s already has the $ in front
-                    result = IsAddress(address);
+                    result = AMemoryHelper.IsAddress(SymbolHandler.Process.Handle, address);
                 }
             }
             else
@@ -2389,6 +2387,431 @@ namespace SputnikAsm.LDisassembler
                 return p1;
             }
             return actualread;
+        }
+        #endregion
+        #region Disassemble
+        public String Disassemble(ref UIntPtr offset)
+        {
+            var ignore = "";
+            var result = Disassemble(ref offset, ref ignore);
+            return result;
+        }
+        public String Disassemble(ref UIntPtr offset, ref String description)
+        {
+            String result;
+            try
+            {
+                var i = 0;
+                var j = 0;
+                var k = 0;
+                LastDisassembleData.IsFloat = false;
+                LastDisassembleData.IsFloat64 = false;
+                LastDisassembleData.IsCloaked = false;
+                LastDisassembleData.CommentsOverride = "";
+                // todo add the binutils
+                //if (defaultbinutils != nil)
+                //{
+                //    //use this
+                //    lastdisassembledata.address = offset;
+                //    lastdisassembledata.seperatorcount = 0;
+                //    defaultbinutils.disassemble(lastdisassembledata);
+                //    result = AStringUtils.IntToHex(lastdisassembledata.address, 8);
+                //    result = result + " - ";
+                //    for (i = 0; i <= length(lastdisassembledata.bytes) - 1; i++)
+                //        result = result + AStringUtils.IntToHex(lastdisassembledata.bytes[i], 2) + ' ';
+                //    result = result + " - ";
+                //    result = result + lastdisassembledata.opcode;
+                //    result = result + ' ';
+                //    result = result + lastdisassembledata.parameters;
+                //    if (length(lastdisassembledata.bytes) > 0)
+                //        offset += length(lastdisassembledata.bytes);
+                //    else
+                //    {
+                //        if (processhandler.systemarchitecture == archarm)
+                //        {
+                //            if ((offset | 1) == 1)
+                //                offset += 2;
+                //            else
+                //                offset += 4;
+                //        }
+                //        else
+                //            offset += 1;
+                //    }
+                //    return result;
+                //}
+                if (Is64BitOverride)
+                    Is64Bit = Is64BitOverrideState;
+                else
+                {
+                    Is64Bit = SymbolHandler.Process.IsX64;
+                    if (Environment.Is64BitOperatingSystem)
+                    {
+                        if (offset.ToUInt64() >= 0x100000000UL)
+                            Is64Bit = true;
+                    }
+                    // todo make this work!
+                    //if (SymbolHandler.GetModuleByAddress(offset, out mi))
+                    //    is64bit = mi.is64bitmodule;
+                }
+                // todo handle arm
+                //if (processhandler.systemarchitecture == archarm)
+                //{
+                //    result = armdisassembler.disassemble(offset);
+                //    lastdisassembledata = armdisassembler.lastdisassembledata;
+                //    return result;
+                //}
+                _modRmPosition = ATmrPos.None;
+                var last = 0U;
+                var tempResult = "";
+                LastDisassembleData.Bytes.SetLength(0);
+                LastDisassembleData.Address = offset;
+                LastDisassembleData.SeparatorCount = 0;
+                LastDisassembleData.Prefix = "";
+                LastDisassembleData.PrefixSize = 0;
+                LastDisassembleData.OpCode = "";
+                LastDisassembleData.Parameters = "";
+                LastDisassembleData.IsJump = false;
+                LastDisassembleData.IsCall = false;
+                LastDisassembleData.IsRet = false;
+                LastDisassembleData.IsConditionalJump = false;
+                LastDisassembleData.ModRmValueType = ADisassemblerValueType.None;
+                LastDisassembleData.ParameterValueType = ADisassemblerValueType.None;
+                LastDisassembleData.HasSib = false;
+                LastDisassembleData.DataSize = 0;
+                LastDisassembleData.RipRelative = 0;
+                // todo uncomment user override
+                //if (assigned(ondisassembleoverride))  //check if the user has defined it's own disassembler
+                //{
+                //    //if so, call the OnDisassemble propery, and if it returns true don't handle the original
+                //    if (ondisassembleoverride(self, offset, LastDisassembleData, result, description))
+                //    {
+                //        if (length(lastdisassembledata.bytes) == 0)  //BAD!
+                //            setlength(lastdisassembledata.bytes, 1);
+                //
+                //        offset += length(lastdisassembledata.bytes);
+                //        return result;
+                //    }
+                //}
+                // //also check global overrides
+                // for (i = 0; i <= length(globaldisassembleoverrides) - 1; i++)
+                // {
+                //     if (assigned(globaldisassembleoverrides[i]))
+                //     {
+                //         if (globaldisassembleoverrides[i](self, offset, LastDisassembleData, result, description))
+                //         {
+                //             if (length(lastdisassembledata.bytes) == 0)  //BAD!
+                //                 setlength(lastdisassembledata.bytes, 1);
+                // 
+                //             offset += length(lastdisassembledata.bytes);
+                //             return result;
+                //         }
+                //     }
+                // }
+                _ripRelative = false;
+                if (IsDataOnly)
+                    result = "";
+                else
+                    result = AStringUtils.IntToHex(offset, 8) + " - ";
+                var isPrefix = true;
+                _prefix = new APrefix(0xf0, 0xf2, 0xf3, 0x2e, 0x36, 0x3e, 0x26, 0x64, 0x65, 0x66, 0x67);
+                _prefix2 = new APrefix();
+                var startOffset = offset;
+                var initialOffset = offset;
+                for (i = 32; i <= 63; i++) //debug code
+                    _memory[i] = 0xce;
+                var actualRead = ReadMemory(offset, _memory.ToIntPtr().ToUIntPtr(), 32);
+                var memory = _memory.Shift(0);
+                if (actualRead > 0)
+                {
+                    //{$ifndef jni}
+                    //if debuggerthread<>nil then
+                    //  for i:=0 to actualRead-1 do
+                    //    if memory[i]=$cc then
+                    //    begin
+                    //      //memory[i]:=debuggerthread.getrealbyte(offset+i);
+                    //
+                    //      repairbreakbyte(offset+i, memory[i]);
+                    //    end;
+                    //{$endif}
+                    while (isPrefix)
+                    {
+                        offset += 1; //offset will always inc by 1
+                        if (_prefix.Contains(memory[0]))
+                        {
+                            if (LastDisassembleData.Bytes.Length > 10)
+                            {
+                                //prevent a too long prefix from crashing the disassembler (e.g 12GB filled with one prefix....)
+                                isPrefix = false;
+                                break;
+                            }
+                            LastDisassembleData.Bytes.Inc();
+                            LastDisassembleData.Bytes.Last = memory[0];
+                            if (!IsDataOnly)
+                                result = result + IntToHexSigned((UIntPtr)memory[0], 2) + ' ';
+                            isPrefix = true;
+                            startOffset += 1;
+                            _prefix2.Add(memory[0]);
+                            memory = memory.Shift(1);
+                            if (offset.ToUInt64() > initialOffset.ToUInt64() + 24)  //too long
+                            {
+                                description = "";
+                                LastDisassembleData.OpCode = "??";
+                                offset = initialOffset + 1;
+                                return result;
+                            }
+
+                        }
+                        else
+                            isPrefix = false;
+                    }
+                    var noVexPossible = false;
+                    if (_prefix2.Contains(0xf0))
+                    {
+                        tempResult = "lock ";
+                        noVexPossible = true;
+                    }
+                    if (_prefix2.Contains(0xf2))
+                    {
+                        tempResult += "repne ";
+                        noVexPossible = true;
+                    }
+                    if (_prefix2.Contains(0xf3))
+                    {
+                        tempResult += "repe ";
+                        noVexPossible = true;
+                    }
+                    LastDisassembleData.Prefix = tempResult;
+                    _opCodeFlags.Clear();
+                    _rexPrefix = 0;
+                    if (Is64Bit)
+                    {
+                        if (AMathUtils.InRangeX(memory[0], 0x40, 0x4f))  //does it start with a rex prefix ?
+                        {
+                            LastDisassembleData.Bytes.Inc();
+                            LastDisassembleData.Bytes.Last = memory[0];
+                            _rexPrefix = memory[0];
+                            _opCodeFlags.B = (_rexPrefix & BIT_REX_B) == BIT_REX_B;
+                            _opCodeFlags.X = (_rexPrefix & BIT_REX_X) == BIT_REX_X;
+                            _opCodeFlags.R = (_rexPrefix & BIT_REX_R) == BIT_REX_R;
+                            _opCodeFlags.W = (_rexPrefix & BIT_REX_W) == BIT_REX_W;
+                            if (!IsDataOnly)
+                                result = result + IntToHexSigned((UIntPtr)_rexPrefix, 2) + ' ';
+                            offset += 1;
+                            startOffset += 1;
+                            _prefix2.Add(_rexPrefix);
+                            memory = memory.Shift(1);
+                            noVexPossible = true;
+                            if (offset.ToUInt64() > initialOffset.ToUInt64() + 24)
+                            {
+                                description = "";
+                                LastDisassembleData.OpCode = "??";
+                                offset = initialOffset + 1;
+                                return result;
+                            }
+                        }
+                    }
+                    var prefixSize = LastDisassembleData.Bytes.Length;
+                    LastDisassembleData.PrefixSize = prefixSize;
+                    if (noVexPossible == false && AMathUtils.InRangeX(memory[0], 0xc4, 0xc5))
+                    {
+                        _hasVex = true;
+                        int bytesToMove;
+                        if (memory[0] == 0xc5)
+                        {
+                            //2 byte VEX
+                            prefixSize += 2;
+                            var vex2 = new AVex2Byte(memory.ToIntPtr(1));
+                            _opCodeFlags.Pp = vex2.Pp;
+                            _opCodeFlags.L = vex2.L == 1;
+                            _opCodeFlags.Vvvv = vex2.Vvvv;
+                            _opCodeFlags.R = vex2.R == 0;
+                            _opCodeFlags.Mmmmm = 1;
+                            i = LastDisassembleData.Bytes.Length;
+                            LastDisassembleData.Bytes.SetLength(i + 2);
+                            LastDisassembleData.Bytes[i] = memory[0];
+                            LastDisassembleData.Bytes[i + 1] = memory[1];
+                            memory[1] = 0xf;
+                            bytesToMove = 1;
+                            memory = memory.Shift(1);
+                            offset += 1;
+                        }
+                        else
+                        {
+                            //3 byte vex
+                            prefixSize += 3;
+                            var vex3 = new AVex3Byte(memory.ToIntPtr(1));
+                            _opCodeFlags.Pp = vex3.Pp;
+                            _opCodeFlags.L = vex3.L == 1;
+                            _opCodeFlags.Vvvv = vex3.Vvvv;
+                            _opCodeFlags.W = vex3.W == 1; //this one is NOT inverted
+                            _opCodeFlags.Mmmmm = vex3.Mmmmm;
+                            _opCodeFlags.B = vex3.B == 0;
+                            _opCodeFlags.X = vex3.X == 0;
+                            _opCodeFlags.R = vex3.R == 0;
+                            i = LastDisassembleData.Bytes.Length;
+                            LastDisassembleData.Bytes.SetLength(i + 3);
+                            LastDisassembleData.Bytes[i] = memory[0];
+                            LastDisassembleData.Bytes[i + 1] = memory[1];
+                            LastDisassembleData.Bytes[i + 2] = memory[2];
+                            /* mmmmm:
+                            00000: Reserved for future use (will #UD)
+                            00001: implied 0F leading opcode byte
+                            00010: implied 0F 38 leading opcode bytes
+                            00011: implied 0F 3A leading opcode bytes
+                            00100-11111: Reserved for future use (will #UD)
+                            */
+                            bytesToMove = 3; //number of bytes to shift
+                            switch (_opCodeFlags.Mmmmm)
+                            {
+                                case 1:
+                                    {
+                                        bytesToMove = 2;
+                                        memory[2] = 0xf;
+                                    }
+                                    break;
+                                case 2:
+                                    {
+                                        bytesToMove = 1;
+                                        memory[1] = 0xf;
+                                        memory[2] = 0x38;
+                                    }
+                                    break;
+                                case 3:
+                                    {
+                                        bytesToMove = 1;
+                                        memory[1] = 0xf;
+                                        memory[2] = 0x3a;
+                                    }
+                                    break; //else invalid
+                            }
+                            memory = memory.Shift(bytesToMove);
+                            offset += bytesToMove;
+                        }
+                        switch (_opCodeFlags.Pp)
+                        {
+                            case 1:
+                                _prefix2.Add(0x66);
+                                break;
+                            case 2:
+                                _prefix2.Add(0xf3);
+                                break;
+                            case 3:
+                                _prefix2.Add(0xf2);
+                                break;
+                        }
+                    }
+                    else
+                        _hasVex = false;
+                    //compatibility fix for code that still checks for rex.* or sets it as a temporary flag replacement
+                    _rexPrefix = (Byte)(_opCodeFlags.B ? _rexPrefix | BIT_REX_B : _rexPrefix);
+                    _rexPrefix = (Byte)(_opCodeFlags.X ? _rexPrefix | BIT_REX_X : _rexPrefix);
+                    _rexPrefix = (Byte)(_opCodeFlags.R ? _rexPrefix | BIT_REX_R : _rexPrefix);
+                    _rexPrefix = (Byte)(_opCodeFlags.W ? _rexPrefix | BIT_REX_W : _rexPrefix);
+                    if (
+                        !DisassembleProcess1(memory, ref offset, ref prefixSize, ref last, ref description) &&
+                        !DisassembleProcess2(memory, ref offset, ref prefixSize, ref last, ref description) &&
+                        !DisassembleProcess3(memory, ref offset, ref prefixSize, ref last, ref description) &&
+                        !DisassembleProcess4(memory, ref offset, ref prefixSize, ref last, ref description) &&
+                        !DisassembleProcess5(memory, ref offset, ref prefixSize, ref last, ref description)
+                        )
+                    {
+                        LastDisassembleData.OpCode = "db";
+                        LastDisassembleData.Parameters = AStringUtils.IntToHex(memory[0], 2);
+                    }
+                    if (LastDisassembleData.Parameters != "" && LastDisassembleData.Parameters[LastDisassembleData.Parameters.Length - 1] == ',')
+                        LastDisassembleData.Parameters = UStringUtils.SubStr(LastDisassembleData.Parameters, 0, -1); // todo check if this actually shrinks
+                    LastDisassembleData.Description = description;
+                    //copy the remaining bytes
+                    k = LastDisassembleData.Bytes.Length;
+                    if ((offset.ToIntPtr().ToInt64() - initialOffset.ToIntPtr().ToInt64()) < k)
+                        offset = initialOffset + k;
+                    LastDisassembleData.Bytes.SetLength((int)(offset.ToUInt64() - initialOffset.ToUInt64()));
+                    if ((k >= 32) || (k < 0))
+                        MessageBox.Show(AStringUtils.IntToHex(startOffset, 8) + "disassembler error 1", "debug here");
+                    var td = (UInt32)(offset.ToUInt64() - initialOffset.ToUInt64() - (UInt64)k);
+                    i = (int)(k + td);
+                    if ((td >= 32) || (i >= 32) || (i < 0))
+                        MessageBox.Show(AStringUtils.IntToHex(startOffset, 8) + "disassembler error 2", "debug here");
+                    if (td > 0)
+                    {
+                        var breakNow = false;
+                        try
+                        {
+                            using (var p1 = new UBytePtr(LastDisassembleData.Bytes.Buffer))
+                                AArrayUtils.CopyMemory(p1, k, _memory.ToIntPtr(), k, (int)td);
+                        }
+                        catch
+                        {
+                            breakNow = true;
+                        }
+                        if (breakNow)
+                            MessageBox.Show(AStringUtils.IntToHex(startOffset, 8) + "disassembler error 3", "debug here");
+                    }
+                    //adjust for the prefix.
+                    if (k != 0)
+                    {
+                        for (i = 0; i <= LastDisassembleData.SeparatorCount - 1; i++)
+                            LastDisassembleData.Separators[i] += prefixSize;
+
+                        if (LastDisassembleData.RipRelative != 0)
+                            LastDisassembleData.RipRelative += prefixSize;
+                    }
+                    //  result:=result+'- '+tempResult;
+                    if (_ripRelative)
+                    {
+                        //add the current offset to the code between []
+                        LastDisassembleData.ModRmValue = (UIntPtr)(offset.ToUInt64() + ((UIntPtr)((int)LastDisassembleData.ModRmValue)).ToUInt64()); //sign extended increase
+                        i = AStringUtils.Pos("[", LastDisassembleData.Parameters);
+                        j = AStringUtils.PosEx("]", LastDisassembleData.Parameters, i);
+                        var tempAddress = LastDisassembleData.ModRmValue;
+                        tempResult = AStringUtils.Copy(LastDisassembleData.Parameters, 1, i);
+                        tempResult += IntToHexSigned(tempAddress, 8);
+                        LastDisassembleData.Parameters = tempResult + AStringUtils.Copy(LastDisassembleData.Parameters, j, LastDisassembleData.Parameters.Length);
+                    }
+                }
+                else
+                {
+                    LastDisassembleData.OpCode = "??";
+                    offset += 1;
+                }
+                // todo handle cloak
+                //# ifdef windows
+                //string result;
+                //lastdisassembledata.iscloaked = hascloakedregioninrange(lastdisassembledata.address, length(lastdisassembledata.bytes), va, pa);
+                //#else
+                LastDisassembleData.IsCloaked = false;
+                //#endif
+                if (!IsDataOnly)
+                {
+                    result = AStringUtils.IntToHex(LastDisassembleData.Address, 8) + " - " + GetLastByteString();
+                    result += " - ";
+                    result = result + LastDisassembleData.Prefix + LastDisassembleData.OpCode;
+                    result += ' ';
+                    result += LastDisassembleData.Parameters;
+                }
+                // todo handle custom override
+                //if (assigned(onpostdisassemble))
+                //{
+                //    tempResult = result;
+                //    tempDescription = description;
+                //
+                //    if (onpostdisassemble(self, initialOffset, LastDisassembleData, tempResult, tempDescription))
+                //    {
+                //        result = tempResult;
+                //        description = tempDescription;
+                //
+                //        if (length(lastdisassembledata.bytes) > 0)
+                //            offset = initialOffset + length(lastdisassembledata.bytes);
+                //    }
+                //}
+            }
+            catch
+            {
+                //outputdebugstring(AStringUtils.IntToHex(startOffset,8)+':disassembler exception:'+e.message);
+                ///MessageBox(0,pchar('disassembler exception at '+ AStringUtils.IntToHex(startOffset,8)+#13#10+e.message+#13#10+#13#10+'Please provide dark byte the bytes that are at this address so he can fix it'#13#10'(Open another CE instance and in the hexadecimal view go to this address)'),'debug here',MB_OK);
+                throw new Exception("error make this work");
+            }
+            return result ?? "";
         }
         #endregion
     }
