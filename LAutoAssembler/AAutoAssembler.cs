@@ -63,11 +63,15 @@ namespace SputnikAsm.LAutoAssembler
         public String rsWrongSyntaxSHAREDALLOCNameSize = "Wrong syntax. SHAREDALLOC(name,size)";
         public String rsInvalidInteger = "Invalid integer";
         #endregion
+        #region Variables
         public AAssembler Assembler;
+        #endregion
+        #region Constructor
         public AAutoAssembler()
         {
             Assembler = new AAssembler();
         }
+        #endregion
         #region RemoveComments
         public void RemoveComments(ARefStringArray code)
         {
@@ -265,14 +269,6 @@ namespace SputnikAsm.LAutoAssembler
         }
         #endregion
         #region ReplaceStructWithDefines
-        public void structError()
-        {
-            Console.WriteLine("err");
-        }
-        public void structError(string a)
-        {
-            Console.WriteLine("err");
-        }
         public void ReplaceStructWithDefines(ARefStringArray code, int linenr)
         {
             int currentOffset;
@@ -291,19 +287,19 @@ namespace SputnikAsm.LAutoAssembler
             currentOffset = 0;
             tokens = new ARefStringArray();
             elements = new ARefStringArray();
-            for (i = linenr + 1; i <= code.Length - 1; i++)
+            for (i = linenr + 1; i < code.Length; i++)
             {
                 lastlinenr = i;
                 TokenizeStruct(code[i].Value, tokens);
                 j = 0;
-                if (tokens.Length > 0)
+                if (tokens.Length > 0 && !String.IsNullOrEmpty(tokens[0].Value))
                 {
                     //first check if it's a label definition
-                    if (tokens[0].Value[tokens[0].Length] == ':')
+                    if (tokens[0].Value[tokens[0].Length - 1] == ':')
                     {
-                        elementname = AStringUtils.Copy(tokens[0].Value, 1, tokens[0].Length - 1);
+                        elementname = AStringUtils.Copy(tokens[0].Value, 0, tokens[0].Length - 1);
                         if (Assembler.GetOpCodesIndex(elementname) != -1)
-                            structError(elementname + " is a reserved word");
+                            StructError(elementname + " is a reserved word", structname, lastlinenr + 1);
                         elements.Add(elementname, currentOffset);
                         j = 1;
                     }
@@ -323,9 +319,9 @@ namespace SputnikAsm.LAutoAssembler
                         case 'R':
                             {
                                 //could be res*
-                                if ((tokens[j].Length == 4) && (AStringUtils.Copy(tokens[j].Value, 1, 3) == "RES"))
+                                if ((tokens[j].Length == 4) && (AStringUtils.Copy(tokens[j].Value, 0, 3) == "RES"))
                                 {
-                                    switch (tokens[j].Value[4])
+                                    switch (tokens[j].Value[3])
                                     {
                                         case 'B':
                                             bytesize = 1;
@@ -340,17 +336,17 @@ namespace SputnikAsm.LAutoAssembler
                                             bytesize = 8;
                                             break;
                                         default:
-                                            structError();
+                                            StructError(null, structname, lastlinenr + 1);
                                             break;
                                     }
                                     //now get the count
                                     j += 1;
                                     if (j >= tokens.Length)
-                                        structError();
+                                        StructError(null, structname, lastlinenr + 1);
                                     currentOffset += bytesize * AStringUtils.StrToInt(tokens[j].Value);
                                 }
                                 else
-                                    structError();
+                                    StructError(null, structname, lastlinenr + 1);
                             }
                             break;
                         case 'D':
@@ -358,7 +354,7 @@ namespace SputnikAsm.LAutoAssembler
                                 //could be d* ?
                                 if (tokens[j].Length == 2)
                                 {
-                                    switch (tokens[j].Value[2])
+                                    switch (tokens[j].Value[1])
                                     {
                                         case 'B':
                                             bytesize = 1;
@@ -373,12 +369,12 @@ namespace SputnikAsm.LAutoAssembler
                                             bytesize = 8;
                                             break;
                                         default:
-                                            structError();
+                                            StructError(null, structname, lastlinenr + 1);
                                             break;
                                     }
                                     j += 1;
                                     if (j >= tokens.Length)
-                                        structError();
+                                        StructError(null, structname, lastlinenr + 1);
                                     currentOffset += bytesize;
                                     //check if there are more ?'s after this (in case of dw ? ? ?)
                                     while (j < tokens.Length - 1)
@@ -394,29 +390,41 @@ namespace SputnikAsm.LAutoAssembler
 
                                 }
                                 else
-                                    structError();
+                                    StructError(null, structname, lastlinenr + 1);
                             }
                             break;
-
                         default:
-                            structError("No idea what " + tokens[j].Value + " is"); //we already dealth with labels, so this is wrong
+                            //we already dealth with labels, so this is wrong
+                            StructError("No idea what '" + tokens[j].Value + "' is", structname, lastlinenr + 1);
                             break;
                     }
                     j += 1; //next token
                 }
             }
             if (endfound == false)
-                structError("No end found");
-
-            //the elements have been filled in, delete the structure (between linenr and lastlinenr) and inject define(element,offset) and define(structname.element,offset)
+                StructError("No end found", structname, lastlinenr + 1);
+            // the elements have been filled in, delete the structure (between linenr and lastlinenr)
+            // and inject define(element,offset)
+            // and define(structname.element,offset)
             for (i = lastlinenr; i >= linenr; i--)
                 code.RemoveAt(i);
             for (i = 0; i <= elements.Length - 1; i++)
             {
-                code.Insert(linenr, "define(" + elements[i].Value + ',' + AStringUtils.IntToHex(elements[i].Length, 1) + ')');
+                code.Insert(linenr, "define(" + elements[i].Value + ',' + AStringUtils.IntToHex(elements[i].Position, 1) + ')');
                 code.Insert(linenr, "define(" + structname + '.' + elements[i].Value + ',' + AStringUtils.IntToHex(elements[i].Position, 1) + ')');
             }
             code.Insert(linenr, "define(" + structname + "_size," + AStringUtils.IntToHex(currentOffset, 1) + ')');
+        }
+        #endregion
+        #region StructError
+        private void StructError(String reason, String structName, int lineNumber)
+        {
+            var error = "Error in the structure definition of " + structName + " at line " + lineNumber;
+            if (!String.IsNullOrEmpty(reason))
+                error = error + " :" + reason;
+            else
+                error += '.';
+            throw new Exception(error);
         }
         #endregion
     }

@@ -190,9 +190,9 @@ namespace SputnikAsm.LGenerics
         {
             if (index < 0)
                 return;
-            EnsureCapacity(index + length + 1);
             var saved = Raw;
-            for (var i = 0; i < data.Length; i++)
+            EnsureCapacity(Length + data.Length);
+            for (var i = 0; i < length; i++)
                 Raw[index + i] = data[i];
             for (var i = 0; i < saved.Length; i++)
                 Raw[index + i + data.Length] = saved[i];

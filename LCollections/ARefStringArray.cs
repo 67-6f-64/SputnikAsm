@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using SputnikAsm.LGenerics;
 using SputnikAsm.LString;
@@ -37,6 +38,13 @@ namespace SputnikAsm.LCollections
         public void Add(String value, int index)
         {
             Add(new ARefString(value, index));
+        }
+        #endregion
+        #region AddRange
+        public void AddRange(IEnumerable<String> array)
+        {
+            foreach (var item in array)
+                Add(item);
         }
         #endregion
         #region Insert
