@@ -1,4 +1,7 @@
 ﻿using System;
+using Sputnik.LString;
+using SputnikAsm.LCollections;
+using SputnikAsm.LUtils;
 
 namespace SputnikAsm.LAutoAssembler
 {
@@ -57,7 +60,101 @@ namespace SputnikAsm.LAutoAssembler
         public String rsYouHavnTSpecifiedAEnableSection = "You have not specified a enable section";
         public String rsYouHavnTSpecifiedADisableSection = "You have not specified a disable section";
         public String rsWrongSyntaxSHAREDALLOCNameSize = "Wrong syntax. SHAREDALLOC(name,size)";
-        public String rsInvalidInteger = "Invalid integer";    
+        public String rsInvalidInteger = "Invalid integer";
+        #endregion
+        #region RemoveComments
+        public void RemoveComments(AStringArray code)
+        {
+            var inString = false;
+            var inComment = false;
+            for (var i = 0; i < code.Length; i++)
+            {
+                var currentLine = code[i];
+                using (var p = new UCharPtr(currentLine))
+                {
+                    for (var j = 0; j < currentLine.Length; j++)
+                    {
+                        if (inComment)
+                        {
+                            //inside a comment, remove everything till a } is encountered
+                            if ((p[j] == '}') || ((p[j] == '*') && (j < p.Size) && (p[j + 1] == '/')))
+                            {
+                                inComment = false; //and continue parsing the code...
+                                if ((p[j] == '*') && (j < currentLine.Length) && (p[j + 1] == '/'))
+                                    p[j + 1] = ' ';
+                            }
+                            p[j] = ' ';
+                        }
+                        else
+                        {
+                            if (p[j] == '\'')
+                                inString = !inString;
+                            if (p[j] == '\t')
+                                p[j] = ' '; //tabs are basicly comments
+                            if (!inString)
+                            {
+                                //not inside a string, so comment markers need to be dealt with
+                                if ((p[j] == '/') && (j < p.Size) && (p[j + 1] == '/'))  //- comment (only the rest of the line)
+                                {
+                                    //cut off till the end of the line (and might as well jump out now)
+                                    currentLine = AStringUtils.Copy(currentLine, 0, j);
+                                    break;
+                                }
+                                if ((p[j] == '{') || ((p[j] == '/') && (j < p.Size) && (p[j + 1] == '*')))
+                                {
+                                    inComment = true;
+                                    p[j] = ' '; //replace from here till the first } with spaces, this goes on for multiple lines
+                                }
+                            }
+                        }
+                    }
+                }
+                code[i] = currentLine.Trim();
+            }
+        }
+        #endregion
+        #region GetEnableAndDisablePos
+        public Boolean GetEnableAndDisablePos(AStringArray code, out int enablePos, out int disablePos)
+        {
+            var result = false;
+            enablePos = -1;
+            disablePos = -1;
+            for (var i = 0; i < code.Length; i++)
+            {
+                var currentLine = code[i];
+                var j = AStringUtils.Pos("//", currentLine);
+                if (j > 0)
+                    currentLine = AStringUtils.Copy(currentLine, 1, j - 1);
+                while ((currentLine.Length > 0) && (currentLine[1] == ' '))
+                    currentLine = AStringUtils.Copy(currentLine, 2, currentLine.Length - 1);
+                while ((currentLine.Length > 0) && (currentLine[currentLine.Length - 1] == ' '))
+                    currentLine = AStringUtils.Copy(currentLine, 1, currentLine.Length - 1);
+                if (currentLine.Length == 0)
+                    continue;
+                if (AStringUtils.Copy(currentLine, 1, 2) == "//")
+                    continue; //skip
+                if (currentLine.ToUpper() == "[ENABLE]")
+                {
+                    result = true; //there's at least a enable section, so it's ok
+                    if (enablePos != -1)
+                    {
+                        enablePos = -2;
+                        return true;
+                    }
+                    enablePos = i;
+                }
+                if (currentLine.ToUpper() == "[DISABLE]")
+                {
+                    if (disablePos != -1)
+                    {
+                        disablePos = -2;
+                        return result;
+                    }
+                    disablePos = i;
+                }
+            }
+            return result;
+        }
         #endregion
     }
 }

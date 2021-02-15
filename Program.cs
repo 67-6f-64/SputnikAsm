@@ -1,6 +1,7 @@
 ﻿using System;
 using Sputnik.LUtils;
 using SputnikAsm.LAssembler;
+using SputnikAsm.LAutoAssembler;
 using SputnikAsm.LCollections;
 
 namespace SputnikAsm
@@ -17,6 +18,24 @@ namespace SputnikAsm
             Console.WriteLine("Result: " + result);
             Console.WriteLine("Bytes:");
             Console.WriteLine(UBinaryUtils.Expand(b.Raw));
+
+
+            var cc = @"
+            mov eax, edx
+            [Enable]
+            mov esi, edi
+            [Disable]
+            lea eax, [esi]
+            ";
+            var aa = new AAutoAssembler();
+            var code = new AStringArray();
+            code.Assign(UStringUtils.GetLines(cc).ToArray());
+            aa.RemoveComments(code);
+            foreach(var l in code.Raw)
+                Console.WriteLine("Code: " + l);
+
+            var ret = aa.GetEnableAndDisablePos(code, out int epos, out int dpos);
+            Console.WriteLine("Found " + ret + " Enable " + epos + " Disable " + dpos);
 
 
             Console.ReadKey();
