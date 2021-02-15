@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Windows.Forms;
+using Sputnik.LDateTime;
 using Sputnik.LFileSystem;
 using Sputnik.LString;
 using Sputnik.LUtils;
@@ -13,6 +14,7 @@ using SputnikAsm.LGenerics;
 using SputnikAsm.LProcess;
 using SputnikAsm.LProcess.LMemory;
 using SputnikAsm.LProcess.LNative.LTypes;
+using SputnikAsm.LProcess.LThreads;
 using SputnikAsm.LProcess.Utilities;
 using SputnikAsm.LString;
 using SputnikAsm.LSymbolHandler;
@@ -885,13 +887,20 @@ namespace SputnikAsm.LAutoAssembler
             AArrayManager<ADefines> defines
             )
         {
-            var result = UIntPtr.Zero;
-            if (targetSelf)
-                result = SelfSymbolHandler.GetAddressFromName(name);
-            else
-                result = Assembler.SymHandler.GetAddressFromName(name);
-            if (result != UIntPtr.Zero)
-                return result;
+            try
+            {
+                UIntPtr result;
+                if (targetSelf)
+                    result = SelfSymbolHandler.GetAddressFromName(name);
+                else
+                    result = Assembler.SymHandler.GetAddressFromName(name);
+                if (result != UIntPtr.Zero)
+                    return result;
+            }
+            catch
+            {
+                // ignored
+            }
             name = name.ToUpper();
             for (var j = 0; j < labels.Length; j++)
             {
@@ -913,7 +922,7 @@ namespace SputnikAsm.LAutoAssembler
                 if (defines[j].Name.ToUpper() == name)
                     return Assembler.SymHandler.GetAddressFromName(defines[j].Whatever);
             }
-            return result;
+            return UIntPtr.Zero;
         }
         #endregion
         #region AutoAssemble
@@ -1038,6 +1047,7 @@ namespace SputnikAsm.LAutoAssembler
             var prefered = UIntPtr.Zero;
             var oldprefered = UIntPtr.Zero;
             var protection = MemoryProtectionFlags.ExecuteReadWrite;
+            IARemoteThread threadhandle = null;
             var result = false;
             allocs.SetLength(0);
             kallocs.SetLength(0);
@@ -1368,69 +1378,56 @@ namespace SputnikAsm.LAutoAssembler
                                     throw new Exception(rsWrongSyntaxIncludeFilenameCea);
                             }
                             #endregion
-                            #region Command CREATETHREAD() -- todo
-                            /*
-
-                            if (uppercase(copy(currentline, 1, 12)) == "CREATETHREAD")
+                            #region Command CREATETHREAD()
+                            if (AStringUtils.Copy(currentline, 0, 13).ToUpper() == "CREATETHREAD(")
                             {
-                                if (currentline[13] == '(')  //CREATETHREAD(
+                                a = AStringUtils.Pos("(", currentline);
+                                b = AStringUtils.Pos(")", currentline);
+                                if (a != -1 && b != -1)
                                 {
-                                    //create a thread
-                                    a = pos("(", currentline);
-                                    b = pos(")", currentline);
-                                    if ((a != -1) && (b != -1))
-                                    {
-                                        s1 = trim(copy(currentline, a + 1, b - a - 1));
-                                        setlength(createthread, length(createthread) + 1);
-                                        createthread[length(createthread) - 1] = s1;
+                                    s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
+                                    createthread.SetLength(createthread.Length + 1);
+                                    createthread.Last = s1;
 
-                                        setlength(assemblerlines, length(assemblerlines) - 1);
-                                        continue_;
-                                    }
-                                    else create(rswrongsyntaxcreatethreadaddress);
+                                    assemblerlines.SetLength(assemblerlines.Length - 1);
+                                    continue;
                                 }
                                 else
-                                {
-                                    //could be createthreadandwait
-                                    if (uppercase(copy(currentline, 13, 8)) == "ANDWAIT(")  //CREATETHREADANDWAIT(
-                                    {
-                                        a = pos("(", currentline);
-                                        b = pos(")", currentline);
-                                        if ((a > 0) && (b > 0))
-                                        {
-                                            s1 = trim(copy(currentline, a + 1, b - a - 1));
-
-                                            slist = s1.split(set::of(',', eos));
-                                            if (length(slist) == 2)
-                                            {
-                                                //try
-                                                j = strtoint(trim(slist[1]));
-                                                //except
-                                                create("Invalid timeout for createthreadandwait");
-                                                //end;
-                                            }
-                                            else
-                                            {
-                                                if ((lastloadedtableversion > 0) && (lastloadedtableversion <= 30))  //when the current table was made with an older CE build and it uses  CREATETHREADANDWAIT
-                                                    j = 5000;
-                                                else
-                                                    j = 0;
-                                            }
-
-
-                                            setlength(createthreadandwait, length(createthreadandwait) + 1);
-                                            createthreadandwait[length(createthreadandwait) - 1].name = slist[0];
-                                            createthreadandwait[length(createthreadandwait) - 1].position = length(assemblerlines) - 1;
-                                            createthreadandwait[length(createthreadandwait) - 1].timeout = j;
-
-                                            setlength(assemblerlines, length(assemblerlines) - 1);
-                                            continue_;
-                                        }
-                                        else create(rswrongsyntaxcreatethreadaddress);
-                                    }
-                                }
+                                    throw new Exception(rsWrongSyntaxCreateThreadAddress);
                             }
-                            */
+                            #endregion
+                            #region Command CREATETHREADANDWAIT()
+                            if (AStringUtils.Copy(currentline, 0, 20).ToUpper() == "CREATETHREADANDWAIT(")
+                            {
+                                a = AStringUtils.Pos("(", currentline);
+                                b = AStringUtils.Pos(")", currentline);
+                                if (a != -1 && b != -1)
+                                {
+                                    s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
+                                    slist.Assign(s1.Split(','));
+                                    if (slist.Length == 2)
+                                    {
+                                        try
+                                        {
+                                            j = AStringUtils.StrToInt(slist[1].Trim());
+                                        }
+                                        catch
+                                        {
+                                            throw new Exception("Invalid timeout for CreateThreadAndWait");
+                                        }
+                                    }
+                                    else
+                                        j = 5000;
+                                    createthreadandwait.SetLength(createthreadandwait.Length + 1);
+                                    createthreadandwait.Last.Name = slist[0];
+                                    createthreadandwait.Last.Position = assemblerlines.Length - 1;
+                                    createthreadandwait.Last.Timeout = j;
+                                    assemblerlines.SetLength(assemblerlines.Length - 1);
+                                    continue;
+                                }
+                                else
+                                    throw new Exception(rsWrongSyntaxCreateThreadAddress);
+                            }
                             #endregion
                             #region Command READMEM()
                             if (AStringUtils.Copy(currentline, 0, 8).ToUpper() == "READMEM(")
@@ -2079,125 +2076,147 @@ namespace SputnikAsm.LAutoAssembler
                     }
                 }
                 #endregion
-                #region Sanity Check (Create Thread) -- todo
-                //if (createthread.Length > 0)
-                //{
-                //    for (i = 0; i < createthread.Length; i++)
-                //    {
-                //        ok1 = true;
-                //
-                //        //try
-                //        testPtr = symHandler.getAddressFromName(createthread[i]);
-                //        //except
-                //        ok1 = false;
-                //        //end;
-                //        if (!ok1)
-                //        {
-                //            for (j = 0; j <= length(labels) - 1; j++)
-                //            {
-                //                if (uppercase(labels[j].labelname) == uppercase(createthread[i]))
-                //                {
-                //                    ok1 = true;
-                //                    flush();
-                //                }
-                //            }
-                //        }
-                //        if (!ok1)
-                //        {
-                //            for (j = 0; j <= length(allocs) - 1; j++)
-                //            {
-                //                if (uppercase(allocs[j].varname) == uppercase(createthread[i]))
-                //                {
-                //                    ok1 = true;
-                //                    flush();
-                //                }
-                //            }
-                //        }
-                //        if (!ok1)
-                //        {
-                //            for (j = 0; j <= length(kallocs) - 1; j++)
-                //            {
-                //                if (uppercase(kallocs[j].varname) == uppercase(createthread[i]))
-                //                {
-                //                    ok1 = true;
-                //                    flush();
-                //                }
-                //            }
-                //        }
-                //        if (!ok1)
-                //        {
-                //            for (j = 0; j <= length(defines) - 1; j++)
-                //            {
-                //                if (uppercase(defines[j].name) == uppercase(createthread[i]))
-                //                {
-                //                    //try
-                //                    testPtr = symHandler.getAddressFromName(defines[j].whatever);
-                //                    ok1 = true;
-                //                    //except
-                //                    //end;
-                //                    flush();
-                //                }
-                //            }
-                //        }
-                //        if (!ok1)
-                //            throw new Exception(UStringUtils.Sprintf(rsTheAddressInCreatethreadIsNotValid, createthread[i]));
-                //    }
-                //}
+                #region Sanity Check (Create Thread)
+                if (createthread.Length > 0)
+                {
+                    for (i = 0; i < createthread.Length; i++)
+                    {
+                        ok1 = true;
+                        try
+                        {
+                            testPtr = symHandler.GetAddressFromName(createthread[i]);
+                        }
+                        catch
+                        {
+                            ok1 = false;
+                        }
+                        if (!ok1)
+                        {
+                            for (j = 0; j < labels.Length; j++)
+                            {
+                                if (String.Equals(labels[j].Name, createthread[i], StringComparison.CurrentCultureIgnoreCase))
+                                {
+                                    ok1 = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!ok1)
+                        {
+                            for (j = 0; j < allocs.Length; j++)
+                            {
+                                if (String.Equals(allocs[j].Name, createthread[i], StringComparison.CurrentCultureIgnoreCase))
+                                {
+                                    ok1 = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!ok1)
+                        {
+                            for (j = 0; j < kallocs.Length; j++)
+                            {
+                                if (String.Equals(kallocs[j].Name, createthread[i], StringComparison.CurrentCultureIgnoreCase))
+                                {
+                                    ok1 = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!ok1)
+                        {
+                            for (j = 0; j < defines.Length; j++)
+                            {
+                                if (String.Equals(defines[j].Name, createthread[i], StringComparison.CurrentCultureIgnoreCase))
+                                {
+                                    try
+                                    {
+                                        testPtr = symHandler.GetAddressFromName(defines[j].Whatever);
+                                        ok1 = true;
+                                    }
+                                    catch
+                                    {
+                                        // ignored
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                        if (!ok1)
+                            throw new Exception(UStringUtils.Sprintf(rsTheAddressInCreatethreadIsNotValid, createthread[i]));
+                    }
+                }
                 #endregion
-                #region Sanity Check (Create Thread And Wait) -- todo
-                // if (length(createthreadandwait) > 0)
-                //     for (i = 0; i <= length(createthreadandwait) - 1; i++)
-                //     {
-                //         ok1 = true;
-                // 
-                //         //try
-                //         testptr = symhandler.getaddressfromname(createthreadandwait[i].name);
-                //         //except
-                //         ok1 = false;
-                //         //end;
-                // 
-                //         if (~ok1)
-                //             for (j = 0; j <= length(labels) - 1; j++)
-                //                 if (uppercase(labels[j].labelname) == uppercase(createthreadandwait[i].name))
-                //                 {
-                //                     ok1 = true;
-                //                     flush();
-                //                 }
-                // 
-                //         if (~ok1)
-                //             for (j = 0; j <= length(allocs) - 1; j++)
-                //                 if (uppercase(allocs[j].varname) == uppercase(createthreadandwait[i].name))
-                //                 {
-                //                     ok1 = true;
-                //                     flush();
-                //                 }
-                // 
-                //         if (~ok1)
-                //             for (j = 0; j <= length(kallocs) - 1; j++)
-                //                 if (uppercase(kallocs[j].varname) == uppercase(createthreadandwait[i].name))
-                //                 {
-                //                     ok1 = true;
-                //                     flush();
-                //                 }
-                // 
-                //         if (~ok1)
-                //             for (j = 0; j <= length(defines) - 1; j++)
-                //                 if (uppercase(defines[j].name) == uppercase(createthreadandwait[i].name))
-                //                 {
-                //                     //try
-                //                     testptr = symhandler.getaddressfromname(defines[j].whatever);
-                //                     ok1 = true;
-                //                     //except
-                //                     //end;
-                //                     flush();
-                //                 }
-                // 
-                //         if (~ok1)
-                //         {
-                //             create(format(rstheaddressincreatethreadandwaitisnotvalid, set::of(createthreadandwait[i].name, eos)));
-                //         }
-                // 
-                //     }
+                #region Sanity Check (Create Thread And Wait)
+                if (createthreadandwait.Length > 0)
+                {
+                    for (i = 0; i < createthreadandwait.Length; i++)
+                    {
+                        ok1 = true;
+                        try
+                        {
+                            testPtr = symHandler.GetAddressFromName(createthreadandwait[i].Name);
+                        }
+                        catch
+                        {
+                            ok1 = false;
+                        }
+                        if (!ok1)
+                        {
+                            for (j = 0; j < labels.Length; j++)
+                            {
+                                if (String.Equals(labels[j].Name, createthreadandwait[i].Name, StringComparison.CurrentCultureIgnoreCase))
+                                {
+                                    ok1 = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!ok1)
+                        {
+                            for (j = 0; j < allocs.Length; j++)
+                            {
+                                if (String.Equals(allocs[j].Name, createthreadandwait[i].Name, StringComparison.CurrentCultureIgnoreCase))
+                                {
+                                    ok1 = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!ok1)
+                        {
+                            for (j = 0; j < kallocs.Length; j++)
+                            {
+                                if (String.Equals(kallocs[j].Name, createthreadandwait[i].Name, StringComparison.CurrentCultureIgnoreCase))
+                                {
+                                    ok1 = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!ok1)
+                        {
+                            for (j = 0; j < defines.Length; j++)
+                            {
+                                if (String.Equals(defines[j].Name, createthreadandwait[i].Name, StringComparison.CurrentCultureIgnoreCase))
+                                {
+                                    try
+                                    {
+                                        testPtr = symHandler.GetAddressFromName(defines[j].Whatever);
+                                        ok1 = true;
+                                    }
+                                    catch
+                                    {
+                                        // ignored
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                        if (!ok1)
+                            throw new Exception(UStringUtils.Sprintf(rsTheAddressInCreatethreadAndWaitIsNotValid, createthreadandwait[i].Name));
+                    }
+                }
                 #endregion
                 #region Sanity Check (Load Binary) -- todo
                 //if (length(loadbinary) > 0)
@@ -2409,135 +2428,133 @@ namespace SputnikAsm.LAutoAssembler
                         {
                             for (j = 0; j < labels.Length; j++)
                             {
-                                if (TokenCheck(currentline, labels[j].Name))
+                                if (!TokenCheck(currentline, labels[j].Name))
+                                    continue;
+                                if (!labels[j].Defined)
                                 {
-                                    if (!labels[j].Defined)
+                                    //the address hasn't been found yet
+                                    //this is the part that causes those nops after a short jump below the current instruction
+                                    //problem: The size of these instructions determine where this label will be defined
+                                    //close
+                                    s1 = ReplaceToken(currentline, labels[j].Name, AStringUtils.IntToHex(currentaddress, 8));
+                                    //far and big
+                                    // todo add back when arm is added
+                                    //if (processhandler.systemarchitecture == archarm)
+                                    //    currentline = ReplaceToken(currentline, labels[j].Name, AStringUtils.IntToHex(currentaddress + 0x4fffff8, 8));
+                                    //else
                                     {
-                                        //the address hasn't been found yet
-                                        //this is the part that causes those nops after a short jump below the current instruction
-                                        //problem: The size of these instructions determine where this label will be defined
-                                        //close
-                                        s1 = ReplaceToken(currentline, labels[j].Name, AStringUtils.IntToHex(currentaddress, 8));
-                                        //far and big
-                                        // todo add back when arm is added
-                                        //if (processhandler.systemarchitecture == archarm)
-                                        //    currentline = ReplaceToken(currentline, labels[j].Name, AStringUtils.IntToHex(currentaddress + 0x4fffff8, 8));
-                                        //else
+                                        if (process.IsX64)  //and not in region
                                         {
-                                            if (process.IsX64)  //and not in region
+                                            //check if between here and the definition of labels[j].labelname is an write pointer change specifier to a region too far away from currentaddress, if not, LONG will suffice
+                                            //tip: you 'could' disassemble everything inbetween and see if a small jmp is possible as well (just a lot slower)
+                                            mustbefar = false;
+                                            for (l = i + 1; l < assemblerlines.Length; l++)
                                             {
-                                                //check if between here and the definition of labels[j].labelname is an write pointer change specifier to a region too far away from currentaddress, if not, LONG will suffice
-                                                //tip: you 'could' disassemble everything inbetween and see if a small jmp is possible as well (just a lot slower)
-                                                mustbefar = false;
-                                                for (l = i + 1; l < assemblerlines.Length; l++)
+                                                currentline2 = assemblerlines[l].Line;
+                                                if (currentline2 == labels[j].Name + ':')
+                                                    break; //reached the label
+                                                if (currentline2[currentline2.Length - 1] == ':')
                                                 {
-                                                    currentline2 = assemblerlines[l].Line;
-                                                    if (currentline2 == labels[j].Name + ':')
-                                                        break; //reached the label
-                                                    if (currentline2[currentline2.Length - 1] == ':')
+                                                    //check if it's just a label or alloc in the same group
+                                                    for (k = 0; k < defines.Length; k++)
+                                                        currentline2 = ReplaceToken(currentline2, defines[k].Name, defines[k].Whatever);
+                                                    s2 = AStringUtils.Copy(currentline2, 0, currentline2.Length - 1);
+                                                    for (k = 0; k < allocs.Length; k++)
                                                     {
-                                                        //check if it's just a label or alloc in the same group
-                                                        for (k = 0; k < defines.Length; k++)
-                                                            currentline2 = ReplaceToken(currentline2, defines[k].Name, defines[k].Whatever);
-                                                        s2 = AStringUtils.Copy(currentline2, 0, currentline2.Length - 1);
-                                                        for (k = 0; k < allocs.Length; k++)
+                                                        if (allocs[k].Name == s2)
                                                         {
-                                                            if (allocs[k].Name == s2)
-                                                            {
-                                                                if (currentaddress.ToUInt64() > allocs[k].Address.ToUInt64())
-                                                                    diff = (UIntPtr)(currentaddress.ToUInt64() - allocs[k].Address.ToUInt64());
-                                                                else
-                                                                    diff = (UIntPtr)(allocs[k].Address.ToUInt64() - currentaddress.ToUInt64());
-                                                                if (diff.ToUInt64() >= 0x80000000)
-                                                                {
-                                                                    mustbefar = true;
-                                                                    break;
-                                                                }
-                                                            }
-                                                        }
-                                                        if (mustbefar)
-                                                            break;
-                                                        for (k = 0; k < kallocs.Length; k++)
-                                                        {
-                                                            if (kallocs[k].Name == s2)
-                                                            {
-                                                                if (currentaddress.ToUInt64() > kallocs[k].Address.ToUInt64())
-                                                                    diff = (UIntPtr)(currentaddress.ToUInt64() - kallocs[k].Address.ToUInt64());
-                                                                else
-                                                                    diff = (UIntPtr)(kallocs[k].Address.ToUInt64() - currentaddress.ToUInt64());
-                                                                if (diff.ToUInt64() >= 0x80000000)
-                                                                {
-                                                                    mustbefar = true;
-                                                                    break;
-                                                                }
-                                                            }
-                                                        }
-                                                        if (mustbefar)
-                                                            break;
-                                                        //if it's a label it's ok
-                                                        ok1 = false;
-                                                        for (k = 0; k < labels.Length; k++)
-                                                        {
-                                                            if (labels[k].Name == s2)
-                                                            {
-                                                                ok1 = true;
-                                                                break;
-                                                            }
-                                                        }
-                                                        if (ok1)
-                                                            continue; //it's a label, no need to do a heavy symbol lookupl // not an alloc or kalloc
-                                                        try
-                                                        {
-                                                            var testptr = symHandler.GetAddressFromName(AStringUtils.Copy(currentline2, 0, currentline2.Length - 1));
-                                                            if (currentaddress.ToUInt64() > testptr.ToUInt64())
-                                                                diff = (UIntPtr)(currentaddress.ToUInt64() - testptr.ToUInt64());
+                                                            if (currentaddress.ToUInt64() > allocs[k].Address.ToUInt64())
+                                                                diff = (UIntPtr)(currentaddress.ToUInt64() - allocs[k].Address.ToUInt64());
                                                             else
-                                                                diff = (UIntPtr)(testptr.ToUInt64() - currentaddress.ToUInt64());
+                                                                diff = (UIntPtr)(allocs[k].Address.ToUInt64() - currentaddress.ToUInt64());
                                                             if (diff.ToUInt64() >= 0x80000000)
                                                             {
                                                                 mustbefar = true;
                                                                 break;
                                                             }
                                                         }
-                                                        catch
+                                                    }
+                                                    if (mustbefar)
+                                                        break;
+                                                    for (k = 0; k < kallocs.Length; k++)
+                                                    {
+                                                        if (kallocs[k].Name == s2)
+                                                        {
+                                                            if (currentaddress.ToUInt64() > kallocs[k].Address.ToUInt64())
+                                                                diff = (UIntPtr)(currentaddress.ToUInt64() - kallocs[k].Address.ToUInt64());
+                                                            else
+                                                                diff = (UIntPtr)(kallocs[k].Address.ToUInt64() - currentaddress.ToUInt64());
+                                                            if (diff.ToUInt64() >= 0x80000000)
+                                                            {
+                                                                mustbefar = true;
+                                                                break;
+                                                            }
+                                                        }
+                                                    }
+                                                    if (mustbefar)
+                                                        break;
+                                                    //if it's a label it's ok
+                                                    ok1 = false;
+                                                    for (k = 0; k < labels.Length; k++)
+                                                    {
+                                                        if (labels[k].Name == s2)
+                                                        {
+                                                            ok1 = true;
+                                                            break;
+                                                        }
+                                                    }
+                                                    if (ok1)
+                                                        continue; //it's a label, no need to do a heavy symbol lookupl // not an alloc or kalloc
+                                                    try
+                                                    {
+                                                        var testptr = symHandler.GetAddressFromName(AStringUtils.Copy(currentline2, 0, currentline2.Length - 1));
+                                                        if (currentaddress.ToUInt64() > testptr.ToUInt64())
+                                                            diff = (UIntPtr)(currentaddress.ToUInt64() - testptr.ToUInt64());
+                                                        else
+                                                            diff = (UIntPtr)(testptr.ToUInt64() - currentaddress.ToUInt64());
+                                                        if (diff.ToUInt64() >= 0x80000000)
                                                         {
                                                             mustbefar = true;
-                                                        }
-                                                        if (mustbefar)
                                                             break;
+                                                        }
                                                     }
+                                                    catch
+                                                    {
+                                                        mustbefar = true;
+                                                    }
+                                                    if (mustbefar)
+                                                        break;
                                                 }
-                                                if (mustbefar)
-                                                    currentline = ReplaceToken(currentline, labels[j].Name, AStringUtils.IntToHex(currentaddress + 0xfffff, 8));
-                                                else
-                                                    currentline = ReplaceToken(currentline, labels[j].Name, AStringUtils.IntToHex(currentaddress + 0xfffff, 8));
                                             }
+                                            if (mustbefar)
+                                                currentline = ReplaceToken(currentline, labels[j].Name, AStringUtils.IntToHex(currentaddress + 0xfffff, 8));
                                             else
                                                 currentline = ReplaceToken(currentline, labels[j].Name, AStringUtils.IntToHex(currentaddress + 0xfffff, 8));
                                         }
-                                        assembled.Inc();
-                                        assembled.Last.CreateThreadAndWait = createthreadandwaitid;
-                                        assembled.Last.Address = currentaddress;
-                                        Assembler.Assemble(currentline, currentaddress.ToUInt64(), assembled.Last.Bytes, AAssemblerPreference.apnone, true);
-                                        a = assembled.Last.Bytes.Length;
-                                        Assembler.Assemble(s1, currentaddress.ToUInt64(), assembled.Last.Bytes, AAssemblerPreference.apnone, true);
-                                        b = assembled.Last.Bytes.Length;
-                                        if (a > b)  //pick the biggest one
-                                            Assembler.Assemble(currentline, currentaddress.ToUInt64(), assembled.Last.Bytes);
-                                        labels[j].References.Inc();
-                                        labels[j].References.Last = (Byte)(assembled.Length - 1);
-                                        labels[j].References2.Inc();
-                                        labels[j].References2.Last = (Byte)i;
-                                        currentaddress += assembled.Last.Bytes.Length;
-                                        ok1 = true;
+                                        else
+                                            currentline = ReplaceToken(currentline, labels[j].Name, AStringUtils.IntToHex(currentaddress + 0xfffff, 8));
                                     }
-                                    else
-                                        currentline = ReplaceToken(currentline, labels[j].Name, AStringUtils.IntToHex(labels[j].Address, 8));
-                                    //break;
+                                    assembled.Inc();
+                                    assembled.Last.CreateThreadAndWait = createthreadandwaitid;
+                                    assembled.Last.Address = currentaddress;
+                                    Assembler.Assemble(currentline, currentaddress.ToUInt64(), assembled.Last.Bytes, AAssemblerPreference.apnone, true);
+                                    a = assembled.Last.Bytes.Length;
+                                    Assembler.Assemble(s1, currentaddress.ToUInt64(), assembled.Last.Bytes, AAssemblerPreference.apnone, true);
+                                    b = assembled.Last.Bytes.Length;
+                                    if (a > b)  //pick the biggest one
+                                        Assembler.Assemble(currentline, currentaddress.ToUInt64(), assembled.Last.Bytes);
+                                    labels[j].References.Inc();
+                                    labels[j].References.Last = (Byte)(assembled.Length - 1);
+                                    labels[j].References2.Inc();
+                                    labels[j].References2.Last = (Byte)i;
+                                    currentaddress += assembled.Last.Bytes.Length;
+                                    ok1 = true;
                                 }
+                                else
+                                    currentline = ReplaceToken(currentline, labels[j].Name, AStringUtils.IntToHex(labels[j].Address, 8));
+                                //break;
                             }
                         }
-
                         if (ok1)
                             continue;
                         if (currentline[currentline.Length - 1] == ':')
@@ -2545,54 +2562,53 @@ namespace SputnikAsm.LAutoAssembler
                             ok1 = false;
                             for (j = 0; j < labels.Length; j++)
                             {
-                                if (i == labels[j].AssemblerLine)
+                                if (i != labels[j].AssemblerLine)
+                                    continue;
+                                if (labels[j].Defined)
+                                    currentaddress = labels[j].Address;
+                                else
                                 {
-                                    if (labels[j].Defined)
-                                        currentaddress = labels[j].Address;
-                                    else
-                                    {
-                                        labels[j].Address = currentaddress;
-                                        labels[j].Defined = true;
-                                    }
-                                    ok1 = true;
-                                    //reassemble the instructions that had no target
-                                    for (k = 0; k < labels[j].References.Length; k++)
-                                    {
-                                        a = assembled[labels[j].References[k]].Bytes.Length; //original size of the assembled code
-                                        s1 = ReplaceToken(assemblerlines[labels[j].References2[k]].Line, labels[j].Name, AStringUtils.IntToHex(labels[j].Address, 8));
-                                        if (process.IsX64)
-                                            Assembler.Assemble(s1, assembled[labels[j].References[k]].Address.ToUInt64(), assembled[labels[j].References[k]].Bytes);
-                                        else
-                                            Assembler.Assemble(s1, assembled[labels[j].References[k]].Address.ToUInt64(), assembled[labels[j].References[k]].Bytes, AAssemblerPreference.apnone);
-                                        b = assembled[labels[j].References[k]].Bytes.Length; //new size
-                                        assembled[labels[j].References[k]].Bytes.SetLength(a); //original size (original size is always bigger or equal than newsize)
-                                        if (b < a && a < 12)  //try to grow the instruction as some people cry about nops (unless it was a megajmp/call as those are less efficient)
-                                        {
-                                            //try a bigger one
-                                            Assembler.Assemble(s1, assembled[labels[j].References[k]].Address.ToUInt64(), nops, AAssemblerPreference.aplong);
-                                            if (nops.Length == a)  //found a match size
-                                            {
-                                                AArrayUtils.CopyMemory(assembled[labels[j].References[k]].Bytes, nops, a);
-                                                b = a;
-                                            }
-                                        }
-                                        //fill the difference with nops (not the most efficient approach, but it should work)
-                                        // todo add back when arm is added
-                                        //if (processhandler.systemarchitecture == archarm)
-                                        //{
-                                        //    for (l = 0; l <= ((a - b + 3) / 4) - 1; l++)
-                                        //        pdword(&assembled[labels[j].References[k]].Bytes[b + l * 4]) = 0xe1a00000;      //<mov r0,r0: (nop equivalent)
-                                        //}
-                                        //else
-                                        {
-                                            // perhaps make it so if a-b>8 then replace with the far version
-                                            Assembler.Assemble("nop " + AStringUtils.IntToHex(a - b, 1), 0, nops);
-                                            for (l = b; l <= a - 1; l++)
-                                                assembled[labels[j].References[k]].Bytes[l] = nops[l - b];
-                                        }
-                                    }
-                                    break;
+                                    labels[j].Address = currentaddress;
+                                    labels[j].Defined = true;
                                 }
+                                ok1 = true;
+                                //reassemble the instructions that had no target
+                                for (k = 0; k < labels[j].References.Length; k++)
+                                {
+                                    a = assembled[labels[j].References[k]].Bytes.Length; //original size of the assembled code
+                                    s1 = ReplaceToken(assemblerlines[labels[j].References2[k]].Line, labels[j].Name, AStringUtils.IntToHex(labels[j].Address, 8));
+                                    if (process.IsX64)
+                                        Assembler.Assemble(s1, assembled[labels[j].References[k]].Address.ToUInt64(), assembled[labels[j].References[k]].Bytes);
+                                    else
+                                        Assembler.Assemble(s1, assembled[labels[j].References[k]].Address.ToUInt64(), assembled[labels[j].References[k]].Bytes, AAssemblerPreference.apnone);
+                                    b = assembled[labels[j].References[k]].Bytes.Length; //new size
+                                    assembled[labels[j].References[k]].Bytes.SetLength(a); //original size (original size is always bigger or equal than newsize)
+                                    if (b < a && a < 12)  //try to grow the instruction as some people cry about nops (unless it was a megajmp/call as those are less efficient)
+                                    {
+                                        //try a bigger one
+                                        Assembler.Assemble(s1, assembled[labels[j].References[k]].Address.ToUInt64(), nops, AAssemblerPreference.aplong);
+                                        if (nops.Length == a)  //found a match size
+                                        {
+                                            AArrayUtils.CopyMemory(assembled[labels[j].References[k]].Bytes, nops, a);
+                                            b = a;
+                                        }
+                                    }
+                                    //fill the difference with nops (not the most efficient approach, but it should work)
+                                    // todo add back when arm is added
+                                    //if (processhandler.systemarchitecture == archarm)
+                                    //{
+                                    //    for (l = 0; l <= ((a - b + 3) / 4) - 1; l++)
+                                    //        pdword(&assembled[labels[j].References[k]].Bytes[b + l * 4]) = 0xe1a00000;      //<mov r0,r0: (nop equivalent)
+                                    //}
+                                    //else
+                                    {
+                                        // perhaps make it so if a-b>8 then replace with the far version
+                                        Assembler.Assemble("nop " + AStringUtils.IntToHex(a - b, 1), 0, nops);
+                                        for (l = b; l <= a - 1; l++)
+                                            assembled[labels[j].References[k]].Bytes[l] = nops[l - b];
+                                    }
+                                }
+                                break;
                             }
                             if (ok1)
                                 continue;
@@ -2796,39 +2812,48 @@ namespace SputnikAsm.LAutoAssembler
                     }
                     if (!ok1)
                         ok2 = false;
-                    #region Create Thread
-                    //if (ok2 & (assembled[i].createthreadandwait != -1))
-                    //{
-                    //    //create threads
-                    //    for (j = 0; j <= assembled[i].createthreadandwait; j++)
-                    //    {
-                    //        if (createthreadandwait[j].position != -1)
-                    //        {
-                    //            //create the thread and wait for it's result
-                    //            testptr = getaddressfromscript(createthreadandwait[j].name);
-                    //            threadhandle = createremotethread(processhandle, nil, 0, (pointer)(testptr), nil, 0, bw);
-                    //            ok2 = threadhandle > 0;
-                    //            if (ok2)
-                    //            {
-                    //                try
-                    //                {
-                    //                    k = createthreadandwait[j].timeout;
-                    //                    if (k <= 0)
-                    //                        y = infinite;
-                    //                    else
-                    //                        y = k;
-                    //                    if (waitforsingleobject(threadhandle, y) != wait_object_0)
-                    //                        create("createthreadandwait did not execute properly");
-                    //                }
-                    //                catch
-                    //                {
-                    //                    closehandle(threadhandle);
-                    //                }
-                    //            }
-                    //            createthreadandwait[j].position = -1; //mark it as handled
-                    //        }
-                    //    }
-                    //}
+                    #region Create Thread And Wait
+                    if (ok2 & (assembled[i].CreateThreadAndWait != -1))
+                    {
+                        //create threads
+                        for (j = 0; j <= assembled[i].CreateThreadAndWait; j++)
+                        {
+                            if (createthreadandwait[j].Position != -1)
+                            {
+                                //create the thread and wait for it's result
+                                testPtr = GetAddressFromScript(createthreadandwait[j].Name, targetSelf, labels, allocs, kallocs, defines);
+                                threadhandle = process.ThreadFactory.Create(testPtr.ToIntPtr());
+                                ok2 = threadhandle.Id != 0;
+                                if (ok2)
+                                {
+                                    try
+                                    {
+                                        k = createthreadandwait[j].Timeout;
+                                        if (k <= 0)
+                                            y = 0;
+                                        else
+                                            y = (uint)k;
+                                        var epoch = UDateTime.EpochMil();
+                                        while (threadhandle.IsAlive)
+                                        {
+                                            if (y > 0 && UDateTime.EpochMil(epoch) > y)
+                                            {
+                                                threadhandle.Terminate();
+                                                threadhandle.Dispose();
+                                                break;
+                                            }
+                                            UDateTime.Sleep(10);
+                                        }
+                                    }
+                                    catch
+                                    {
+                                        threadhandle?.Dispose();
+                                    }
+                                }
+                                createthreadandwait[j].Position = -1; //mark it as handled
+                            }
+                        }
+                    }
                     #endregion
                 }
                 if (!ok2)
@@ -2961,72 +2986,93 @@ namespace SputnikAsm.LAutoAssembler
                             }
                         }
                     }
-                    #region Create Threads -- todo
+                    #region Create Threads
                     //still here, so create threads if needed
-                    //if (length(createthread) > 0)
-                    //{
-                    //    for (i = 0; i <= length(createthread) - 1; i++)
-                    //    {
-                    //        ok1 = true;
-                    //        //try
-                    //        testptr = symhandler.getaddressfromname(createthread[i]);
-                    //        //except
-                    //        ok1 = false;
-                    //        //end;
-                    //
-                    //        if (~ok1)
-                    //            for (j = 0; j <= length(labels) - 1; j++)
-                    //                if (uppercase(labels[j].labelname) == uppercase(createthread[i]))
-                    //                {
-                    //                    ok1 = true;
-                    //                    testptr = labels[j].address;
-                    //                    flush();
-                    //                }
-                    //
-                    //        if (~ok1)
-                    //            for (j = 0; j <= length(allocs) - 1; j++)
-                    //                if (uppercase(allocs[j].varname) == uppercase(createthread[i]))
-                    //                {
-                    //                    ok1 = true;
-                    //                    testptr = allocs[j].address;
-                    //                    flush();
-                    //                }
-                    //
-                    //        if (~ok1)
-                    //            for (j = 0; j <= length(kallocs) - 1; j++)
-                    //                if (uppercase(kallocs[j].varname) == uppercase(createthread[i]))
-                    //                {
-                    //                    ok1 = true;
-                    //                    testptr = kallocs[j].address;
-                    //                    flush();
-                    //                }
-                    //
-                    //        if (~ok1)
-                    //            for (j = 0; j <= length(defines) - 1; j++)
-                    //                if (uppercase(defines[j].name) == uppercase(createthread[i]))
-                    //                {
-                    //                    //try
-                    //                    testptr = symhandler.getaddressfromname(defines[j].whatever);
-                    //                    ok1 = true;
-                    //                    //except
-                    //                    //end;
-                    //
-                    //                    flush();
-                    //                }
-                    //
-                    //        if (ok1)  //address found
-                    //        {
-                    //            //try
-                    //            threadhandle = createremotethread(processhandle, nil, 0, (pointer)(testptr), nil, 0, bw);
-                    //            ok2 = threadhandle > 0;
-                    //
-                    //            if (ok2)
-                    //                closehandle(threadhandle);
-                    //            //finally
-                    //            //end;
-                    //        }
-                    //    }
-                    //}  //^ thread creation
+                    if (createthread.Length > 0)
+                    {
+                        for (i = 0; i < createthread.Length; i++)
+                        {
+                            ok1 = true;
+                            try
+                            {
+                                testPtr = symHandler.GetAddressFromName(createthread[i]);
+                            }
+                            catch
+                            {
+                                ok1 = false;
+                            }
+                            if (!ok1)
+                            {
+                                for (j = 0; j < labels.Length; j++)
+                                {
+                                    if (String.Equals(labels[j].Name, createthread[i], StringComparison.CurrentCultureIgnoreCase))
+                                    {
+                                        ok1 = true;
+                                        testPtr = labels[j].Address;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (!ok1)
+                            {
+                                for (j = 0; j < allocs.Length; j++)
+                                {
+                                    if (String.Equals(kallocs[j].Name, createthread[i], StringComparison.CurrentCultureIgnoreCase))
+                                    {
+                                        ok1 = true;
+                                        testPtr = allocs[j].Address;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (!ok1)
+                            {
+                                for (j = 0; j < kallocs.Length; j++)
+                                {
+                                    if (String.Equals(kallocs[j].Name, createthread[i], StringComparison.CurrentCultureIgnoreCase))
+                                    {
+                                        ok1 = true;
+                                        testPtr = kallocs[j].Address;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (!ok1)
+                            {
+                                for (j = 0; j < defines.Length; j++)
+                                {
+                                    if (String.Equals(defines[j].Name, createthread[i], StringComparison.CurrentCultureIgnoreCase))
+                                    {
+                                        try
+                                        {
+                                            testPtr = symHandler.GetAddressFromName(defines[j].Whatever);
+                                            ok1 = true;
+                                        }
+                                        catch
+                                        {
+                                            // ignored
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+                            if (ok1)  //address found
+                            {
+                                try
+                                {
+                                    threadhandle = process.ThreadFactory.Create(testPtr.ToIntPtr());
+                                    // todo why are we closing the thread?
+                                    ok2 = threadhandle.Id != 0;
+                                    if (ok2)
+                                        threadhandle.Dispose(); // lose control of the thread and let it run wild
+                                }
+                                catch
+                                {
+                                    // ignored
+                                }
+                            }
+                        }
+                    }
                     #endregion
                     //fill "allSymbols"
                     if (disableInfo != null)

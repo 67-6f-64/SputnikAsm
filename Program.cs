@@ -54,7 +54,10 @@ data:
 
 exec:
 mov, eax 7
+exec2:
+inc eax
 mov [data], eax
+jmp exec2
 push 0
 add esp, 4
 retn
