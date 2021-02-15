@@ -1623,7 +1623,7 @@ namespace SputnikAsm.LDisassembler
         #region OpCode4Fst
         private int OpCode4Fst(String opCode)
         {
-            var result = 2; //float
+            var result = 3; //float
             if (opCode.Length >= 4)
             {
                 switch (opCode[3])
@@ -1631,7 +1631,7 @@ namespace SputnikAsm.LDisassembler
                     case 'c':
                     case 'e':
                     case 's':
-                        result = 1;
+                        result = 2;
                         break;
                 }
             }
@@ -1641,13 +1641,13 @@ namespace SputnikAsm.LDisassembler
         #region OpCode3Fn
         private int OpCode3Fn(String opCode)
         {
-            var result = 2; //float
+            var result = 3; //float
             if (opCode.Length < 3)
                 return result;
             switch (opCode[2])
             {
                 case 's':
-                    result = 1;
+                    result = 2;
                     break; //fnst
             }
             return result;
@@ -1656,7 +1656,7 @@ namespace SputnikAsm.LDisassembler
         #region OpCode3Fs
         private int OpCode3Fs(String opCode)
         {
-            var result = 2; //float
+            var result = 3; //float
             if (opCode.Length < 3)
                 return result;
             switch (opCode[2])
@@ -1671,13 +1671,14 @@ namespace SputnikAsm.LDisassembler
         #region OpCode2F
         private int OpCode2F(String opCode)
         {
-            var result = 2;
+            var result = 3;
             if (opCode.Length < 2)
                 return result;
             switch (opCode[1])
             {
                 case 'i':
-                    result = 1; break; //fixxxxx
+                    result = 2;
+                    break; //fixxxxx
                 case 'n':
                     result = OpCode3Fn(opCode); break;
                 case 's':
@@ -1689,7 +1690,7 @@ namespace SputnikAsm.LDisassembler
         #region OpCodeToValueType
         private int OpCodeToValueType(String opCode)
         {
-            var result = 1;
+            var result = 2;
             if (opCode.Length < 1)
                 return result;
             switch (opCode[0])
@@ -1698,50 +1699,6 @@ namespace SputnikAsm.LDisassembler
                     result = OpCode2F(opCode);
                     break;
             }
-            return result;
-        }
-        #endregion
-        #region PreviousOpCode
-        public UIntPtr PreviousOpCode(UIntPtr address)
-        {
-            var result = UIntPtr.Zero;
-            var aggressive = _aggressiveAlignment;
-            _aggressiveAlignment = true;
-            var x = PreviousOpCodeHelp(address, 80, ref result);
-            if (x != address)
-            {
-                //no match found 80 bytes from the start
-                //try 40
-                x = PreviousOpCodeHelp(address, 40, ref result);
-                if (x != address)
-                {
-                    //nothing with 40, try 20
-                    x = PreviousOpCodeHelp(address, 20, ref result);
-                    if (x != address)
-                    {
-                        //no 20, try 10
-                        x = PreviousOpCodeHelp(address, 10, ref result);
-                        if (x != address)
-                        {
-                            //and if all else fails try to find the closest one
-                            result = address - 1;
-                            for (var i = 1; i <= 20; i++)
-                            {
-                                x = address - i;
-                                var s = "";
-                                Disassemble(ref x, ref s);
-                                if (x == address)
-                                {
-                                    result = address - i;
-                                    return result;
-                                }
-                            }
-                        }
-
-                    }
-                }
-            }
-            _aggressiveAlignment = aggressive;
             return result;
         }
         #endregion
@@ -1855,8 +1812,51 @@ namespace SputnikAsm.LDisassembler
             return result;
         }
         #endregion
+        #region PreviousOpCode
+        public UIntPtr PreviousOpCode(UIntPtr address)
+        {
+            var aggressive = _aggressiveAlignment;
+            _aggressiveAlignment = true;
+            var x = PreviousOpCodeHelp(address, 80, out var result);
+            if (x != address)
+            {
+                //no match found 80 bytes from the start
+                //try 40
+                x = PreviousOpCodeHelp(address, 40, out result);
+                if (x != address)
+                {
+                    //nothing with 40, try 20
+                    x = PreviousOpCodeHelp(address, 20, out result);
+                    if (x != address)
+                    {
+                        //no 20, try 10
+                        x = PreviousOpCodeHelp(address, 10, out result);
+                        if (x != address)
+                        {
+                            //and if all else fails try to find the closest one
+                            result = address - 1;
+                            for (var i = 1; i <= 20; i++)
+                            {
+                                x = address - i;
+                                var s = "";
+                                Disassemble(ref x, ref s);
+                                if (x == address)
+                                {
+                                    result = address - i;
+                                    return result;
+                                }
+                            }
+                        }
+
+                    }
+                }
+            }
+            _aggressiveAlignment = aggressive;
+            return result;
+        }
+        #endregion
         #region PreviousOpCodeHelp
-        public UIntPtr PreviousOpCodeHelp(UIntPtr address, int distance, ref UIntPtr result2)
+        public UIntPtr PreviousOpCodeHelp(UIntPtr address, int distance, out UIntPtr result)
         {
             var y = UIntPtr.Zero;
             var s = "";
@@ -1866,9 +1866,8 @@ namespace SputnikAsm.LDisassembler
                 y = x;
                 Disassemble(ref x, ref s);
             }
-            var result = x;
-            result2 = y;
-            return result;
+            result = y;
+            return x;
         }
         #endregion
         #region IntToHexSigned
@@ -2871,11 +2870,12 @@ namespace SputnikAsm.LDisassembler
                 //    }
                 //}
             }
-            catch
+            catch (Exception e)
             {
+                // todo make this work
                 //outputdebugstring(AStringUtils.IntToHex(startOffset,8)+':disassembler exception:'+e.message);
-                ///MessageBox(0,pchar('disassembler exception at '+ AStringUtils.IntToHex(startOffset,8)+#13#10+e.message+#13#10+#13#10+'Please provide dark byte the bytes that are at this address so he can fix it'#13#10'(Open another CE instance and in the hexadecimal view go to this address)'),'debug here',MB_OK);
-                throw new Exception("error make this work");
+                //MessageBox(0,pchar('disassembler exception at '+ AStringUtils.IntToHex(startOffset,8)+#13#10+e.message+#13#10+#13#10+'Please provide dark byte the bytes that are at this address so he can fix it'#13#10'(Open another CE instance and in the hexadecimal view go to this address)'),'debug here',MB_OK);
+                throw new Exception("disassembler exception: " + e.Message);
             }
             return result ?? "";
         }

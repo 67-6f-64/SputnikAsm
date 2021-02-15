@@ -98,9 +98,14 @@ namespace SputnikAsm
                     //Console.WriteLine(cl + " ; " + d.DecodeLastParametersToString());
                     d.SplitDisassembledString(dis, true, out var address, out var bytes, out var opcode, out var special);
                     Console.WriteLine($"0x{address.PadRight(8)} {bytes.PadRight(20)} {opcode} {special} ");
+                    var prev = d.PreviousOpCode((UIntPtr)UStringUtils.StringToUInt64("0x" + address));
+                    Console.WriteLine("Prev: " + prev);
                 }
-                catch
+                catch (Exception e)
                 {
+                    Console.WriteLine("Error " + e.Message);
+                    Console.WriteLine(e.Source);
+                    Console.WriteLine(e.StackTrace);
                     break;
                 }
             }
