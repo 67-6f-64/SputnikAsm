@@ -85,7 +85,10 @@
     <Compile Include="LAutoAssembler\AAutoAssembler.cs" />
     <Compile Include="LGenerics\AArrayManager.cs" />
     <Compile Include="LString\ARefString.cs" />
+    <Compile Include="LSymbolHandler\ASymbol.cs" />
+    <Compile Include="LSymbolHandler\AProcess.cs" />
     <Compile Include="LSymbolHandler\ASymbolHandler.cs" />
+    <Compile Include="LSymbolHandler\AUserDefinedSymbol.cs" />
     <Compile Include="LUtils\AArrayUtils.cs" />
     <Compile Include="LUtils\AMathUtils.cs" />
     <Compile Include="LUtils\ACharUtils.cs" />

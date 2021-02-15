@@ -185,7 +185,7 @@ namespace SputnikAsm.LAssembler
                     result = 7;
                     break;
             }
-            if (Assembler.SymHandler.process.is64bit)
+            if (Assembler.SymHandler.Process.IsX64)
             {
                 switch (reg)
                 {
@@ -324,7 +324,7 @@ namespace SputnikAsm.LAssembler
                 Assembler.SetSibScale(ref sib, 3);
             else
                 Assembler.SetSibScale(ref sib, 0);
-            if (Assembler.SymHandler.process.is64bit)
+            if (Assembler.SymHandler.Process.IsX64)
             {
                 if (AStringUtils.Pos("RAX", reg) != -1)
                     SetSibIndex(ref sib, 0);
@@ -484,7 +484,7 @@ namespace SputnikAsm.LAssembler
             //setreg
             if (reg > 7)
             {
-                if (Assembler.SymHandler.process.is64bit)
+                if (Assembler.SymHandler.Process.IsX64)
                     RexR = true;
                 else
                     throw new Exception("The assembler tried to set a register value that is too high");
@@ -643,7 +643,7 @@ namespace SputnikAsm.LAssembler
                 //no registers, just a address
                 SetRm(modrm, 0, 5);
                 Assembler.SetMod(modrm, 0, 0);
-                if (Assembler.SymHandler.process.is64bit)
+                if (Assembler.SymHandler.Process.IsX64)
                 {
                     if (disp <= 0xffffffff)
                     {
@@ -815,7 +815,7 @@ namespace SputnikAsm.LAssembler
                 found = true;
                 return;
             }
-            if (Assembler.SymHandler.process.is64bit)
+            if (Assembler.SymHandler.Process.IsX64)
             {
                 if ((reg[k] == "R8") || (reg[-k] == "R8"))
                 {
@@ -981,7 +981,7 @@ namespace SputnikAsm.LAssembler
             var overrideshort = false;
             var overridelong = false;
             var overridefar = false;
-            var is64bit = Assembler.SymHandler.process.is64bit;
+            var is64bit = Assembler.SymHandler.Process.IsX64;
             RelativeAddressLocation = -1;
             RexPrefix = 0;
             var result = false;
@@ -1050,7 +1050,7 @@ namespace SputnikAsm.LAssembler
                 parameter3 = "";
             overrideshort = AStringUtils.Pos("SHORT ", parameter1) != -1;
             overridelong = (AStringUtils.Pos("LONG ", parameter1) != -1);
-            if (Assembler.SymHandler.process.is64bit)
+            if (Assembler.SymHandler.Process.IsX64)
                 overridefar = (AStringUtils.Pos("FAR ", parameter1) != -1);
             else
                 overridelong |= (AStringUtils.Pos("FAR ", parameter1) != -1);
@@ -1064,7 +1064,7 @@ namespace SputnikAsm.LAssembler
             paramtype1 = Assembler.GetTokenType(ref parameter1, parameter2);
             paramtype2 = Assembler.GetTokenType(ref parameter2, parameter1);
             paramtype3 = Assembler.GetTokenType(ref parameter3, "");
-            if (Assembler.SymHandler.process.is64bit)
+            if (Assembler.SymHandler.Process.IsX64)
             {
                 if (paramtype1 == ATokenType.ttregister8bitwithprefix)
                 {
@@ -1217,7 +1217,7 @@ namespace SputnikAsm.LAssembler
             signedv2type = Assembler.SignedValueToType((int)v2);
             result = false;
             //to make it easier for people that don't like the relative addressing limit
-            if ((!overrideshort) & (!overridelong) & (Assembler.SymHandler.process.is64bit))    //if 64-bit and no override is given
+            if ((!overrideshort) & (!overridelong) & (Assembler.SymHandler.Process.IsX64))    //if 64-bit and no override is given
             {
                 //check if this is a jmp or call with relative value
                 if ((tokens[mnemonic] == "JMP") || (tokens[mnemonic] == "CALL"))
@@ -3091,7 +3091,7 @@ namespace SputnikAsm.LAssembler
                 if (result)
                 {
                     //insert rex prefix if needed
-                    if (Assembler.SymHandler.process.is64bit)
+                    if (Assembler.SymHandler.Process.IsX64)
                     {
                         if (Assembler.OpCodes[j].NorExw)
                             RexW = false;

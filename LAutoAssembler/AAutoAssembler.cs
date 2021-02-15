@@ -628,13 +628,13 @@ namespace SputnikAsm.LAutoAssembler
         }
         #endregion
         #region AobScans -- todo make this work!!!
-        public void AobScans(TProcess process, ARefStringArray code, Boolean syntaxCheckOnly)
+        public void AobScans(AProcess process, ARefStringArray code, Boolean syntaxCheckOnly)
         {
 
         }
         #endregion
         #region AutoAssemble
-        public Boolean AutoAssemble(UIntPtr processHandle, ARefStringArray code, Boolean popUpMessages, Boolean enable, Boolean syntaxCheckOnly, AAllocArray allocArray, AStringArray registeredSymbols, Boolean createScript, ARefStringArray newScript)
+        public Boolean AutoAssemble(AProcess process, ARefStringArray code, Boolean popUpMessages, Boolean enable, Boolean syntaxCheckOnly, AAllocArray allocArray, AStringArray registeredSymbols, Boolean createScript, ARefStringArray newScript)
         {
             //add line numbers to the code
             for (var i = 0; i <= code.Length - 1; i++)
@@ -679,12 +679,12 @@ namespace SputnikAsm.LAutoAssembler
                         break;
                 }
             }
-            var result = AutoAssemble2(processHandle, tempStrings, popUpMessages, syntaxCheckOnly, allocArray, registeredSymbols, createScript, newScript);
+            var result = AutoAssemble2(process, tempStrings, popUpMessages, syntaxCheckOnly, allocArray, registeredSymbols, createScript, newScript);
             return result;
         }
         #endregion
-        #region
-        public Boolean AutoAssemble2(UIntPtr processHandle, ARefStringArray code, Boolean popUpMessages, Boolean syntaxCheckOnly, AAllocArray allocArray, AStringArray registeredSymbols, Boolean createScript, ARefStringArray newScript)
+        #region AutoAssemble2
+        public Boolean AutoAssemble2(AProcess process, ARefStringArray code, Boolean popUpMessages, Boolean syntaxCheckOnly, AAllocArray allocArray, AStringArray registeredSymbols, Boolean createScript, ARefStringArray newScript)
         {
             var i = 0;
             var j = 0;
@@ -759,9 +759,8 @@ namespace SputnikAsm.LAutoAssembler
                 }
             }
             var symHandler = Assembler.SymHandler;
-            symHandler.process.Handle = processHandle;
+            symHandler.Process = process;
             symHandler.WaitForSymbolsLoaded();
-            var process = symHandler.process;
             //2 pass scanner
             try
             {
@@ -804,6 +803,7 @@ namespace SputnikAsm.LAutoAssembler
                             assemblerlines.SetLength(assemblerlines.Length + 1);
                             assemblerlines.Last = currentline;
                             //do this first. Do not touch register symbol with any kind of define/label/whatsoever
+                            #region RegisterSymbol()
                             if (AStringUtils.Copy(currentline, 0, 15).ToUpper() == "REGISTERSYMBOL(")
                             {
                                 //add this symbol to the register symbol list
@@ -821,6 +821,7 @@ namespace SputnikAsm.LAutoAssembler
                                 assemblerlines.SetLength(assemblerlines.Length - 1);
                                 continue;
                             }
+                            #endregion
                             //if the newline is empty then it has been handled and the plugin doesn't want it to be added for phase2
                             if (currentline.Length == 0)
                             {
@@ -1310,7 +1311,7 @@ namespace SputnikAsm.LAutoAssembler
                              */
                             #endregion
                             //replace ALLOC identifiers with values so the assemble error check doesnt crash on that
-                            if (process.is64bit)
+                            if (process.IsX64)
                             {
                                 for (j = 0; j < allocs.Length; j++)
                                     currentline = ReplaceToken(currentline, allocs[j].Name, "ffffffffffffffff");
@@ -1321,7 +1322,7 @@ namespace SputnikAsm.LAutoAssembler
                                     currentline = ReplaceToken(currentline, allocs[j].Name, "00000000");
                             }
                             //replace KALLOC identifiers with values so the assemble error check doesnt crash on that
-                            if (process.is64bit)
+                            if (process.IsX64)
                             {
                                 for (j = 0; j < kallocs.Length; j++)
                                     currentline = ReplaceToken(currentline, kallocs[j].Name, "ffffffffffffffff");
@@ -1366,7 +1367,7 @@ namespace SputnikAsm.LAutoAssembler
                                 }
                             }
                             //replace label references with 00000000 so the assembler check doesn't complain about it
-                            if (process.is64bit)
+                            if (process.IsX64)
                             {
                                 for (j = 0; j <= labels.Length - 1; j++)
                                     currentline = ReplaceToken(currentline, labels[j].Name, "ffffffffffffffff");
@@ -1664,7 +1665,7 @@ namespace SputnikAsm.LAutoAssembler
                                 //close
                                 s1 = ReplaceToken(currentline, labels[j].Name, AStringUtils.IntToHex(currentaddress, 8));
                                 //far and big
-                                if (process.is64bit)  //and not in region
+                                if (process.IsX64)  //and not in region
                                     currentline = ReplaceToken(currentline, labels[j].Name, AStringUtils.IntToHex(currentaddress + 0xfffff, 8));
                                 else
                                     currentline = ReplaceToken(currentline, labels[j].Name, AStringUtils.IntToHex(currentaddress + 0xfffff, 8));
@@ -1705,7 +1706,7 @@ namespace SputnikAsm.LAutoAssembler
                                 {
                                     a = assembled[labels[j].References[k]].Bytes.Length; //original size of the assembled code
                                     s1 = ReplaceToken(assemblerlines[labels[j].References2[k]], labels[j].Name, AStringUtils.IntToHex(labels[j].Address, 8));
-                                    if (Assembler.Is64Bit & process.is64bit)
+                                    if (Assembler.Is64Bit & process.IsX64)
                                         Assembler.Assemble(s1, assembled[labels[j].References[k]].Address.ToUInt64(), assembled[labels[j].References[k]].Bytes);
                                     else
                                         Assembler.Assemble(s1, assembled[labels[j].References[k]].Address.ToUInt64(), assembled[labels[j].References[k]].Bytes, AAssemblerPreference.aplong);
@@ -1740,16 +1741,10 @@ namespace SputnikAsm.LAutoAssembler
                 // unprotect memory
                 for (i = 0; i < fullaccess.Length; i++)
                 {
-                    // UBERFOX BELOW -- make it produce a script instead of doing it for real
                     if (createScript)
-                    {
                         newScript.Add("FullAccess " + AStringUtils.IntToHex(fullaccess[i].Address, intPtrHexSize) + " " + fullaccess[i].Size);
-                    }
                     else
-                    {
-                        //virtualprotectex(processHandle, (pointer)(fullaccess[i].address), fullaccess[i].size, PAGE_EXECUTE_READWRITE, &op);
-                    }
-                    // UBERFOX ABOVE
+                        process.FullAccess((IntPtr)fullaccess[i].Address.ToUInt64(), (int)fullaccess[i].Size);
                 }
                 #region hidden
                 //load binaries
@@ -1832,7 +1827,6 @@ namespace SputnikAsm.LAutoAssembler
                 for (i = 0; i < assembled.Length; i++)
                 {
                     testPtr = assembled[i].Address;
-                    // UBERFOX -- make it produce pokes instead
                     if (createScript)
                     {
                         newScript.Add("Poke " + AStringUtils.IntToHex(testPtr, intPtrHexSize) + " " + AStringUtils.BinToHexStr(assembled[i].Bytes.Raw));
@@ -1841,11 +1835,9 @@ namespace SputnikAsm.LAutoAssembler
                     }
                     else
                     {
-                        //ok1 = virtualprotectex(processHandle, UIntToPtr(testPtr), length(assembled[i].bytes), PAGE_EXECUTE_READWRITE, &op);
-                        //ok1 = WriteProcessMemory(processHandle, UIntToPtr(testPtr), &assembled[i].bytes[0], length(assembled[i].bytes), op2);
-                        //virtualprotectex(processHandle, UIntToPtr(testPtr), length(assembled[i].bytes), op, &op2);
+                        ok1 = process.FullAccess((IntPtr)testPtr.ToUInt64(), assembled[i].Bytes.Length);
+                        ok2 = process.WriteMem((IntPtr)testPtr.ToUInt64(), assembled[i].Bytes.Raw) == assembled[i].Bytes.Length;
                     }
-                    // UBERFOX ABOVE
                     if (!ok1)
                         ok2 = false;
                 }

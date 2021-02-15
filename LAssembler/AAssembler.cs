@@ -509,7 +509,7 @@ namespace SputnikAsm.LAssembler
                     break;
                 default:
                 {
-                    if (SymHandler.process.is64bit)
+                    if (SymHandler.Process.IsX64)
                     {
                         switch (token)
                         {
