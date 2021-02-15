@@ -313,7 +313,7 @@ namespace Tack
         #endregion
         public static int hexstrtoint(string s)
         {
-            return UStringUtils.StringToInt32(converthexstrtorealstr(s));
+            return strtoint(converthexstrtorealstr(s));
         }
         public static Int64 hexstrtoint64(string s)
         {

@@ -17,9 +17,10 @@ namespace Tack
             var a = new AutoAssembler();
             var b = new tassemblerbytes();
 
-            b.EnsureCapacity(0);
-            a.singlelineassembler.createmodrm(b, 6, "[7]");
-
+            //var result = a.assemble("mov eax, edx", 400300, b); // 8B C2
+            var result = a.assemble("mov eax, dword ptr[esi]", 0x400300, b); // 8B C2
+            Console.WriteLine("Result: " + result);
+            Console.WriteLine("Bytes:");
             Console.WriteLine(UBinaryUtils.Expand(b.Raw));
 
             Console.ReadKey();

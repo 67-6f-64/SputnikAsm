@@ -1488,6 +1488,7 @@ namespace Tack.LAutoAssembler
                 {
                     if (opcodes[j].mnemonic[0] == 'A' + i)
                     {
+                        Console.WriteLine(opcodes[j].mnemonic);
                         //found the first entry with this as first character
                         if (lastindex != null)
                             lastindex.nextentry = j;
@@ -1523,7 +1524,7 @@ namespace Tack.LAutoAssembler
                 {
                     for (var k = assemblerindex[i].startentry; k < assemblerindex[i].nextentry - 1; k++)
                     {
-                        if (opcodes[k].mnemonic[1] == 'A' + j)
+                        if (opcodes[k].mnemonic[0] == 'A' + j)
                         {
                             if (lastindex != null)
                                 lastindex.nextentry = k;
@@ -1552,16 +1553,16 @@ namespace Tack.LAutoAssembler
             var result = -1;
             if (opcode.Length <= 0)
                 return result;
-            index1 = opcode[1] - 'A';
-            if ((index1 < 0) || (index1 > 25))
+            index1 = opcode[0] - 'A';
+            if ((index1 < 0) || (index1 >= 25))
                 return result; //not alphabetical
             bestindex = assemblerindex[index1];
             if (bestindex.startentry == -1)
                 return result;
             if ((assemblerindex[index1].subindex != null) && (opcode.Length > 1))
             {
-                index2 = opcode[2] - 'A';
-                if ((index2 < 0) || (index2 > 25))
+                index2 = opcode[0] - 'A';
+                if ((index2 < 0) || (index2 >= 25))
                     return result; //not alphabetical
                 bestindex = assemblerindex[index1].subindex[index2];
                 if (bestindex.startentry == -1)
@@ -1584,7 +1585,7 @@ namespace Tack.LAutoAssembler
                     result = i; //found it
                     return result;
                 }
-                if (opcodes[i].mnemonic[1] != opcode[1])
+                if (opcodes[i].mnemonic[0] != opcode[0])
                     return result;
             }
             //still here, not found, -1
