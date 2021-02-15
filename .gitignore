@@ -1,0 +1,10 @@
+\!Code/
+\!Commands/
+obj/
+x86/
+x64/
+*.rar
+*.sdf
+*.opensdf
+.vs/*
+bin/*
