@@ -27,6 +27,12 @@ namespace SputnikAsm.LUtils
             return UStringUtils.IndexOf(str, needle);
         }
         #endregion
+        #region PosEx
+        public static int PosEx(String needle, String str, int start)
+        {
+            return UStringUtils.IndexOf(str, needle, start);
+        }
+        #endregion
         #region Val
         public static void Val(String str, out UIntPtr v, out int code)
         {

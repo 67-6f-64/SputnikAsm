@@ -27,7 +27,7 @@ namespace SputnikAsm.LGenerics
             #endregion
         }
         #endregion
-        #region Properties
+        #region Variables
         private readonly Object _lock;
         #endregion
         #region Properties
@@ -89,6 +89,32 @@ namespace SputnikAsm.LGenerics
                 }
                 EnsureCapacity(size);
             }
+        }
+        #endregion
+        #region Inc
+        public void Inc()
+        {
+            SetLength(Length + 1);
+        }
+        public void IncBy(int size)
+        {
+            SetLength(Length + size);
+        }
+        #endregion
+        #region Dec
+        public void Dec()
+        {
+            SetLength(Length + 1);
+        }
+        public void DecBy(int size)
+        {
+            var sz = Length - size;
+            if (sz <= 0)
+            {
+                Clear();
+                return;
+            }
+            SetLength(sz);
         }
         #endregion
         #region EnsureCapacity
@@ -318,12 +344,15 @@ namespace SputnikAsm.LGenerics
             {
                 if (index < 0)
                     return;
-                var saved = Raw;
-                EnsureCapacity(Length + data.Length);
-                for (var i = 0; i < length; i++)
-                    Raw[index + i] = data[i];
-                for (var i = 0; i < saved.Length; i++)
-                    Raw[index + i + data.Length] = saved[i];
+                var first = Take(0, index);
+                var second = data;
+                var third = Take(index);
+                var len = Length + (index - Length);
+                EnsureCapacity(len);
+                Raw = new T[first.Length + length + third.Length];
+                Array.Copy(first, 0, Raw, 0, first.Length);
+                Array.Copy(second, 0, Raw, first.Length, length);
+                Array.Copy(third, 0, Raw, first.Length + length, third.Length);
             }
         }
         #endregion
@@ -537,22 +566,23 @@ namespace SputnikAsm.LGenerics
         }
         #endregion
         #region Take
-        public T[] Take(int count)
+        public T[] Take(int start)
         {
-            return Take(0, count);
+            return Take(start, -1);
         }
-        public T[] Take(int index, int count)
+        public T[] Take(int start, int count)
         {
             lock (_lock)
             {
                 var ret = new USafeList<T>();
-                for (var i = index; i < Raw.Length; i++)
+                for (var i = start; i < Raw.Length; i++)
                 {
                     var c = Raw[i];
-                    if (count <= 0)
+                    if (count != -1 && count <= 0)
                         return ret.Content;
                     ret.Add(c);
-                    count--;
+                    if (count != -1)
+                        count--;
                 }
                 return ret.Content;
             }

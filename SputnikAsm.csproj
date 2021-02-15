@@ -83,6 +83,7 @@
     <Compile Include="LAssembler\AOpCodes.cs" />
     <Compile Include="LAssembler\ASingleLineAssembler.cs" />
     <Compile Include="LAutoAssembler\AAutoAssembler.cs" />
+    <Compile Include="LExtensions\XPointerExt.cs" />
     <Compile Include="LGenerics\AArrayManager.cs" />
     <Compile Include="LString\ARefString.cs" />
     <Compile Include="LSymbolHandler\ASymbol.cs" />

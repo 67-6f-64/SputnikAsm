@@ -4,6 +4,7 @@ using SputnikAsm.LAssembler;
 using SputnikAsm.LAutoAssembler;
 using SputnikAsm.LAutoAssembler.LCollections;
 using SputnikAsm.LCollections;
+using SputnikAsm.LGenerics;
 using SputnikAsm.LSymbolHandler;
 
 namespace SputnikAsm
@@ -12,6 +13,19 @@ namespace SputnikAsm
     {
         static void Main(string[] args)
         {
+            // var k2 = new AArrayManager<int>();
+            // k2.Add(10);
+            // k2.Add(20);
+            // k2.Add(30);
+            // k2.Insert(1, new [] { 4, 5, 6 });
+            // foreach (var o in k2.Raw)
+            // {
+            //     Console.WriteLine("Raw: " + o);
+            // }
+            // Console.ReadKey();
+            // Environment.Exit(1);
+
+
             var pacWin = new AProcess("pacwin.exe");
             var a = new AAssembler();
             var b = new AByteArray();
@@ -28,16 +42,20 @@ namespace SputnikAsm
             var cc = @"
 registersymbol(cat);
             [ENABLE]
+alloc(dog,$1000);
 label(cat);
 400300:
 jmp 600700
 mov eax, edx
 inc esi
 cat:
-jmp cat
+jmp dog
 
-40030E:
-readmem(400310,2);
+dog:
+push 10
+push 20
+mov eax, edx
+call 400700
 
 [DISABLE]
 400300:

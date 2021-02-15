@@ -9,6 +9,7 @@ using Sputnik.LEngine;
 using Sputnik.LEnums;
 using Sputnik.LMarshal;
 using Sputnik.LUtils;
+using SputnikAsm.LExtensions;
 using SputnikWin;
 using SputnikWin.LExtra.LMemorySharp.Native;
 using SputnikWin.LFileSystem;
@@ -465,15 +466,28 @@ namespace SputnikAsm.LSymbolHandler
     {
         #region Allocate
         public static IntPtr Allocate(
-                                        SafeMemoryHandle processHandle,
-                                        int size,
-                                        MemoryProtectionFlags protectionFlags = MemoryProtectionFlags.ExecuteReadWrite,
-                                        MemoryAllocationFlags allocationFlags = MemoryAllocationFlags.Commit
-                                    )
+            SafeMemoryHandle processHandle,
+            int size,
+            MemoryProtectionFlags protectionFlags = MemoryProtectionFlags.ExecuteReadWrite,
+            MemoryAllocationFlags allocationFlags = MemoryAllocationFlags.Commit
+        )
         {
             if (!Validator.Validate(processHandle, "processHandle"))
                 return IntPtr.Zero;
             var ret = NativeMethods.VirtualAllocEx(processHandle, IntPtr.Zero, size, allocationFlags, protectionFlags);
+            return ret != IntPtr.Zero ? ret : IntPtr.Zero;
+        }
+        public static IntPtr Allocate(
+            SafeMemoryHandle processHandle,
+            IntPtr address,
+            int size,
+            MemoryProtectionFlags protectionFlags = MemoryProtectionFlags.ExecuteReadWrite,
+            MemoryAllocationFlags allocationFlags = MemoryAllocationFlags.Commit
+        )
+        {
+            if (!Validator.Validate(processHandle, "processHandle"))
+                return IntPtr.Zero;
+            var ret = NativeMethods.VirtualAllocEx(processHandle, address, size, allocationFlags, protectionFlags);
             return ret != IntPtr.Zero ? ret : IntPtr.Zero;
         }
         #endregion
@@ -652,6 +666,27 @@ namespace SputnikAsm.LSymbolHandler
             {
                 return false;
             }
+        }
+        #endregion
+        #region GetMainModule
+        public UProcessModule GetMainModule()
+        {
+            if (!IsValid())
+                return null;
+            var mainModule = _process.GetMainModule();
+            return mainModule;
+        }
+        #endregion
+        #region GetModule
+        public UProcessModule GetModule(String moduleName)
+        {
+            if (!IsValid())
+                return null;
+            var mainModule = _process.GetMainModule();
+            if (mainModule.ModuleName == moduleName)
+                return mainModule;
+            var ret = _process.GetModules().FirstOrDefault(m => m.ModuleName == moduleName);
+            return ret;
         }
         #endregion
         #region FindTarget, FindWindow, IsWindowMatch
@@ -1433,6 +1468,21 @@ namespace SputnikAsm.LSymbolHandler
                 return IntPtr.Zero;
             return MemoryCore.Allocate(_process.GetSafeHandle(), size, protectionFlags, allocFlags);
         }
+        public IntPtr Alloc(IntPtr address, int size, MemoryProtectionFlags protectionFlags, MemoryAllocationFlags allocFlags)
+        {
+            if (!IsValid())
+                return IntPtr.Zero;
+            return MemoryCore.Allocate(_process.GetSafeHandle(), address, size, protectionFlags, allocFlags);
+        }
+        #endregion
+        #region AllocNear
+        public IntPtr AllocNear(IntPtr preferred, int size, MemoryProtectionFlags protectionFlags, MemoryAllocationFlags allocFlags)
+        {
+            if (!IsValid())
+                return IntPtr.Zero;
+            var address = (IntPtr)FindFreeBlockForRegion(preferred.ToUIntPtr(), (UInt32)size).ToUInt64();
+            return MemoryCore.Allocate(_process.GetSafeHandle(), address, size, protectionFlags, allocFlags);
+        }
         #endregion
         #region Free
         public Boolean Free(IntPtr pointer)
@@ -1442,25 +1492,80 @@ namespace SputnikAsm.LSymbolHandler
             return MemoryCore.Free(_process.GetSafeHandle(), pointer);
         }
         #endregion
-        #region GetMainModule
-        public UProcessModule GetMainModule()
+        #region FindFreeBlockForRegion
+        public UIntPtr FindFreeBlockForRegion(UIntPtr baseAddress, UInt32 size)
         {
-            if (!IsValid())
-                return null;
-            var mainModule = _process.GetMainModule();
-            return mainModule;
-        }
-        #endregion
-        #region GetModule
-        public UProcessModule GetModule(String moduleName)
-        {
-            if (!IsValid())
-                return null;
-            var mainModule = _process.GetMainModule();
-            if (mainModule.ModuleName == moduleName)
-                return mainModule;
-            var ret = _process.GetModules().FirstOrDefault(m => m.ModuleName == moduleName);
-            return ret;
+            return UIntPtr.Zero;
+            //MemoryBasicInformation32 mbi = new MemoryBasicInformation32();
+            //UIntPtr x, b, offset;
+            //UIntPtr minAddress, maxAddress;
+            //if (!process.is64Bit)
+            //    return UIntPtr.Zero; //don't bother
+            ////64-bit
+            //if (baseAddress == 0)
+            //    return UIntPtr.Zero;
+            //minAddress = baseAddress - 0x70000000; //let's add in some extra overhead to skip the last fffffff
+            //maxAddress = baseAddress + 0x70000000;
+            //if ((minAddress > PtrToUInt(systeminfo.lpMaximumApplicationAddress)) || (minAddress < PtrToUInt(systeminfo.lpMinimumApplicationAddress)))
+            //    minAddress = PtrToUInt(systeminfo.lpMinimumApplicationAddress);
+            //if ((maxAddress < PtrToUInt(systeminfo.lpMinimumApplicationAddress)) || (maxAddress > PtrToUInt(systeminfo.lpMaximumApplicationAddress)))
+            //    maxAddress = PtrToUInt(systeminfo.lpMaximumApplicationAddress);
+            //b = minAddress;
+            //ZeroMemory(&mbi, sizeof(mbi));
+            //while (VirtualQueryEx(process.Handle, UIntToPtr(b), mbi, sizeof(mbi)) == sizeof(mbi))
+            //{
+            //    if (mbi.BaseAddress > UIntToPtr(maxAddress)) return FindFreeBlockForRegion_result; //no memory found, just return 0 and let windows decide
+            //
+            //    if ((mbi.State == MEM_FREE) && ((mbi.RegionSize) > size))
+            //    {
+            //        if ((PtrToUInt(mbi.baseaddress) % systeminfo.dwAllocationGranularity) > 0)
+            //        {
+            //            //the whole size can not be used
+            //            x = PtrToUInt(mbi.baseaddress);
+            //            offset = systeminfo.dwAllocationGranularity - (x % systeminfo.dwAllocationGranularity);
+            //
+            //            //check if there's enough left
+            //            if ((mbi.regionsize - offset) > size)
+            //            {
+            //                //yes
+            //                x = x + offset;
+            //
+            //                if (x < base)
+            //                {
+            //                    x = x + (mbi.regionsize - offset) - size;
+            //                    if (x > base) x = base;
+            //
+            //                    //now decrease x till it's alligned properly
+            //                    x = x - (x % systeminfo.dwAllocationGranularity);
+            //                }
+            //
+            //                //if the difference is closer then use that
+            //                if (abs(PtrInt(x - base)) < abs(PtrInt(PtrToUInt(result) - base)))
+            //                    result = UIntToPtr(x);
+            //            }
+            //            //nope
+            //
+            //        }
+            //        else
+            //        {
+            //            x = PtrToUInt(mbi.BaseAddress);
+            //            if (x < base)  //try to get it the closest possible (so to the end of the region-size and aligned by dwAllocationGranularity)
+            //            {
+            //                x = (x + mbi.RegionSize) - size;
+            //                if (x > base) x = base;
+            //
+            //                //now decrease x till it's alligned properly
+            //                x = x - (x % systeminfo.dwAllocationGranularity);
+            //            }
+            //
+            //            if (abs(ptrInt(x - base)) < abs(ptrInt(PtrToUInt(result) - base)))
+            //                result = UIntToPtr(x);
+            //        }
+            //
+            //    }
+            //    b = PtrToUInt(mbi.BaseAddress) + mbi.RegionSize;
+            //}
+            //return FindFreeBlockForRegion_result;
         }
         #endregion
     }

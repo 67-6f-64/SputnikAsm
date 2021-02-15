@@ -1,15 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Windows.Forms;
+using Sputnik.LFileSystem;
 using Sputnik.LString;
 using Sputnik.LUtils;
 using SputnikAsm.LAssembler;
 using SputnikAsm.LAssembler.LEnums;
 using SputnikAsm.LAutoAssembler.LCollections;
 using SputnikAsm.LCollections;
+using SputnikAsm.LExtensions;
 using SputnikAsm.LGenerics;
 using SputnikAsm.LSymbolHandler;
 using SputnikAsm.LUtils;
+using SputnikWin.LExtra.LMemorySharp.Native;
 
 namespace SputnikAsm.LAutoAssembler
 {
@@ -951,45 +954,32 @@ namespace SputnikAsm.LAutoAssembler
                             }
                             */
                             #endregion
-                            #region Command INCLUDE() -- todo
-                            /*
-                            if (uppercase(copy(currentline, 1, 8)) == "INCLUDE(")
+                            #region Command INCLUDE()
+                            if (AStringUtils.Copy(currentline, 0, 8).ToUpper() == "INCLUDE(")
                             {
-                                a = pos("(", currentline);
-                                b = pos(")", currentline);
-
-                                if ((a > 0) && (b > 0))
+                                a = AStringUtils.Pos("(", currentline);
+                                b = AStringUtils.Pos(")", currentline);
+                                if (a > 0 && b > 0)
                                 {
-                                    s1 = trim(copy(currentline, a + 1, b - a - 1));
+                                    s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
 
-                                    if (ExtractFileExt(uppercase(s1)) == "")
-                                        s1 = s1 + ".CEA";
-
-                                    if (~fileexists(s1))
-                                    {
-                                        //check if it's inside the current location,also can use '..\..\'
-                                        throw new Exception(UStringUtils.Sprintf(rsCouldNotBeFound, set::of(s1, eos)));
-                                    }
-
-                                    include = tstringlist.Create;
-                                    //try
-                                    include.LoadFromFile(s1);
-                                    removecomments(include);
-                                    unlabeledlabels(include);
-                                    aobscans(process, include, syntaxCheckOnly);
-
-                                    for (j = i + 1; j <= (i + 1) + (include.Count - 1); j++)
+                                    if (String.IsNullOrEmpty(UIo.Path.GetExtension(s1)))
+                                        s1 += ".cea";
+                                    if (!UIo.File.Exists(s1))
+                                        throw new Exception(UStringUtils.Sprintf(rsCouldNotBeFound, s1));
+                                    include = new ARefStringArray();
+                                    include.AddRange(UIo.File.ReadAllLines(s1));
+                                    RemoveComments(include);
+                                    UnlabeledLabels(include);
+                                    AobScans(process, include, syntaxCheckOnly);
+                                    for (j = i + 1; j <= (i + 1) + (include.Length - 1); j++)
                                         code.Insert(j, include[j - (i + 1)]);
-                                    //finally
-                                    include.Free;
-                                    //end;
-
-                                    setlength(assemblerlines, length(assemblerlines) - 1);
-                                    continue_;
+                                    assemblerlines.SetLength(assemblerlines.Length - 1);
+                                    continue;
                                 }
-                                else throw new Exception(rsWrongSyntaxIncludeFilenameCea);
+                                else
+                                    throw new Exception(rsWrongSyntaxIncludeFilenameCea);
                             }
-                            */
                             #endregion
                             #region Command CREATETHREAD() -- todo
                             /*
@@ -1012,76 +1002,48 @@ namespace SputnikAsm.LAutoAssembler
                             }
                             */
                             #endregion
-                            #region Command READMEM() -- todo
-                            /*
-                            if (uppercase(copy(currentline, 1, 8)) == "READMEM(")
+                            #region Command READMEM()
+                            if (AStringUtils.Copy(currentline, 0, 8).ToUpper() == "READMEM(")
                             {
                                 //read memory and place it here (readmem(address,size) )
-                                a = pos("(", currentline);
-                                b = pos(",", currentline);
-                                c = pos(")", currentline);
+                                a = AStringUtils.Pos("(", currentline);
+                                b = AStringUtils.Pos(",", currentline);
+                                c = AStringUtils.Pos(")", currentline);
                                 if ((a > 0) && (b > 0) && (c > 0))
                                 {
-                                    s1 = trim(copy(currentline, a + 1, b - a - 1));
-                                    s2 = trim(copy(currentline, b + 1, c - b - 1));
-
+                                    s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
+                                    s2 = AStringUtils.Copy(currentline, b + 1, c - b - 1).Trim();
                                     //read memory and replace with lines of DB xx xx xx xx xx xx xx xx
-                                    //try
-                                    testPtr = symHandler.getAddressFromName(s1);
-                                    //except
-                                    throw new Exception(rsInvalidAddressForReadMem);
-                                    //end;
-
-                                    //try
-                                    a = strtoint(s2);
-                                    //except
-                                    throw new Exception(rsInvalidSizeForReadMem);
-                                    //end;
-
+                                    testPtr = symHandler.GetAddressFromName(s1);
+                                    a = AStringUtils.StrToInt(s2);
                                     if (a == 0)
                                         throw new Exception(rsInvalidSizeForReadMem);
-
-
-                                    GetMem(bytebuf, a);
-                                    //try
-                                    if ((~ReadProcessMemory(processHandle, UIntToPtr(testPtr), bytebuf, a, x)) | (x < a))
-                                        throw new Exception(UStringUtils.Sprintf(rsTheMemoryAtCouldNotBeFullyRead, set::of(s1, eos)));
-
+                                    var byteBuf = (Byte[])process.ReadMem((IntPtr)testPtr.ToUInt64(), ReadType.Binary, a);
+                                    if (byteBuf.Length <= 0 | (byteBuf.Length < a))
+                                        throw new Exception(UStringUtils.Sprintf(rsTheMemoryAtCouldNotBeFullyRead, s1));
                                     //still here so everything ok
-                                    setlength(assemblerlines, length(assemblerlines) - 1);
-
+                                    assemblerlines.SetLength(assemblerlines.Length - 1);
                                     s1 = "db";
-
                                     for (j = 0; j <= a - 1; j++)
                                     {
-                                        s1 = s1 + ' ' + IntToHex(bytebuf[j], 2);
-                                        if ((j % 16) == 15)
+                                        s1 = s1 + ' ' + AStringUtils.IntToHex(byteBuf[j], 2);
+                                        if (j % 16 == 15)
                                         {
-                                            setlength(assemblerlines, length(assemblerlines) + 1);
-                                            assemblerlines[length(assemblerlines) - 1] = s1;
-
+                                            assemblerlines.SetLength(assemblerlines.Length + 1);
+                                            assemblerlines.Last = s1;
                                             s1 = "db";
                                         }
                                     }
-
-                                    if (length(s1) > 2)
+                                    if (s1.Length > 2)
                                     {
-                                        setlength(assemblerlines, length(assemblerlines) + 1);
-                                        assemblerlines[length(assemblerlines) - 1] = s1;
+                                        assemblerlines.SetLength(assemblerlines.Length + 1);
+                                        assemblerlines.Last = s1;
                                     }
-
-                                    //finally
-                                    FreeMem(bytebuf);
-                                    //end;
-
-
-
                                 }
-                                else throw new Exception(rsWrongSyntaxReadMemAddressSize);
-
-                                continue_;
+                                else
+                                    throw new Exception(rsWrongSyntaxReadMemAddressSize);
+                                continue;
                             }
-                            */
                             #endregion
                             #region Command LOADBINARY() -- todo
                             /*
@@ -1278,77 +1240,60 @@ namespace SputnikAsm.LAutoAssembler
                             }
                             */
                             #endregion
-                            #region Command ALLOC() -- todo
-                            /*
-                            if (uppercase(copy(currentline, 1, 6)) == "ALLOC(")
+                            #region Command ALLOC()
+                            if (AStringUtils.Copy(currentline, 0, 6).ToUpper() == "ALLOC(")
                             {
                                 //syntax: alloc(x,size)    x=variable name size=bytes
                                 //or
                                 //syntax: alloc(x,size,prefered region)    x=variable name size=bytes
                                 //allocate memory
-                                a = pos("(", currentline);
-                                b = pos(",", currentline);
-                                c = PosEx(',', currentline, b + 1);
-                                d = pos(")", currentline);
-
-
-
-                                if ((a > 0) && (b > 0) && (d > 0))
+                                a = AStringUtils.Pos("(", currentline);
+                                b = AStringUtils.Pos(",", currentline);
+                                c = AStringUtils.PosEx(",", currentline, b + 1);
+                                d = AStringUtils.Pos(")", currentline);
+                                if (a > 0 && b > 0 && d > 0)
                                 {
-                                    s1 = trim(copy(currentline, a + 1, b - a - 1));
-
+                                    s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
                                     if (c > 0)
                                     {
-                                        s2 = trim(copy(currentline, b + 1, c - b - 1));
-                                        s3 = trim(copy(currentline, c + 1, d - c - 1));
+                                        s2 = AStringUtils.Copy(currentline, b + 1, c - b - 1).Trim();
+                                        s3 = AStringUtils.Copy(currentline, c + 1, d - c - 1).Trim();
                                     }
                                     else
                                     {
-                                        s2 = trim(copy(currentline, b + 1, d - b - 1));
+                                        s2 = AStringUtils.Copy(currentline, b + 1, d - b - 1).Trim();
                                         s3 = "";
                                     }
-
-                                    val(string('$') + s1, j, a);
-                                    if (a == 0) throw new Exception(UStringUtils.Sprintf(rsIsNotAValidIdentifier, set::of(s1, eos)));
-
-                                    varsize = length(s1);
-
+                                    AStringUtils.Val("0x" + s1, out j, out a);
+                                    if (a == 0)
+                                        throw new Exception(UStringUtils.Sprintf(rsIsNotAValidIdentifier, s1));
+                                    varsize = s1.Length;
                                     //check for duplicate identifiers
                                     j = 0;
-                                    while ((j < length(allocs)) && (length(allocs[j].varname) > varsize))
+                                    while (j < allocs.Length && allocs[j].Name.Length > varsize)
                                     {
-                                        if (allocs[j].varname == s1)
-                                            throw new Exception(UStringUtils.Sprintf(rsTheIdentifierHasAlreadyBeenDeclared, set::of(s1, eos)));
+                                        if (allocs[j].Name == s1)
+                                            throw new Exception(UStringUtils.Sprintf(rsTheIdentifierHasAlreadyBeenDeclared, s1));
 
                                         j += 1;
                                     }
-
-                                    j = length(allocs);//quickfix
-
-                                    setlength(allocs, length(allocs) + 1);
-
+                                    j = allocs.Length; //quickfix
+                                    allocs.SetLength(allocs.Length + 1);
                                     //longest varnames first so the rename of a shorter matching var wont override the longer one
                                     //move up the other allocs so I can inser this element (A linked list might have been better)
-                                    for (k = length(allocs) - 1; k >= j + 1; k--)
+                                    for (k = allocs.Length - 1; k >= j + 1; k--)
                                         allocs[k] = allocs[k - 1];
-
-                                    allocs[j].varname = s1;
-                                    allocs[j].size = StrToInt(s2);
+                                    allocs[j].Name = s1;
+                                    allocs[j].Size = AStringUtils.StrToDWord(s2);
                                     if (s3 != "")
-                                    {
-
-                                        allocs[j].prefered = symHandler.getAddressFromName(s3);
-                                    }
+                                        allocs[j].Preferred = symHandler.GetAddressFromName(s3);
                                     else
-                                        allocs[j].prefered = 0;
-
-
-                                    setlength(assemblerlines, length(assemblerlines) - 1);   //don't bother with this in the 2nd pass
-                                    continue_;
+                                        allocs[j].Preferred = UIntPtr.Zero;
+                                    assemblerlines.SetLength(assemblerlines.Length - 1);   //don't bother with this in the 2nd pass
+                                    continue;
                                 }
                                 else throw new Exception(rsWrongSyntaxALLOCIdentifierSizeinbytes);
                             }
-                             */
                             #endregion
                             //replace ALLOC identifiers with values so the assemble error check doesnt crash on that
                             if (process.IsX64)
@@ -1665,71 +1610,71 @@ namespace SputnikAsm.LAutoAssembler
                     //Code is injectable ,but Do not inject it!
                 }
                 #region Allocate The Memory
-                // if (length(allocs) > 0)
-                // {
-                //     j = 0; //entry to go from
-                //     prefered = allocs[0].prefered;
-                //     x = allocs[0].size;
-                //     for (i = 1; i <= length(allocs) - 1; i++)
-                //     {
-                //         //does this entry have a prefered location?
-                //         if (allocs[i].Preferred != 0)
-                //         {
-                //             //if yes, is it the same as the previous entry? (or was the previous one that doesn't care?)
-                //             if ((prefered != allocs[i].prefered) && (prefered != 0))
-                //             {
-                //                 //different prefered address
-                //                 if (x > 0)  //it has some previous entries with compatible locations
-                //                 {
-                //                     k = 10;
-                //                     allocs[j].Address = UIntPtr.Zero;
-                //                     while ((k > 0) && (allocs[j].Address == UIntPtr.Zero))
-                //                     {
-                //                         //try allocating untill a memory region has been found (e.g due to quick allocating by the game)
-                //                         allocs[j].Address = PtrToUInt(virtualallocex(processHandle, FindFreeBlockForRegion(process, prefered, x), x, MEM_RESERVE | MEM_COMMIT, page_execute_readwrite));
-                //                         if (allocs[j].Address == 0) OutputDebugString((pchar)(rsFailureToAllocateMemory + " 1"));
-                // 
-                //                         k -= 1;
-                //                     }
-                //                     if (allocs[j].Address == UIntPtr.Zero)
-                //                         allocs[j].Address = PtrToUInt(virtualallocex(processHandle, nil, x, MEM_RESERVE | MEM_COMMIT, page_execute_readwrite));
-                //                     if (allocs[j].Address == UIntPtr.Zero)
-                //                         OutputDebugString((pchar)(rsFailureToAllocateMemory + " 2"));
-                //                     //adjust the addresses of entries that are part of this block
-                //                     for (k = j + 1; k <= i - 1; k++)
-                //                         allocs[k].Address = allocs[k - 1].Address + allocs[k - 1].Size;
-                //                     x = 0;
-                //                 }
-                //                 //new preferred address
-                //                 j = i;
-                //                 prefered = allocs[i].Preferred;
-                //             }
-                //         }
-                //         //no prefered location specified, OR same prefered location
-                //         x += allocs[i].Size;
-                //     }
-                //     if (x > 0)
-                //     {
-                //         //adjust the address of entries that are part of this final block
-                //         k = 10;
-                //         allocs[j].Address = 0;
-                //         while ((k > 0) && (allocs[j].Address == 0))
-                //         {
-                //             i = 0;
-                //             prefered = PtrToUInt(FindFreeBlockForRegion(process, prefered, x));
-                //             allocs[j].address = PtrToUInt(virtualallocex(processHandle, UIntToPtr(prefered), x, MEM_RESERVE | MEM_COMMIT, page_execute_readwrite));
-                //             if (allocs[j].address == 0)
-                //                 OutputDebugString((pchar)(rsFailureToAllocateMemory + " 3"));
-                //             k -= 1;
-                //         }
-                //         if (allocs[j].Address == 0)
-                //             allocs[j].Address = PtrToUInt(virtualallocex(processHandle, nil, x, MEM_RESERVE | MEM_COMMIT, page_execute_readwrite));
-                //         if (allocs[j].Address == 0)
-                //             throw new Exception(rsFailureToAllocateMemory + " 4");
-                //         for (i = j + 1; i <= length(allocs) - 1; i++)
-                //             allocs[i].Address = allocs[i - 1].Address + allocs[i - 1].size;
-                //     }
-                // }
+                if (allocs.Length > 0)
+                {
+                    j = 0; //entry to go from
+                    prefered = allocs[0].Preferred;
+                    x = allocs[0].Size;
+                    for (i = 1; i <= allocs.Length - 1; i++)
+                    {
+                        //does this entry have a prefered location?
+                        if (allocs[i].Preferred != UIntPtr.Zero)
+                        {
+                            //if yes, is it the same as the previous entry? (or was the previous one that doesn't care?)
+                            if (prefered != allocs[i].Preferred && prefered != UIntPtr.Zero)
+                            {
+                                //different preferred address
+                                if (x > 0)  //it has some previous entries with compatible locations
+                                {
+                                    k = 10;
+                                    allocs[j].Address = UIntPtr.Zero;
+                                    while (k > 0 && allocs[j].Address == UIntPtr.Zero)
+                                    {
+                                        //try allocating until a memory region has been found (e.g due to quick allocating by the game)
+                                        allocs[j].Address = process.AllocNear(prefered.ToIntPtr(), (int)x, MemoryProtectionFlags.ExecuteReadWrite, MemoryAllocationFlags.Reserve | MemoryAllocationFlags.Commit).ToUIntPtr();
+                                        if (allocs[j].Address == UIntPtr.Zero)
+                                            OutputDebugString(rsFailureToAllocateMemory + " 1");
+                                        k -= 1;
+                                    }
+                                    if (allocs[j].Address == UIntPtr.Zero)
+                                        allocs[j].Address = process.Alloc((int)x, MemoryProtectionFlags.ExecuteReadWrite, MemoryAllocationFlags.Reserve | MemoryAllocationFlags.Commit).ToUIntPtr();
+                                    if (allocs[j].Address == UIntPtr.Zero)
+                                        OutputDebugString(rsFailureToAllocateMemory + " 2");
+                                    //adjust the addresses of entries that are part of this block
+                                    for (k = j + 1; k <= i - 1; k++)
+                                        allocs[k].Address = (UIntPtr)(allocs[k - 1].Address.ToUInt64() + allocs[k - 1].Size);
+                                    x = 0;
+                                }
+                                //new preferred address
+                                j = i;
+                                prefered = allocs[i].Preferred;
+                            }
+                        }
+                        //no preferred location specified, OR same preferred location
+                        x += allocs[i].Size;
+                    }
+                    if (x > 0)
+                    {
+                        //adjust the address of entries that are part of this final block
+                        k = 10;
+                        allocs[j].Address = UIntPtr.Zero;
+                        while (k > 0 && allocs[j].Address == UIntPtr.Zero)
+                        {
+                            i = 0;
+                            prefered = process.FindFreeBlockForRegion(prefered, (UInt32)x);
+                            allocs[j].Address = process.Alloc(prefered.ToIntPtr(), (int)x, MemoryProtectionFlags.ExecuteReadWrite, MemoryAllocationFlags.Reserve | MemoryAllocationFlags.Commit).ToUIntPtr();
+                            if (allocs[j].Address == UIntPtr.Zero)
+                                OutputDebugString(rsFailureToAllocateMemory + " 3");
+                            k -= 1;
+                        }
+                        if (allocs[j].Address == UIntPtr.Zero)
+                            allocs[j].Address = process.Alloc((int)x, MemoryProtectionFlags.ExecuteReadWrite, MemoryAllocationFlags.Reserve | MemoryAllocationFlags.Commit).ToUIntPtr();
+                        if (allocs[j].Address == UIntPtr.Zero)
+                            throw new Exception(rsFailureToAllocateMemory + " 4");
+                        for (i = j + 1; i <= allocs.Length - 1; i++)
+                            allocs[i].Address = (UIntPtr)(allocs[i - 1].Address.ToUInt64() + allocs[i - 1].Size);
+                    }
+                }
                 #endregion
                 //-----------------------2nd pass------------------------
                 //assembler lines only contains label specifiers and assembler instructions
@@ -2115,6 +2060,12 @@ namespace SputnikAsm.LAutoAssembler
                 tokens.Clear();
             }
             return result;
+        }
+        #endregion
+        #region OutputDebugString
+        private void OutputDebugString(String msg)
+        {
+            Console.WriteLine("Debug: " + msg);
         }
         #endregion
     }
