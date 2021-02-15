@@ -1960,112 +1960,90 @@ namespace SputnikAsm.LDisassembler
             return result;
         }
         #endregion
-        #region SplitDisassembledString -- todo
-        public void SplitDisassembledString(String disassembled, Boolean showvalues, out String address, out String bytes, out String opcode, out String special, Object context = null)
+        #region SplitDisassembledString
+        public void SplitDisassembledString(String disassembled, Boolean showValues, out String address, out String bytes, out String opcode, out String special, Object context = null)
         {
-            var byteInterp = new AByteInterpreter(SymbolHandler);
-            var offset = UIntPtr.Zero;
-            var value = UIntPtr.Zero;
-            var e = 0;
-            var i = 0;
-            var j = 0;
-            var j2 = 0;
-            var k = 0;
-            var l = 0;
-            string ts, ts2, ts3;
-            var actualread = 0;
-            var valuetype = 0;
-            //    tokens: ttokens;
-            var fvalue = 0.0f;
-            var fvalue2 = 0.0;
             var tempBufBack = UBinaryUtils.NewZeroByteArray(127);
-            var tempbuf = new UBytePtr(tempBufBack);
-            AVariableType variabletype;
-            var tempaddress = UIntPtr.Zero;
-            var err = false;
-            var isjumper = false;
-            var hexstring = "";
+            var tempBuf = new UBytePtr(tempBufBack);
+            var tempAddress = UIntPtr.Zero;
             var readBuf = new UBytePtr(UBinaryUtils.NewZeroByteArray(64));
-            i = AStringUtils.Pos(" - ", disassembled);
+            var i = AStringUtils.Pos(" - ", disassembled);
             address = AStringUtils.Copy(disassembled, 1, i - 1).ToUpper();
             i += 3;
-            j = AStringUtils.PosEx(" - ", disassembled, i);
+            var j = AStringUtils.PosEx(" - ", disassembled, i);
             if (j == -1)
                 j = disassembled.Length + 1;
-            bytes = AStringUtils.Copy(disassembled, i, (j - i));
+            bytes = AStringUtils.Copy(disassembled, i, j - i);
             j += 3;
-            k = AStringUtils.PosEx(" : ", disassembled, j);
-            l = k;
+            var k = AStringUtils.PosEx(" : ", disassembled, j);
+            var l = k;
             if (k == -1)
                 k = disassembled.Length + 1;
-            opcode = AStringUtils.Copy(disassembled, j, (k - j));
-            if (showvalues)
+            opcode = AStringUtils.Copy(disassembled, j, k - j);
+            if (showValues)
             {
-                ts = "";
+                var ts = "";
                 special = "";
-                if (HasAddress(opcode, ref tempaddress, context) | (opcode.Length > 3 && opcode.StartsWith("lea")))
+                if (HasAddress(opcode, ref tempAddress, context) | (opcode.Length > 3 && opcode.StartsWith("lea")))
                 {
-                    if (AMemoryHelper.IsAddress(SymbolHandler.Process.Handle, tempaddress.ToIntPtr()))
+                    AVariableType variableType;
+                    if (AMemoryHelper.IsAddress(SymbolHandler.Process.Handle, tempAddress.ToIntPtr()))
                     {
+                        int j2;
                         try
                         {
-        
                             if (opcode.StartsWith("lea")) //lea
                             {
                                 j = AStringUtils.Pos("[", opcode);
                                 j2 = AStringUtils.Pos("]", opcode);
-                                ts2 = AStringUtils.Copy(opcode, j + 1, j2 - j - 1);
-                                tempaddress = SymbolHandler.GetAddressFromName(ts2, false, out err);
+                                var ts2 = AStringUtils.Copy(opcode, j + 1, j2 - j - 1);
+                                tempAddress = SymbolHandler.GetAddressFromName(ts2, false, out var err);
                                 if (err)
                                     return; //error
                             }
                         }
                         catch
                         {
-                            tempaddress = UIntPtr.Zero; ////////////////////////// REACHED WITH INDEX FIX
+                            tempAddress = UIntPtr.Zero;
                         }
-                        isjumper = false;
-                        if (opcode.StartsWith("j"))
-                            isjumper = true; //jmp, jx
-                        if (opcode.StartsWith("loo"))
-                            isjumper = true; //loop
-                        if (opcode.StartsWith("ca"))
-                            isjumper = true; //call
-                        valuetype = OpCodeToValueType(opcode);
+                        var isJumper = opcode.StartsWith("j") ||
+                                       opcode.StartsWith("loo") ||
+                                       opcode.StartsWith("ca");
+                        var valueType = OpCodeToValueType(opcode);
                         i = AStringUtils.Pos("[", disassembled);
                         if (i != -1)
                         {
                             //it might have an override
                             if (AStringUtils.Pos("qword ptr", opcode) != -1)
-                                valuetype = 4;
+                                valueType = 4;
                             else if (AStringUtils.Pos("dword ptr", opcode) != -1) //usually a double
-                                valuetype = 2;
+                                valueType = 2;
                             else if (AStringUtils.Pos("word ptr", opcode) != -1)
-                                valuetype = 1;
+                                valueType = 1;
                             else if (AStringUtils.Pos("byte ptr", opcode) != -1)
-                                valuetype = 0;
+                                valueType = 0;
                             else
                             {
                                 //check the register used
                                 j2 = AStringUtils.Pos(",[", opcode);
                                 k = AStringUtils.Pos("],", opcode);
+                                String ts3;
                                 if (j2 != -1)  //register in front
                                 {
                                     l = AStringUtils.Pos(" ", opcode);
                                     ts3 = AStringUtils.Copy(opcode, l + 1, j2 - l - 1);
-        
                                     switch (AAsmTools.Assembler.TokenToRegisterBit(ts3.ToUpper()))
                                     {
                                         case ATokenType.Register8Bit:
-                                            valuetype = 0;
+                                            valueType = 0;
                                             break;
                                         case ATokenType.Register16Bit:
-                                            valuetype = 1;
+                                            valueType = 1;
                                             break;
                                         case ATokenType.Register32Bit:
-                                            valuetype = 2;
+                                            valueType = 2;
                                             break;
-                                        default: valuetype = 2;
+                                        default: valueType = 2;
                                             break;
                                     }
                                 }
@@ -2077,76 +2055,77 @@ namespace SputnikAsm.LDisassembler
                                     switch (AAsmTools.Assembler.TokenToRegisterBit(ts3.ToUpper()))
                                     {
                                         case ATokenType.Register8Bit:
-                                            valuetype = 0;
+                                            valueType = 0;
                                             break;
                                         case ATokenType.Register16Bit:
-                                            valuetype = 1;
+                                            valueType = 1;
                                             break;
                                         case ATokenType.Register32Bit:
-                                            valuetype = 2;
+                                            valueType = 2;
                                             break;
-                                        default: valuetype = 2;
+                                        default: valueType = 2;
                                             break;
                                     }
                                 } //else no idea, check var
                             }
                         } //not an address specifier
-                        if (valuetype == 2)
+                        if (valueType == 2)
                         {
-                            if (Kernel32.ReadProcessMemory(Proc.Handle, tempaddress.ToIntPtr(), tempbuf.ToIntPtr(), 16, out actualread))
+                            if (Kernel32.ReadProcessMemory(Proc.Handle, tempAddress.ToIntPtr(), tempBuf.ToIntPtr(), 16, out _))
                             {
-                                variabletype = byteInterp.FindTypeOfData(tempaddress, tempbuf, 16);
-                                switch (variabletype)
+                                variableType = AAsmTools.ByteInterpreter.FindTypeOfData(tempAddress, tempBuf, 16);
+                                switch (variableType)
                                 {
                                     case AVariableType.Single:
-                                        valuetype = 3;
+                                        valueType = 3;
                                         break;
                                     case AVariableType.Double:
-                                        valuetype = 4;
+                                        valueType = 4;
                                         break;
                                     case AVariableType.String:
-                                        valuetype = 5;
+                                        valueType = 5;
                                         break;
                                     case AVariableType.UnicodeString:
-                                        valuetype = 6;
+                                        valueType = 6;
                                         break;
                                 }
                             }
                         }
-                        if (isjumper)
-                            valuetype = 2; //handle it as a dword
-                        value = UIntPtr.Zero;
-                        fvalue = 0;
-                        fvalue2 = 0;
-                        switch (valuetype)
+                        if (isJumper)
+                            valueType = 2; //handle it as a dword
+                        switch (valueType)
                         {
                             case 0: // byte
-                                if (Kernel32.ReadProcessMemory(Proc.Handle, tempaddress.ToIntPtr(), readBuf.ToIntPtr(), 1, out actualread))
+                            {
+                                if (Kernel32.ReadProcessMemory(Proc.Handle, tempAddress.ToIntPtr(), readBuf.ToIntPtr(), 1, out _))
                                 {
-                                    value = (UIntPtr)readBuf.ReadByte();
+                                    var value = (UIntPtr)readBuf.ReadByte();
                                     ts = AStringUtils.IntToHex(value, 2);
                                 }
                                 break;
+                            }
                             case 1: // word
-                                if (Kernel32.ReadProcessMemory(Proc.Handle, tempaddress.ToIntPtr(), readBuf.ToIntPtr(), 2, out actualread))
+                            {
+                                if (Kernel32.ReadProcessMemory(Proc.Handle, tempAddress.ToIntPtr(), readBuf.ToIntPtr(), 2, out _))
                                 {
-                                    value = (UIntPtr)readBuf.ReadUInt16();
+                                    var value = (UIntPtr)readBuf.ReadUInt16();
                                     ts = AStringUtils.IntToHex(value, 4);
                                 }
                                 break;
+                            }
                             case 2: // dword
-                                if (Kernel32.ReadProcessMemory(Proc.Handle, tempaddress.ToIntPtr(), readBuf.ToIntPtr(), 4, out actualread))
+                            {
+                                if (Kernel32.ReadProcessMemory(Proc.Handle, tempAddress.ToIntPtr(), readBuf.ToIntPtr(), 4, out _))
                                 {
-                                    value = (UIntPtr)readBuf.ReadUInt32();
-                                    if (isjumper && (((int)value.ToUInt32() & 0xffff) == 0x25ff))  //it's a jmp [xxxxxxxx]    / call [xxxxxx] ...
+                                    var value = (UIntPtr)readBuf.ReadUInt32();
+                                    if (isJumper && (((int)value.ToUInt32() & 0xffff) == 0x25ff))  //it's a jmp [xxxxxxxx]    / call [xxxxxx] ...
                                     {
-                                        value = UIntPtr.Zero;
-                                        if (Kernel32.ReadProcessMemory(Proc.Handle, (IntPtr)(tempaddress.ToUInt64() + 2), readBuf.ToIntPtr(), 4, out actualread))
+                                        if (Kernel32.ReadProcessMemory(Proc.Handle, (IntPtr)(tempAddress.ToUInt64() + 2), readBuf.ToIntPtr(), 4, out _))
                                         {
                                             value = (UIntPtr)readBuf.ReadUInt32();
                                             if (Proc.IsX64)
-                                                value = (UIntPtr)(tempaddress.ToUInt64() + 6 + value.ToUInt64());
-                                            if (Kernel32.ReadProcessMemory(Proc.Handle, value.ToIntPtr(), readBuf.ToIntPtr(), Proc.PointerSize, out actualread))
+                                                value = (UIntPtr)(tempAddress.ToUInt64() + 6 + value.ToUInt64());
+                                            if (Kernel32.ReadProcessMemory(Proc.Handle, value.ToIntPtr(), readBuf.ToIntPtr(), Proc.PointerSize, out _))
                                             {
                                                 value = readBuf.ReadUIntPtr();
                                                 ts = "->" + SymbolHandler.GetNameFromAddress(value, SymbolHandler.ShowSymbols, SymbolHandler.ShowModules, SymbolHandler.ShowSections, null, out _, 8, false);
@@ -2155,7 +2134,7 @@ namespace SputnikAsm.LDisassembler
                                     }
                                     else
                                         ts = SymbolHandler.GetNameFromAddress(value, SymbolHandler.ShowSymbols, SymbolHandler.ShowModules, SymbolHandler.ShowSections, null, out _, 8, false);
-                                    if (isjumper)
+                                    if (isJumper)
                                     {
                                         //check if ts is a name or a hexadecimal value
                                         //if hex, don't use it
@@ -2165,47 +2144,52 @@ namespace SputnikAsm.LDisassembler
                                     }
                                 }
                                 break;
+                            }
                             case 3: // Single
-                                if (Kernel32.ReadProcessMemory(Proc.Handle, tempaddress.ToIntPtr(), readBuf.ToIntPtr(), 4, out actualread))
+                            {
+                                if (Kernel32.ReadProcessMemory(Proc.Handle, tempAddress.ToIntPtr(), readBuf.ToIntPtr(), 4, out _))
                                 {
-                                    fvalue = readBuf.ReadFloat();
-                                    ts = UStringUtils.Sprintf("(float)%.4f", fvalue);
+                                    var value = readBuf.ReadFloat();
+                                    ts = UStringUtils.Sprintf("(float)%.4f", value);
                                 }
                                 break;
+                            }
                             case 4: // Double
-                                if (Kernel32.ReadProcessMemory(Proc.Handle, tempaddress.ToIntPtr(), readBuf.ToIntPtr(), 8, out actualread))
+                            {
+                                if (Kernel32.ReadProcessMemory(Proc.Handle, tempAddress.ToIntPtr(), readBuf.ToIntPtr(), 8, out _))
                                 {
-                                    fvalue2 = readBuf.ReadDouble();
-                                    ts = UStringUtils.Sprintf("(double)%.4f", fvalue2);
+                                    var value = readBuf.ReadDouble();
+                                    ts = UStringUtils.Sprintf("(double)%.4f", value);
                                 }
                                 break;
+                            }
                             case 5: // String
                                 {
-                                    Kernel32.ReadProcessMemory(Proc.Handle, tempaddress.ToIntPtr(), tempbuf.ToIntPtr(), 128, out actualread);
-                                    tempbuf[127] = 0;
-                                    tempbuf[126] = (Byte)'.';
-                                    tempbuf[125] = (Byte)'.';
-                                    tempbuf[124] = (Byte)'.';
-                                    if (actualread > 0)
-                                        tempbuf[actualread - 1] = 0;
+                                    Kernel32.ReadProcessMemory(Proc.Handle, tempAddress.ToIntPtr(), tempBuf.ToIntPtr(), 128, out var actualRead);
+                                    tempBuf[127] = 0;
+                                    tempBuf[126] = (Byte)'.';
+                                    tempBuf[125] = (Byte)'.';
+                                    tempBuf[124] = (Byte)'.';
+                                    if (actualRead > 0)
+                                        tempBuf[actualRead - 1] = 0;
                                     ts = '"' + UBitConverter.UnpackSingle("z1", 0, tempBufBack).ToString() + '"';
                                 }
                                 break;
                             case 6: // UnicodeString
                                 {
-                                    Kernel32.ReadProcessMemory(Proc.Handle, tempaddress.ToIntPtr(), tempbuf.ToIntPtr(), 128, out actualread);
-                                    tempbuf[127] = 0;
-                                    tempbuf[126] = 0;
-                                    tempbuf[125] = 0;
-                                    tempbuf[124] = (Byte)'.';
-                                    tempbuf[123] = 0;
-                                    tempbuf[122] = (Byte)'.';
-                                    tempbuf[121] = 0;
-                                    tempbuf[120] = (Byte)'.';
-                                    if (actualread > 1)
+                                    Kernel32.ReadProcessMemory(Proc.Handle, tempAddress.ToIntPtr(), tempBuf.ToIntPtr(), 128, out var actualRead);
+                                    tempBuf[127] = 0;
+                                    tempBuf[126] = 0;
+                                    tempBuf[125] = 0;
+                                    tempBuf[124] = (Byte)'.';
+                                    tempBuf[123] = 0;
+                                    tempBuf[122] = (Byte)'.';
+                                    tempBuf[121] = 0;
+                                    tempBuf[120] = (Byte)'.';
+                                    if (actualRead > 1)
                                     {
-                                        tempbuf[actualread - 1] = 0;
-                                        tempbuf[actualread - 2] = 0;
+                                        tempBuf[actualRead - 1] = 0;
+                                        tempBuf[actualRead - 2] = 0;
                                     }
                                     ts = "\"\"" + UBitConverter.UnpackSingle("z7", 0, tempBufBack) + "\"\"";
                                 }
@@ -2216,11 +2200,11 @@ namespace SputnikAsm.LDisassembler
                     }
                     else
                     {
-                        //tempaddress doesn't seem to be an address
-                        tempbuf.Zero();
-                        variabletype = byteInterp.FindTypeOfData(UIntPtr.Zero, tempbuf, Proc.PointerSize);
-                        if (variabletype == AVariableType.Single)
-                            ts = UStringUtils.Sprintf("(float)%.4f", tempaddress.ToIntPtr().ReadFloat());
+                        //tempAddress doesn't seem to be an address
+                        tempBuf.Zero();
+                        variableType = AAsmTools.ByteInterpreter.FindTypeOfData(UIntPtr.Zero, tempBuf, Proc.PointerSize);
+                        if (variableType == AVariableType.Single)
+                            ts = UStringUtils.Sprintf("(float)%.4f", tempAddress.ToIntPtr().ReadFloat());
                     }
                 }
                 special = ts;
@@ -2230,60 +2214,54 @@ namespace SputnikAsm.LDisassembler
         }
         #endregion
         #region DecodeLastParametersToString
-        public unsafe String DecodeLastParametersToString()
+        public String DecodeLastParametersToString()
         {
-            var byteInterp = new AByteInterpreter(SymbolHandler);
             var values = new AArrayManager<ADecodeValue>();
             values.Inc();
             values.Inc();
             var bufferBack = UBinaryUtils.NewZeroByteArray(63);
             var buffer = new UBytePtr(bufferBack);
-            Byte[] readBuf;
-            UIntPtr jumpaddress = UIntPtr.Zero;
-            var x = 0;
-            var s = "";
-            var parametercount = 0;
-            var sv1 = "";
-            var sv2 = "";
-            var i = 0;
+            int x;
             if (LastDisassembleData.CommentsOverride != "")
                 return LastDisassembleData.CommentsOverride;
             var result = "";
             if (LastDisassembleData.IsJump)
             {
+                Byte[] readBuf;
+                UIntPtr jumpAddress;
                 if (LastDisassembleData.ModRmValueType == ADisassemblerValueType.Address)
                 {
-                    jumpaddress = LastDisassembleData.ModRmValue;
-                    readBuf = Proc.Memory.Read<Byte>(jumpaddress.ToIntPtr(), Proc.PointerSize);
+                    jumpAddress = LastDisassembleData.ModRmValue;
+                    readBuf = Proc.Memory.Read<Byte>(jumpAddress.ToIntPtr(), Proc.PointerSize);
                     if (readBuf.Length != Proc.PointerSize)
                         return result;
-                    jumpaddress = UBitConverter.ToUIntPtr(readBuf);
+                    jumpAddress = UBitConverter.ToUIntPtr(readBuf);
                 }
                 else
                 {
                     if (LastDisassembleData.ParameterValueType == ADisassemblerValueType.None)
                         return result; //jump with no address (e.g reg)
-                    jumpaddress = LastDisassembleData.ParameterValue;
+                    jumpAddress = LastDisassembleData.ParameterValue;
                 }
                 //check if the bytes at jumpAddress is ff 25 (jmp [xxxxxxxx])
-                if (Kernel32.ReadProcessMemory(Proc.Handle, jumpaddress.ToIntPtr(), buffer.ToIntPtr(0), 6, out x))
+                if (Kernel32.ReadProcessMemory(Proc.Handle, jumpAddress.ToIntPtr(), buffer.ToIntPtr(0), 6, out x))
                 {
         
                     if ((buffer[0] == 0xff) && buffer[1] == 0x25)
                     {
-                        result = result + "->";  //double, so ->->
+                        result += "->";  //double, so ->->
                         if (Proc.IsX64)
-                            jumpaddress = jumpaddress + 6 + buffer.ReadInt32(2); //jumpaddress+6 because of relative addressing
+                            jumpAddress = jumpAddress + 6 + buffer.ReadInt32(2); //jumpaddress+6 because of relative addressing
                         else
-                            jumpaddress = (UIntPtr)buffer.ReadUInt32(2);
+                            jumpAddress = (UIntPtr)buffer.ReadUInt32(2);
                         //jumpaddress now contains the address of the address to jump to
                         //so, get the address it actually jumps to
-                        readBuf = Proc.Memory.Read<Byte>(jumpaddress.ToIntPtr(), Proc.PointerSize);
+                        readBuf = Proc.Memory.Read<Byte>(jumpAddress.ToIntPtr(), Proc.PointerSize);
                         if (readBuf.Length != Proc.PointerSize)
                             return result;
-                        jumpaddress = UBitConverter.ToUIntPtr(readBuf);
+                        jumpAddress = UBitConverter.ToUIntPtr(readBuf);
                     }
-                    s = SymbolHandler.GetNameFromAddress(jumpaddress, ShowSymbols, ShowModules, ShowSections, null, out _, 8, false);
+                    var s = SymbolHandler.GetNameFromAddress(jumpAddress, ShowSymbols, ShowModules, ShowSections, null, out _, 8, false);
                     if (AStringUtils.Pos(s, LastDisassembleData.Parameters) == 0)  //no need to show a comment if it's exactly the same
                         result = result + "->" + s;
                 }
@@ -2292,26 +2270,27 @@ namespace SputnikAsm.LDisassembler
             {
                 if (LastDisassembleData.ModRmValueType == ADisassemblerValueType.Address || LastDisassembleData.ParameterValueType != ADisassemblerValueType.None)
                 {
-                    parametercount = 0;
+                    var parameterCount = 0;
                     if (LastDisassembleData.ParameterValueType != ADisassemblerValueType.None)
-                        parametercount += 1;
+                        parameterCount += 1;
                     if (LastDisassembleData.ModRmValueType == ADisassemblerValueType.Address)
-                        parametercount += 1;
+                        parameterCount += 1;
                     if (LastDisassembleData.ModRmValueType == ADisassemblerValueType.Address)
                     {
-                        if ((parametercount > 1) && _modRmPosition == ATmrPos.Right)
+                        if ((parameterCount > 1) && _modRmPosition == ATmrPos.Right)
                             values[1].Value = LastDisassembleData.ModRmValue;
                         else
                             values[0].Value = LastDisassembleData.ModRmValue;
                     }
                     if (LastDisassembleData.ParameterValueType != ADisassemblerValueType.None)
                     {
-                        if (parametercount > 1 && _modRmPosition != ATmrPos.Right)
+                        if (parameterCount > 1 && _modRmPosition != ATmrPos.Right)
                             values[1].Value = LastDisassembleData.ParameterValue;
                         else
                             values[0].Value = LastDisassembleData.ParameterValue;
                     }
-                    for (i = 0; i <= parametercount - 1; i++)
+                    int i;
+                    for (i = 0; i <= parameterCount - 1; i++)
                     {
                         values[i].S = "";
                         if (AMemoryHelper.IsAddress(Proc.Handle, values[i].Value.ToIntPtr()))
@@ -2337,7 +2316,7 @@ namespace SputnikAsm.LDisassembler
                                     }
                                 }
                                 else
-                                    values[i].Type = byteInterp.FindTypeOfData(values[i].Value, buffer, x);
+                                    values[i].Type = AAsmTools.ByteInterpreter.FindTypeOfData(values[i].Value, buffer, x);
                             }
                             else
                             {
@@ -2349,7 +2328,7 @@ namespace SputnikAsm.LDisassembler
                         {
                             x = Proc.PointerSize;
                             buffer.WriteUIntPtr(values[i].Value); //assign it so I don't have to make two compare routines
-                            values[i].Type = byteInterp.FindTypeOfData(UIntPtr.Zero, buffer, x);
+                            values[i].Type = AAsmTools.ByteInterpreter.FindTypeOfData(UIntPtr.Zero, buffer, x);
                             values[i].IsAddress = false;
                         }
                         switch (values[i].Type)
@@ -2399,7 +2378,7 @@ namespace SputnikAsm.LDisassembler
                         if (values[i].IsAddress & (values[i].S != ""))
                             values[i].S = '(' + values[i].S + ')';
                         if (i == 0)
-                            result = result + values[i].S;
+                            result += values[i].S;
                         else
                             result = result + ',' + values[i].S;
                     }

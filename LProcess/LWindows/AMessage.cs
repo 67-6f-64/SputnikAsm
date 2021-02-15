@@ -125,7 +125,7 @@ namespace SputnikAsm.LProcess.LWindows
         {
             // ASSURT : 151574. Link Demand on System.Windows.Forms.Message 
             // fails to protect overriden methods.
-            bool unrestricted = false;
+            var unrestricted = false;
             try
             {
                 UnmanagedCode.Demand();

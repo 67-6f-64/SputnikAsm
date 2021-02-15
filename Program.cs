@@ -61,7 +61,7 @@ namespace SputnikAsm
             //}
             //Console.WriteLine(d.LastDisassembleData.Prefix + ' ' + d.LastDisassembleData.OpCode + ' ' + d.LastDisassembleData.Parameters);
 
-            var bi = new AByteInterpreter(a.SymbolHandler);
+            var bi = AAsmTools.ByteInterpreter;
             var bp = m.Memory.Read((IntPtr)0x411C88, 32);
             using (var bip = new UBytePtr(bp))
             {

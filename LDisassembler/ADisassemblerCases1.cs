@@ -228,7 +228,7 @@ namespace SputnikAsm.LDisassembler
                             if (RexW)
                             {
                                 LastDisassembleData.Parameters = _colorReg + "rax" + _endColor + ',' + IntToHexSigned((UIntPtr)LastDisassembleData.ParameterValue, 8);
-                                description = description + " (sign-extended)";
+                                description += " (sign-extended)";
                             }
                             else
                                 LastDisassembleData.Parameters = _colorReg + "eax" + _endColor + ',' + IntToHexSigned(LastDisassembleData.ParameterValue, 8);

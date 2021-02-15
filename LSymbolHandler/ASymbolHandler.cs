@@ -498,7 +498,7 @@ namespace SputnikAsm.LSymbolHandler
             var tokens = new AStringArray();
             string mathstring;
             var hasMultiplication = false;
-            int nextoperation = 0;
+            var nextoperation = 0;
             int regnr;
             name = name.Trim();
             var hasPointer = false;

@@ -25,7 +25,7 @@ namespace SputnikAsm.LDisassembler
                                         LastDisassembleData.Parameters = ModRm(memory, _prefix2, 1, 1, ref last, 16);
                                         LastDisassembleData.ParameterValueType = ADisassemblerValueType.Value;
                                         LastDisassembleData.ParameterValue = (UIntPtr)memory[(int)last];
-                                        LastDisassembleData.Parameters = LastDisassembleData.Parameters + IntToHexSigned((UIntPtr)memory[(int)last], 2);
+                                        LastDisassembleData.Parameters += IntToHexSigned((UIntPtr)memory[(int)last], 2);
                                         description = "rotate 16 bits left " + (memory[(int)last]) + " times";
                                         offset = (UIntPtr)(offset.ToUInt64() + last);
                                     }
@@ -36,7 +36,7 @@ namespace SputnikAsm.LDisassembler
                                         LastDisassembleData.ParameterValueType = ADisassemblerValueType.Value;
                                         LastDisassembleData.ParameterValue = (UIntPtr)memory[(int)last];
 
-                                        LastDisassembleData.Parameters = LastDisassembleData.Parameters + IntToHexSigned((UIntPtr)memory[(int)last], 2);
+                                        LastDisassembleData.Parameters += IntToHexSigned((UIntPtr)memory[(int)last], 2);
                                         description = "rotate 32 bits left " + (memory[(int)last]) + " times";
                                         offset = (UIntPtr)(offset.ToUInt64() + last);
                                     }
@@ -51,7 +51,7 @@ namespace SputnikAsm.LDisassembler
                                         LastDisassembleData.Parameters = ModRm(memory, _prefix2, 1, 1, ref last, 16);
                                         LastDisassembleData.ParameterValueType = ADisassemblerValueType.Value;
                                         LastDisassembleData.ParameterValue = (UIntPtr)memory[(int)last];
-                                        LastDisassembleData.Parameters = LastDisassembleData.Parameters + IntToHexSigned((UIntPtr)memory[(int)last], 2);
+                                        LastDisassembleData.Parameters += IntToHexSigned((UIntPtr)memory[(int)last], 2);
                                         description = "rotate 16 bits right " + (memory[(int)last]) + " times";
                                         offset = (UIntPtr)(offset.ToUInt64() + last);
                                     }
@@ -61,7 +61,7 @@ namespace SputnikAsm.LDisassembler
                                         LastDisassembleData.Parameters = ModRm(memory, _prefix2, 1, 0, ref last);
                                         LastDisassembleData.ParameterValueType = ADisassemblerValueType.Value;
                                         LastDisassembleData.ParameterValue = (UIntPtr)memory[(int)last];
-                                        LastDisassembleData.Parameters = LastDisassembleData.Parameters + IntToHexSigned((UIntPtr)memory[(int)last], 2);
+                                        LastDisassembleData.Parameters += IntToHexSigned((UIntPtr)memory[(int)last], 2);
                                         description = "rotate 32 bits right " + (memory[(int)last]) + " times";
                                         offset = (UIntPtr)(offset.ToUInt64() + last);
                                     }
@@ -76,7 +76,7 @@ namespace SputnikAsm.LDisassembler
                                         LastDisassembleData.Parameters = ModRm(memory, _prefix2, 1, 1, ref last, 16);
                                         LastDisassembleData.ParameterValueType = ADisassemblerValueType.Value;
                                         LastDisassembleData.ParameterValue = (UIntPtr)memory[(int)last];
-                                        LastDisassembleData.Parameters = LastDisassembleData.Parameters + IntToHexSigned((UIntPtr)memory[(int)last], 2);
+                                        LastDisassembleData.Parameters += IntToHexSigned((UIntPtr)memory[(int)last], 2);
                                         description = "rotate 17 bits left " + (memory[(int)last]) + " times";
                                         offset = (UIntPtr)(offset.ToUInt64() + last);
                                     }
@@ -86,7 +86,7 @@ namespace SputnikAsm.LDisassembler
                                         LastDisassembleData.Parameters = ModRm(memory, _prefix2, 1, 0, ref last);
                                         LastDisassembleData.ParameterValueType = ADisassemblerValueType.Value;
                                         LastDisassembleData.ParameterValue = (UIntPtr)memory[(int)last];
-                                        LastDisassembleData.Parameters = LastDisassembleData.Parameters + IntToHexSigned((UIntPtr)memory[(int)last], 2);
+                                        LastDisassembleData.Parameters += IntToHexSigned((UIntPtr)memory[(int)last], 2);
                                         description = "rotate 33 bits left " + (memory[(int)last]) + " times";
                                         offset = (UIntPtr)(offset.ToUInt64() + last);
                                     }
@@ -101,7 +101,7 @@ namespace SputnikAsm.LDisassembler
                                         LastDisassembleData.Parameters = ModRm(memory, _prefix2, 1, 1, ref last, 16);
                                         LastDisassembleData.ParameterValueType = ADisassemblerValueType.Value;
                                         LastDisassembleData.ParameterValue = (UIntPtr)memory[(int)last];
-                                        LastDisassembleData.Parameters = LastDisassembleData.Parameters + IntToHexSigned((UIntPtr)memory[(int)last], 2);
+                                        LastDisassembleData.Parameters += IntToHexSigned((UIntPtr)memory[(int)last], 2);
                                         description = "rotate 17 bits right " + (memory[(int)last]) + " times";
                                         offset = (UIntPtr)(offset.ToUInt64() + last);
                                     }
@@ -111,7 +111,7 @@ namespace SputnikAsm.LDisassembler
                                         LastDisassembleData.Parameters = ModRm(memory, _prefix2, 1, 0, ref last);
                                         LastDisassembleData.ParameterValueType = ADisassemblerValueType.Value;
                                         LastDisassembleData.ParameterValue = (UIntPtr)memory[(int)last];
-                                        LastDisassembleData.Parameters = LastDisassembleData.Parameters + IntToHexSigned((UIntPtr)memory[(int)last], 2);
+                                        LastDisassembleData.Parameters += IntToHexSigned((UIntPtr)memory[(int)last], 2);
                                         description = "rotate 33 bits right " + (memory[(int)last]) + " times";
                                         offset = (UIntPtr)(offset.ToUInt64() + last);
                                     }
@@ -126,7 +126,7 @@ namespace SputnikAsm.LDisassembler
                                         LastDisassembleData.Parameters = ModRm(memory, _prefix2, 1, 1, ref last, 16);
                                         LastDisassembleData.ParameterValueType = ADisassemblerValueType.Value;
                                         LastDisassembleData.ParameterValue = (UIntPtr)memory[(int)last];
-                                        LastDisassembleData.Parameters = LastDisassembleData.Parameters + IntToHexSigned((UIntPtr)memory[(int)last], 2);
+                                        LastDisassembleData.Parameters += IntToHexSigned((UIntPtr)memory[(int)last], 2);
                                         description = "multiply by 2 " + (memory[(int)last]) + " times";
                                         offset = (UIntPtr)(offset.ToUInt64() + last);
                                     }
@@ -136,7 +136,7 @@ namespace SputnikAsm.LDisassembler
                                         LastDisassembleData.Parameters = ModRm(memory, _prefix2, 1, 0, ref last);
                                         LastDisassembleData.ParameterValueType = ADisassemblerValueType.Value;
                                         LastDisassembleData.ParameterValue = (UIntPtr)memory[(int)last];
-                                        LastDisassembleData.Parameters = LastDisassembleData.Parameters + IntToHexSigned((UIntPtr)memory[(int)last], 2);
+                                        LastDisassembleData.Parameters += IntToHexSigned((UIntPtr)memory[(int)last], 2);
                                         description = "multiply by 2 " + (memory[(int)last]) + " times";
                                         offset = (UIntPtr)(offset.ToUInt64() + last);
                                     }
@@ -151,7 +151,7 @@ namespace SputnikAsm.LDisassembler
                                         LastDisassembleData.Parameters = ModRm(memory, _prefix2, 1, 1, ref last, 16);
                                         LastDisassembleData.ParameterValueType = ADisassemblerValueType.Value;
                                         LastDisassembleData.ParameterValue = (UIntPtr)memory[(int)last];
-                                        LastDisassembleData.Parameters = LastDisassembleData.Parameters + IntToHexSigned((UIntPtr)memory[(int)last], 2);
+                                        LastDisassembleData.Parameters += IntToHexSigned((UIntPtr)memory[(int)last], 2);
                                         description = "unsigned divide by 2 " + (memory[(int)last]) + " times";
                                         offset = (UIntPtr)(offset.ToUInt64() + last);
                                     }
@@ -161,7 +161,7 @@ namespace SputnikAsm.LDisassembler
                                         LastDisassembleData.Parameters = ModRm(memory, _prefix2, 1, 0, ref last);
                                         LastDisassembleData.ParameterValueType = ADisassemblerValueType.Value;
                                         LastDisassembleData.ParameterValue = (UIntPtr)memory[(int)last];
-                                        LastDisassembleData.Parameters = LastDisassembleData.Parameters + IntToHexSigned((UIntPtr)memory[(int)last], 2);
+                                        LastDisassembleData.Parameters += IntToHexSigned((UIntPtr)memory[(int)last], 2);
                                         description = "unsigned divide by 2 " + (memory[(int)last]) + " times";
                                         offset = (UIntPtr)(offset.ToUInt64() + last);
                                     }
@@ -176,7 +176,7 @@ namespace SputnikAsm.LDisassembler
                                         LastDisassembleData.Parameters = ModRm(memory, _prefix2, 1, 1, ref last, 16);
                                         LastDisassembleData.ParameterValueType = ADisassemblerValueType.Value;
                                         LastDisassembleData.ParameterValue = (UIntPtr)memory[(int)last];
-                                        LastDisassembleData.Parameters = LastDisassembleData.Parameters + IntToHexSigned((UIntPtr)memory[(int)last], 2);
+                                        LastDisassembleData.Parameters += IntToHexSigned((UIntPtr)memory[(int)last], 2);
                                         description = "signed divide by 2 " + (memory[(int)last]) + " times";
                                         offset = (UIntPtr)(offset.ToUInt64() + last);
                                     }
@@ -186,7 +186,7 @@ namespace SputnikAsm.LDisassembler
                                         LastDisassembleData.Parameters = ModRm(memory, _prefix2, 1, 0, ref last);
                                         LastDisassembleData.ParameterValueType = ADisassemblerValueType.Value;
                                         LastDisassembleData.ParameterValue = (UIntPtr)memory[(int)last];
-                                        LastDisassembleData.Parameters = LastDisassembleData.Parameters + IntToHexSigned((UIntPtr)memory[(int)last], 2);
+                                        LastDisassembleData.Parameters += IntToHexSigned((UIntPtr)memory[(int)last], 2);
                                         description = "signed divide by 2 " + (memory[(int)last]) + " times";
                                         offset = (UIntPtr)(offset.ToUInt64() + last);
                                     }
@@ -283,7 +283,7 @@ namespace SputnikAsm.LDisassembler
                                         LastDisassembleData.ParameterValueType = ADisassemblerValueType.Value;
                                         LastDisassembleData.ParameterValue = (UIntPtr)memory[(int)last];
 
-                                        LastDisassembleData.Parameters = LastDisassembleData.Parameters + IntToHexSigned((UIntPtr)memory[(int)last], 2);
+                                        LastDisassembleData.Parameters += IntToHexSigned((UIntPtr)memory[(int)last], 2);
                                         offset = (UIntPtr)(offset.ToUInt64() + last);
                                     }
                                     break;
@@ -342,7 +342,7 @@ namespace SputnikAsm.LDisassembler
                                             LastDisassembleData.ParameterValueType = ADisassemblerValueType.Value;
                                             LastDisassembleData.ParameterValue = (UIntPtr)wordptr;
 
-                                            LastDisassembleData.Parameters = LastDisassembleData.Parameters + IntToHexSigned((UIntPtr)wordptr, 4);
+                                            LastDisassembleData.Parameters += IntToHexSigned((UIntPtr)wordptr, 4);
                                             offset = (UIntPtr)(offset.ToUInt64() + last + 1);
                                         }
                                         else
@@ -360,9 +360,9 @@ namespace SputnikAsm.LDisassembler
 
 
                                             if (RexW)
-                                                LastDisassembleData.Parameters = LastDisassembleData.Parameters + IntToHexSigned((UIntPtr)dwordptr, 8);
+                                                LastDisassembleData.Parameters += IntToHexSigned((UIntPtr)dwordptr, 8);
                                             else
-                                                LastDisassembleData.Parameters = LastDisassembleData.Parameters + IntToHexSigned((UIntPtr)dwordptr, 8);
+                                                LastDisassembleData.Parameters += IntToHexSigned((UIntPtr)dwordptr, 8);
 
                                             offset = (UIntPtr)(offset.ToUInt64() + last + 3);
                                         }
@@ -2595,7 +2595,7 @@ namespace SputnikAsm.LDisassembler
                         LastDisassembleData.ParameterValue = (UIntPtr)dwordptr;
 
 
-                        LastDisassembleData.Parameters = LastDisassembleData.Parameters + IntToHexSigned((UIntPtr)dwordptr, 8);
+                        LastDisassembleData.Parameters += IntToHexSigned((UIntPtr)dwordptr, 8);
                         offset += 6;
                     }
                     break;
@@ -2689,7 +2689,7 @@ namespace SputnikAsm.LDisassembler
                                     description = "logical compare";
                                     LastDisassembleData.OpCode = "test";
                                     LastDisassembleData.Parameters = ModRm(memory, _prefix2, 1, 2, ref last, 8);
-                                    LastDisassembleData.Parameters = LastDisassembleData.Parameters + IntToHexSigned((UIntPtr)memory[(int)last], 2);
+                                    LastDisassembleData.Parameters += IntToHexSigned((UIntPtr)memory[(int)last], 2);
                                     LastDisassembleData.ParameterValueType = ADisassemblerValueType.Value;
                                     LastDisassembleData.ParameterValue = (UIntPtr)memory[(int)last];
 
@@ -2783,7 +2783,7 @@ namespace SputnikAsm.LDisassembler
                                         LastDisassembleData.ParameterValueType = ADisassemblerValueType.Address;
                                         LastDisassembleData.ParameterValue = (UIntPtr)wordptr;
 
-                                        LastDisassembleData.Parameters = LastDisassembleData.Parameters + IntToHexSigned((UIntPtr)wordptr, 4);
+                                        LastDisassembleData.Parameters += IntToHexSigned((UIntPtr)wordptr, 4);
                                         offset = (UIntPtr)(offset.ToUInt64() + last + 1);
                                     }
                                     else
@@ -2794,9 +2794,9 @@ namespace SputnikAsm.LDisassembler
                                         LastDisassembleData.ParameterValueType = ADisassemblerValueType.Address;
                                         LastDisassembleData.ParameterValue = (UIntPtr)dwordptr;
                                         if (RexW)
-                                            LastDisassembleData.Parameters = LastDisassembleData.Parameters + IntToHexSigned((UIntPtr)dwordptr, 8);
+                                            LastDisassembleData.Parameters += IntToHexSigned((UIntPtr)dwordptr, 8);
                                         else
-                                            LastDisassembleData.Parameters = LastDisassembleData.Parameters + IntToHexSigned((UIntPtr)dwordptr, 8);
+                                            LastDisassembleData.Parameters += IntToHexSigned((UIntPtr)dwordptr, 8);
                                         offset = (UIntPtr)(offset.ToUInt64() + last + 3);
                                     }
                                 }

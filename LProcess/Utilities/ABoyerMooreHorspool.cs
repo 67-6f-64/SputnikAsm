@@ -7,13 +7,13 @@
         
         private static int[] BuildBadCharTable(byte[] pPattern)
         {
-            int idx = 0;
-            int last = pPattern.Length - 1;
-            int[] badShift = new int[256];
+            var idx = 0;
+            var last = pPattern.Length - 1;
+            var badShift = new int[256];
 
             // Get last wildcard position
             for (idx = last; idx > 0 && pPattern[idx] != WildCard; --idx) ;
-            int diff = last - idx;
+            var diff = last - idx;
             if (diff == 0)
                 diff = 1;
 
@@ -31,11 +31,11 @@
             {
                 return -1;
             }
-            int[] badShift = BuildBadCharTable(pattern);
-            int offset = 0;
-            int position = 0;
-            int last = pattern.Length - 1;
-            int maxoffset = buffer.Length - pattern.Length;
+            var badShift = BuildBadCharTable(pattern);
+            var offset = 0;
+            var position = 0;
+            var last = pattern.Length - 1;
+            var maxoffset = buffer.Length - pattern.Length;
             while (offset <= maxoffset)
             {
                 for (position = last; (pattern[position] == buffer[position + offset] || pattern[position] == WildCard); position--)
