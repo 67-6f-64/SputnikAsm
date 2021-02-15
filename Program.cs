@@ -38,30 +38,32 @@ namespace SputnikAsm
             var b1 = new AByteArray();
             var m = new AProcessSharp(System.Diagnostics.Process.GetProcessesByName("pacwin")[0], AMemoryType.Remote);
             var m2 = new AProcessSharp(System.Diagnostics.Process.GetCurrentProcess(), AMemoryType.Remote);
-            a.SymHandler.Process = m2;
+            a.SymHandler.Process = m;
             //var result = a.Assemble("mov eax, [edx+esi+66]", 0x400300, b1); // E9 FB 01 00 00
-            var result = a.Assemble("mov rax,[1122334455778899]", 0x400300, b1); // E9 FB 01 00 00
-            Console.WriteLine("Result: " + result);
-            Console.WriteLine("Bytes:");
-            Console.WriteLine(UBinaryUtils.Expand(b1.TakeAll()));
-
-
+            //var result = a.Assemble("mov rax,[1122334455778899]", 0x400300, b1); // E9 FB 01 00 00
+            //Console.WriteLine("Result: " + result);
+            //Console.WriteLine("Bytes:");
+            //Console.WriteLine(UBinaryUtils.Expand(b1.TakeAll()));
+            //
+            //
             var d = new ADisassembler();
-            var sd = "";
-            using (var pt = new UBytePtr(b1.TakeAll()))
-            {
-                var ptt = pt.ToIntPtr().ToUIntPtr();
-                d.Disassemble(ref ptt, ref sd);
-            }
-            Console.WriteLine(d.LastDisassembleData.Prefix + ' ' + d.LastDisassembleData.OpCode + ' ' + d.LastDisassembleData.Parameters);
-
-            Console.ReadKey();
-            Environment.Exit(1);
+            //var sd = "";
+            //using (var pt = new UBytePtr(b1.TakeAll()))
+            //{
+            //    var ptt = pt.ToIntPtr().ToUIntPtr();
+            //    d.Disassemble(ref ptt, ref sd);
+            //}
+            //Console.WriteLine(d.LastDisassembleData.Prefix + ' ' + d.LastDisassembleData.OpCode + ' ' + d.LastDisassembleData.Parameters);
+            //
+            //Console.ReadKey();
+            //Environment.Exit(1);
 
             var aa = new AAutoAssembler();
+            aa.Assembler.SymHandler.Process = m;
             var cd = @"
 400300:
-fld dword ptr[411c88]
+mov rax, [411c88]
+mov rax, dword ptr[11223344556677]
             ".Trim();
             var codex = new ARefStringArray();
             codex.Assign(UStringUtils.GetLines(cd).ToArray());
@@ -69,14 +71,14 @@ fld dword ptr[411c88]
 
             var b = aa.Assemble(aa.SelfSymbolHandler.Process, codex);
             d.IsDataOnly = false;
-            //d.is64bit = true;
+            d.Is64Bit = true;
             d.SymbolHandler.Process = m;
             var s1 = "";
-            //var bytes = new UBytePtr(b[0].Bytes.TakeAll());
+            var bytes = new UBytePtr(b[0].Bytes.TakeAll());
             //var ptr = bytes.ToIntPtr().ToUIntPtr();
 
             var ptr = (UIntPtr)0x40230F;
-            var i = 20;
+            var i = 30;
             while (i-- > 0)
             {
                 try
@@ -90,19 +92,18 @@ fld dword ptr[411c88]
                     break;
                 }
             }
-            Console.ReadKey();
-            Environment.Exit(1);
+            //Console.ReadKey();
+            //Environment.Exit(1);
 
 
 
+            a.SymHandler.Process = m;
 
             var cc = @"
 [ENABLE]
 400300:
-fld dword ptr[400300]
-mov eax, edx
+mov edx, dword ptr[411c88]
 [DISABLE]
-dealloc(dog)
             ".Trim();
            var code = new ARefStringArray();
            code.Assign(UStringUtils.GetLines(cc).ToArray());

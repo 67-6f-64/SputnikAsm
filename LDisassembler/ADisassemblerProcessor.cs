@@ -38,11 +38,11 @@ namespace SputnikAsm.LDisassembler
             //tmoduleinfo mi;
             UInt64 va = 0;
             UInt64 pa = 0;
-            var novexpossible = false;
             var bytestomove = 0;
             UInt32 td = 0;
             var breaknow = false;
             var result = "";
+            var novexpossible = false;
             try
             {
                 LastDisassembleData.IsFloat = false;
@@ -161,7 +161,7 @@ namespace SputnikAsm.LDisassembler
                 for (i = 32; i <= 63; i++) //debug code
                     _memory[i] = 0xce;
                 actualread = ReadMemory(offset, _memory.ToIntPtr().ToUIntPtr(), 32);
-                var memory = _memory.Shadow();
+                var memory = _memory.Shift(0);
                 if (actualread > 0)
                 {
                     //{$ifndef jni}
@@ -192,7 +192,7 @@ namespace SputnikAsm.LDisassembler
                             isprefix = true;
                             startoffset += 1;
                             _prefix2.Add(memory[0]);
-                            memory.Inc();
+                            memory = memory.Shift(1);
                             if (offset.ToUInt64() > initialoffset.ToUInt64() + 24)  //too long
                             {
                                 description = "";
@@ -239,7 +239,7 @@ namespace SputnikAsm.LDisassembler
                             offset += 1;
                             startoffset += 1;
                             _prefix2.Add(_rexPrefix);
-                            memory.Inc();
+                            memory = memory.Shift(1);
                             novexpossible = true;
                             if (offset.ToUInt64() > initialoffset.ToUInt64() + 24)
                             {
@@ -271,7 +271,7 @@ namespace SputnikAsm.LDisassembler
                             LastDisassembleData.Bytes[i + 1] = memory[1];
                             memory[1] = 0xf;
                             bytestomove = 1;
-                            memory.Inc();
+                            memory = memory.Shift(1);
                             offset += 1;
                         }
                         else
@@ -323,7 +323,7 @@ namespace SputnikAsm.LDisassembler
                                     }
                                     break; //else invalid
                             }
-                            memory.IncBy(bytestomove);
+                            memory = memory.Shift(bytestomove);
                             offset += bytestomove;
                         }
                         switch (_opCodeFlags.Pp)
