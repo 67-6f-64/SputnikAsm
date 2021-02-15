@@ -1208,37 +1208,32 @@ namespace SputnikAsm.LAutoAssembler
                                     throw new Exception(rsSyntaxError);
                             }
                             #endregion
-                            #region Command DEALLOC() -- todo
-                            /*
-                            if (uppercase(copy(currentline, 1, 8)) == "DEALLOC(")
+                            #region Command DEALLOC()
+                            if (AStringUtils.Copy(currentline, 0, 8).ToUpper() == "DEALLOC(")
                             {
-                                if (allocArray != nil) //memory dealloc=possible
+                                if (allocArray != null) //memory dealloc=possible
                                 {
-
                                     //syntax: dealloc(x)  x=name of region to deallocate
                                     //later on in the code there has to be a line with "labelname:"
-                                    a = pos("(", currentline);
-                                    b = pos(")", currentline);
-
-                                    if ((a > 0) && (b > 0))
+                                    a = AStringUtils.Pos("(", currentline);
+                                    b = AStringUtils.Pos(")", currentline);
+                                    if (a > 0 && b > 0)
                                     {
-                                        s1 = trim(copy(currentline, a + 1, b - a - 1));
-
+                                        s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
                                         //find s1 in the ceallocarray
-                                        for (j = 0; j <= length(allocArray) - 1; j++)
+                                        for (j = 0; j < allocArray.Length; j++)
                                         {
-                                            if (uppercase(allocArray[j].varname) == uppercase(s1))
+                                            if (String.Equals(allocArray[j].Name, s1, StringComparison.CurrentCultureIgnoreCase))
                                             {
-                                                setlength(dealloc, length(dealloc) + 1);
-                                                dealloc[length(dealloc) - 1] = allocArray[j].address;
+                                                dealloc.SetLength(dealloc.Length + 1);
+                                                dealloc.Last = allocArray[j].Address;
                                             }
                                         }
                                     }
                                 }
-                                setlength(assemblerlines, length(assemblerlines) - 1);
-                                continue_;
+                                assemblerlines.SetLength(assemblerlines.Length - 1);
+                                continue;
                             }
-                            */
                             #endregion
                             #region Command ALLOC()
                             if (AStringUtils.Copy(currentline, 0, 6).ToUpper() == "ALLOC(")
@@ -1440,6 +1435,7 @@ namespace SputnikAsm.LAutoAssembler
                         throw new Exception(UStringUtils.Sprintf(rsErrorInLine, currentlinenr, currentline, ex.Message));
                     }
                 }
+                #region Sanity Check (Symbols)
                 if (addsymbollist.Length > 0)
                 {
                     //now scan the addsymbollist entries for allocs and labels and see if they exist
@@ -1480,8 +1476,8 @@ namespace SputnikAsm.LAutoAssembler
                             throw new Exception(UStringUtils.Sprintf(rsWasSupposedToBeAddedToTheSymbollistButItIsnTDeclar, addsymbollist[i]));
                     }
                 }
-                #region hidden
-                //check to see if the addresses are valid (label, alloc, define)
+                #endregion
+                #region Sanity Check (Create Thread) -- todo
                 //if (createthread.Length > 0)
                 //{
                 //    for (i = 0; i < createthread.Length; i++)
@@ -1545,6 +1541,8 @@ namespace SputnikAsm.LAutoAssembler
                 //            throw new Exception(UStringUtils.Sprintf(rsTheAddressInCreatethreadIsNotValid, createthread[i]));
                 //    }
                 //}
+                #endregion
+                #region Sanity Check (Load Binary) -- todo
                 //if (length(loadbinary) > 0)
                 //{
                 //
@@ -1786,7 +1784,7 @@ namespace SputnikAsm.LAutoAssembler
                     else
                         process.FullAccess((IntPtr)fullaccess[i].Address.ToUInt64(), (int)fullaccess[i].Size);
                 }
-                #region Load Binaries
+                #region Load Binaries -- todo
                 //load binaries
                 //if (length(loadbinary) > 0)
                 //{
@@ -1894,7 +1892,7 @@ namespace SputnikAsm.LAutoAssembler
                         if (dealloc.Length == allocArray.Length)  //free everything
                         {
                             if (Assembler.Is64Bit)
-                                baseaddress = (UIntPtr)0xffffffff;
+                                baseaddress = (UIntPtr)0xFFFFFFFFFFFFFFFF;
                             else
                                 baseaddress = (UIntPtr)0xffffffff;
                             for (i = 0; i < allocArray.Length; i++)
@@ -1902,8 +1900,7 @@ namespace SputnikAsm.LAutoAssembler
                                 if (allocArray[i].Address.ToUInt64() < baseaddress.ToUInt64())
                                     baseaddress = allocArray[i].Address;
                             }
-                            // todo uncomment!!!
-                            //virtualfreeex(processHandle, UIntToPtr(baseaddress), 0, MEM_RELEASE);
+                            process.Free(baseaddress.ToIntPtr());
                         }
                         allocArray.SetLength(allocs.Length);
                         for (i = 0; i < allocs.Length; i++)
@@ -1952,7 +1949,7 @@ namespace SputnikAsm.LAutoAssembler
                             }
                         }
                     }
-                    #region hidden
+                    #region Create Threads -- todo
                     //still here, so create threads if needed
                     //if (length(createthread) > 0)
                     //{

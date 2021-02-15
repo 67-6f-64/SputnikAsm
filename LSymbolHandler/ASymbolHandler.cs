@@ -414,6 +414,7 @@ namespace SputnikAsm.LSymbolHandler
         #endregion
         public void WaitForSymbolsLoaded()
         {
+            // todo load all necessary symbols APIs etc
         }
         #region AddUserDefinedSymbol
         public void AddUserDefinedSymbol(String addressString, String name)

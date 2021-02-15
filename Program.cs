@@ -40,9 +40,9 @@ namespace SputnikAsm
             
             
             var cc = @"
-registersymbol(cat);
             [ENABLE]
 alloc(dog,$1000);
+alloc(dog2,$1000);
 label(cat);
 400300:
 jmp 600700
@@ -50,6 +50,7 @@ mov eax, edx
 inc esi
 cat:
 jmp dog
+jmp dog2
 
 dog:
 push 10
@@ -57,9 +58,12 @@ push 20
 mov eax, edx
 call 400700
 
-[DISABLE]
-400300:
+dog2:
+push 777
 mov eax, edx
+
+[DISABLE]
+dealloc(dog);
             ".Trim();
             var aa = new AAutoAssembler(a);
             var code = new ARefStringArray();
@@ -67,8 +71,11 @@ mov eax, edx
             aa.RemoveComments(code);
 
             var scr = new ARefStringArray();
-            //var ret = aa.AutoAssemble(pacWin, code, false, true, false, new AAllocArray(), new AStringArray(), true, scr);
-            var ret = aa.AutoAssemble(pacWin, code, false, true, false, new AAllocArray(), new AStringArray(), false, scr);
+            var allocs = new AAllocArray();
+            var ret = aa.AutoAssemble(pacWin, code, false, true, false, allocs, new AStringArray(), false, scr);
+            Console.WriteLine("Result: " + ret);
+            Console.ReadKey();
+            ret = aa.AutoAssemble(pacWin, code, false, false, false, allocs, new AStringArray(), false, scr);
             Console.WriteLine("Result: " + ret);
             foreach (var o in scr.Raw)
             {
