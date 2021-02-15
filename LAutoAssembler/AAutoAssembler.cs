@@ -182,14 +182,37 @@ namespace SputnikAsm.LAutoAssembler
         public String rsYouHavnTSpecifiedADisableSection = "You have not specified a disable section";
         public String rsWrongSyntaxSHAREDALLOCNameSize = "Wrong syntax. SHAREDALLOC(name,size)";
         public String rsInvalidInteger = "Invalid integer";
+        public String rsWrongSyntaxReAssemble = "Wrong syntax. Reassemble(address)";
+        public String rsWrongSyntaxAOBSCANREGION = "Wrong syntax. AOBSCANREGION(name, startaddress, stopaddress, 11 22 33 ** 55)";
+        public String rsTheAddressInCreatethreadAndWaitIsNotValid = "The address in createthreadandwait(%s) is not valid";
+        public String rsAAErrorInTheStructureDefinitionOf = "Error in the structure definition of %s at line %d";
+        public String rsAAIsAReservedWord = "%s is a reserved word";
+        public String rsAANoIdeaWhatXis = "No idea what %s is";
+        public String rsAANoEndFound = "No end found";
+        public String rsAATheArrayOfByteNamed = "The array of byte named %s could not be found";
+        public String rsXCouldNotBeFound = "%s could not be found";
+        public String rsAAErrorWhileSacnningForAobs = "Error while scanning for AOB's : ";
+        public String rsAAError = "Error: ";
+        public String rsAAModuleNotFound = "module not found:";
+        public String rsAALuaErrorInTheScriptAtLine = "Lua error in the script at line ";
+        public String rsGoTo = "Go to ";
+        public String rsMissingExcept = "The {$TRY} at line %d has no matching {$EXCEPT}";
+        public String rsNoPreferedRangeAllocWarning = "None of the ALLOC statements specify a "
+                                    +"preferred address.  Did you take into account that the JMP instruction is"
+                                    +" going to be 14 bytes long?";
+        public String rsFailureAlloc = "Failure allocating memory near %.8x";
+
         #endregion
         #region Variables
         public AAssembler Assembler;
+        public ASymbolHandler SelfSymbolHandler;
         #endregion
         #region Constructor
         public AAutoAssembler(AAssembler assembler)
         {
             Assembler = assembler;
+            SelfSymbolHandler = new ASymbolHandler();
+            SelfSymbolHandler.Process = new AProcess((IntPtr)Process.GetCurrentProcess().Id);
         }
         #endregion
         #region RemoveComments
@@ -197,6 +220,7 @@ namespace SputnikAsm.LAutoAssembler
         {
             var inString = false;
             var inComment = false;
+            var braceComment = false;
             for (var i = 0; i < code.Length; i++)
             {
                 var currentLine = code[i].Value;
@@ -207,10 +231,10 @@ namespace SputnikAsm.LAutoAssembler
                         if (inComment)
                         {
                             //inside a comment, remove everything till a } is encountered
-                            if ((p[j] == '}') || ((p[j] == '*') && (j < p.Size) && (p[j + 1] == '/')))
+                            if ((braceComment && currentLine[j] == '}') || (!braceComment && currentLine[j] == '*' && j < currentLine.Length && currentLine[j + 1] == '/'))
                             {
                                 inComment = false; //and continue parsing the code...
-                                if ((p[j] == '*') && (j < currentLine.Length) && (p[j + 1] == '/'))
+                                if (!braceComment)
                                     p[j + 1] = ' ';
                             }
                             p[j] = ' ';
@@ -230,9 +254,10 @@ namespace SputnikAsm.LAutoAssembler
                                 currentLine = AStringUtils.Copy(currentLine, 0, j);
                                 break;
                             }
-                            if ((p[j] == '{') || ((p[j] == '/') && (j < p.Size) && (p[j + 1] == '*')))
+                            if (currentLine[j] == '{' || (currentLine[j] == '/' && (j < currentLine.Length) && currentLine[j + 1] == '*'))
                             {
                                 inComment = true;
+                                braceComment = currentLine[j] == '{';
                                 p[j] = ' '; //replace from here till the first } with spaces, this goes on for multiple lines
                             }
                         }
@@ -368,14 +393,8 @@ namespace SputnikAsm.LAutoAssembler
             return result;
         }
         #endregion
-        #region GetScript
-        public ARefStringArray GetScript(ARefStringArray code, Boolean enableScript)
-        {
-            var ret = new ARefStringArray();
-            GetScript(code, ret, enableScript);
-            return ret;
-        }
-        public void GetScript(ARefStringArray code, ARefStringArray newScript, Boolean enableScript)
+        #region GetEnableOrDisableScript
+        public void GetEnableOrDisableScript(ARefStringArray code, ARefStringArray newScript, Boolean enableScript)
         {
             var insideEnable = false;
             var insideDisable = false;
@@ -450,9 +469,7 @@ namespace SputnikAsm.LAutoAssembler
             var tokens = new ARefStringArray();
             Tokenize(input, tokens);
             var result = input;
-            // todo figure out which one we should be using!
             for (var i = tokens.Length - 1; i >= 0; i--)
-            //for (var i = 0; i < tokens.Length; i++)
             {
                 if (tokens[i].Value != token)
                     continue;
@@ -503,7 +520,7 @@ namespace SputnikAsm.LAutoAssembler
                     {
                         elementname = AStringUtils.Copy(tokens[0].Value, 0, tokens[0].Length - 1);
                         if (Assembler.GetOpCodesIndex(elementname) != -1)
-                            StructError(elementname + " is a reserved word", structname, lastlinenr + 1);
+                            StructError(UStringUtils.Sprintf(rsAAIsAReservedWord, elementname), structname, lastlinenr + 1);
                         elements.Add(elementname, currentOffset);
                         j = 1;
                     }
@@ -599,14 +616,14 @@ namespace SputnikAsm.LAutoAssembler
                             break;
                         default:
                             //we already dealth with labels, so this is wrong
-                            StructError("No idea what '" + tokens[j].Value + "' is", structname, lastlinenr + 1);
+                            StructError(UStringUtils.Sprintf(rsAANoIdeaWhatXis, tokens[j].Value), structname, lastlinenr + 1);
                             break;
                     }
                     j += 1; //next token
                 }
             }
             if (endfound == false)
-                StructError("No end found", structname, lastlinenr + 1);
+                StructError(rsAANoEndFound, structname, lastlinenr + 1);
             // the elements have been filled in, delete the structure (between linenr and lastlinenr)
             // and inject define(element,offset)
             // and define(structname.element,offset)
@@ -623,12 +640,25 @@ namespace SputnikAsm.LAutoAssembler
         #region StructError
         private void StructError(String reason, String structName, int lineNumber)
         {
-            var error = "Error in the structure definition of " + structName + " at line " + lineNumber;
+            var error = UStringUtils.Sprintf(rsAAErrorInTheStructureDefinitionOf, structName, lineNumber);
             if (!String.IsNullOrEmpty(reason))
                 error = error + " :" + reason;
             else
                 error += '.';
             throw new Exception(error);
+        }
+        #endregion
+        #region GetPotentialLabels
+        public void GetPotentialLabels(ARefStringArray code, AStringArray labels)
+        {
+            for (var i = 0; i < code.Length; i++)
+            {
+                var currentLine = code[i].Value.Trim();
+                if (String.IsNullOrEmpty(currentLine) || (currentLine[currentLine.Length - 1] != ':'))
+                    continue;
+                if (AStringUtils.Pos("+", currentLine) == -1 && AStringUtils.Pos(".", currentLine) == -1)
+                    labels.Add(AStringUtils.Copy(currentLine, 0, currentLine.Length - 1));
+            }
         }
         #endregion
         #region AobScans -- todo make this work!!!

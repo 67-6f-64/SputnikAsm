@@ -4041,6 +4041,7 @@ namespace SputnikAsm.LAssembler
                                 for (i = bytes.Length - 1; i >= RexPrefixLocation + 2; i--)
                                     bytes[i] = bytes[i - 2];
                                 bytes[RexPrefixLocation] = 0xc5; //2 byte VEX
+                                // todo get 2 byte vex working!
                                 //pvex2byte(&bytes[RexPrefixLocation + 1])->pp = (int) (Assembler.OpCodes[j].VexLeadingOpCode);
                                 //pvex2byte(&bytes[RexPrefixLocation + 1])->l = Assembler.OpCodes[j].VexL;
                                 //pvex2byte(&bytes[RexPrefixLocation + 1])->vvvv = vexvvvv;
@@ -4055,6 +4056,7 @@ namespace SputnikAsm.LAssembler
                                 for (i = bytes.Length - 1; i >= RexPrefixLocation + 3; i--)
                                     bytes[i] = bytes[i - 3];
                                 bytes[RexPrefixLocation] = 0xc4; //3 byte VEX
+                                // todo get 3 byte vex working!
                                 //pvex3byte(&bytes[RexPrefixLocation + 1])->mmmmm = (int)(Assembler.OpCodes[j].VexLeadingOpCode);
                                 //pvex3byte(&bytes[RexPrefixLocation + 1])->b = RexB ? 0 : 1;
                                 //pvex3byte(&bytes[RexPrefixLocation + 1])->x = RexX ? 0 : 1;
