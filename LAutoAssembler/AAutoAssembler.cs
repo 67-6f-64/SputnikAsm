@@ -1071,27 +1071,23 @@ namespace SputnikAsm.LAutoAssembler
                             }
                             */
                             #endregion
-                            #region Command UNREGISTERSYMBOL() -- todo
-                            /*
-                            if (uppercase(copy(currentline, 1, 17)) == "UNREGISTERSYMBOL(")
+                            #region Command UNREGISTERSYMBOL()
+                            if (AStringUtils.Copy(currentline, 0, 17).ToUpper() == "UNREGISTERSYMBOL(")
                             {
                                 //add this symbol to the register symbollist
-                                a = pos("(", currentline);
-                                b = pos(")", currentline);
-
-                                if ((a > 0) && (b > 0))
+                                a = AStringUtils.Pos("(", currentline);
+                                b = AStringUtils.Pos(")", currentline);
+                                if (a > 0 && b > 0)
                                 {
-                                    s1 = trim(copy(currentline, a + 1, b - a - 1));
-
-                                    setlength(deletesymbollist, length(deletesymbollist) + 1);
-                                    deletesymbollist[length(deletesymbollist) - 1] = s1;
+                                    s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
+                                    deletesymbollist.SetLength(deletesymbollist.Length + 1);
+                                    deletesymbollist.Last = s1;
                                 }
-                                else throw new Exception(rsSyntaxError);
-
-                                setlength(assemblerlines, length(assemblerlines) - 1);
-                                continue_;
+                                else
+                                    throw new Exception(rsSyntaxError);
+                                assemblerlines.SetLength(assemblerlines.Length - 1);
+                                continue;
                             }
-                            */
                             #endregion
                             #region Command DEFINE()
                             if (AStringUtils.Copy(currentline, 0, 7).ToUpper() == "DEFINE(")

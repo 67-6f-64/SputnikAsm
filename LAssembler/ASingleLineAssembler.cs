@@ -616,7 +616,7 @@ namespace SputnikAsm.LAssembler
             reg2 = "";
             if (AStringUtils.Pos("+", regs) != -1)
             {
-                reg1 = AStringUtils.Copy(regs, 1, AStringUtils.Pos("+", regs) - 1);
+                reg1 = AStringUtils.Copy(regs, 0, AStringUtils.Pos("+", regs));
                 reg2 = AStringUtils.Copy(regs, AStringUtils.Pos("+", regs) + 1, regs.Length);
                 k = 2;
             }
@@ -663,238 +663,110 @@ namespace SputnikAsm.LAssembler
                 Assembler.AddDWord(modrm, (UInt32)disp);
                 found = true;
             }
-            if ((reg[k] == "ESP") || (reg[-k] == "ESP") || (reg[k] == "RSP") || (reg[-k] == "RSP"))  //esp takes precedence
+            try
             {
-                if (reg[-k] == "ESP")
-                    k = -k;
-                if (reg[-k] == "RSP")
-                    k = -k;
-                SetRm(modrm, 0, 4);
-                modrm.SetLength(2);
-                SetSibBase(modrm, 1, 4);
-                CreateSibScaleIndex(modrm, 1, reg[-k]);
-                found = true;
-                return;
-            }
-            if ((reg[k] == "EAX") || (reg[-k] == "EAX") || (reg[k] == "RAX") || (reg[-k] == "RAX"))
-            {
-                if (reg[-k] == "EAX")
-                    k = Math.Abs(k);
-                if (reg[-k] == "RAX")
-                    k = Math.Abs(k);
-                if (reg[-k] != "")  //sib needed
+                if ((reg[k] == "ESP") || (reg[-k] == "ESP") || (reg[k] == "RSP") || (reg[-k] == "RSP"))  //esp takes precedence
                 {
+                    if (reg[-k] == "ESP")
+                        k = -k;
+                    if (reg[-k] == "RSP")
+                        k = -k;
                     SetRm(modrm, 0, 4);
                     modrm.SetLength(2);
-                    SetSibBase(modrm, 1, 0);
+                    SetSibBase(modrm, 1, 4);
                     CreateSibScaleIndex(modrm, 1, reg[-k]);
+                    found = true;
+                    return;
                 }
-                else
-                    SetRm(modrm, 0, 0); //no sib needed
-                found = true;
-                return;
-            }
-            if ((reg[k] == "ECX") || (reg[-k] == "ECX") || (reg[k] == "RCX") || (reg[-k] == "RCX"))
-            {
-                if (reg[-k] == "ECX")
-                    k = -k;
-                if (reg[-k] == "RCX")
-                    k = -k;
-                if (reg[-k] != "")  //sib needed
+                if ((reg[k] == "EAX") || (reg[-k] == "EAX") || (reg[k] == "RAX") || (reg[-k] == "RAX"))
                 {
-                    SetRm(modrm, 0, 4);
-                    modrm.SetLength(2);
-                    SetSibBase(modrm, 1, 1);
-                    CreateSibScaleIndex(modrm, 1, reg[-k]);
+                    if (reg[-k] == "EAX")
+                        k = Math.Abs(k);
+                    if (reg[-k] == "RAX")
+                        k = Math.Abs(k);
+                    if (reg[-k] != "")  //sib needed
+                    {
+                        SetRm(modrm, 0, 4);
+                        modrm.SetLength(2);
+                        SetSibBase(modrm, 1, 0);
+                        CreateSibScaleIndex(modrm, 1, reg[-k]);
+                    }
+                    else
+                        SetRm(modrm, 0, 0); //no sib needed
+                    found = true;
+                    return;
                 }
-                else
-                    SetRm(modrm, 0, 1); //no sib needed
-                found = true;
-                return;
-            }
-            if ((reg[k] == "EDX") || (reg[-k] == "EDX") || (reg[k] == "RDX") || (reg[-k] == "RDX"))
-            {
-                if (reg[-k] == "EDX")
-                    k = -k;
-                if (reg[-k] == "RDX")
-                    k = -k;
-                if (reg[-k] != "")  //sib needed
+                if ((reg[k] == "ECX") || (reg[-k] == "ECX") || (reg[k] == "RCX") || (reg[-k] == "RCX"))
                 {
-                    SetRm(modrm, 0, 4);
-                    modrm.SetLength(2);
-                    SetSibBase(modrm, 1, 2);
-                    CreateSibScaleIndex(modrm, 1, reg[-k]);
+                    if (reg[-k] == "ECX")
+                        k = -k;
+                    if (reg[-k] == "RCX")
+                        k = -k;
+                    if (reg[-k] != "")  //sib needed
+                    {
+                        SetRm(modrm, 0, 4);
+                        modrm.SetLength(2);
+                        SetSibBase(modrm, 1, 1);
+                        CreateSibScaleIndex(modrm, 1, reg[-k]);
+                    }
+                    else
+                        SetRm(modrm, 0, 1); //no sib needed
+                    found = true;
+                    return;
                 }
-                else
-                    SetRm(modrm, 0, 2); //no sib needed
-                found = true;
-                return;
-            }
-            if ((reg[k] == "EBX") || (reg[-k] == "EBX") || (reg[k] == "RBX") || (reg[-k] == "RBX"))
-            {
-                if (reg[-k] == "EBX") k = -k;
-                if (reg[-k] == "RBX") k = -k;
+                if ((reg[k] == "EDX") || (reg[-k] == "EDX") || (reg[k] == "RDX") || (reg[-k] == "RDX"))
+                {
+                    if (reg[-k] == "EDX")
+                        k = -k;
+                    if (reg[-k] == "RDX")
+                        k = -k;
+                    if (reg[-k] != "")  //sib needed
+                    {
+                        SetRm(modrm, 0, 4);
+                        modrm.SetLength(2);
+                        SetSibBase(modrm, 1, 2);
+                        CreateSibScaleIndex(modrm, 1, reg[-k]);
+                    }
+                    else
+                        SetRm(modrm, 0, 2); //no sib needed
+                    found = true;
+                    return;
+                }
+                if ((reg[k] == "EBX") || (reg[-k] == "EBX") || (reg[k] == "RBX") || (reg[-k] == "RBX"))
+                {
+                    if (reg[-k] == "EBX") k = -k;
+                    if (reg[-k] == "RBX") k = -k;
 
-                if (reg[-k] != "")  //sib needed
-                {
-                    SetRm(modrm, 0, 4);
-                    modrm.SetLength(2);
-                    SetSibBase(modrm, 1, 3);
-                    CreateSibScaleIndex(modrm, 1, reg[-k]);
-                }
-                else
-                    SetRm(modrm, 0, 3); //no sib needed
-                found = true;
-                return;
-            }
-            if ((reg[k] == "ESP") || (reg[-k] == "ESP") || (reg[k] == "RSP") || (reg[-k] == "RSP"))
-            {
-                if (reg[-k] == "ESP")
-                    k = -k;
-                if (reg[-k] == "RSP")
-                    k = -k;
-                SetRm(modrm, 0, 4);
-                modrm.SetLength(2);
-                SetSibBase(modrm, 1, 4);
-                CreateSibScaleIndex(modrm, 1, reg[-k]);
-                found = true;
-                return;
-            }
-            if ((reg[k] == "EBP") || (reg[-k] == "EBP") || (reg[k] == "RBP") || (reg[-k] == "RBP"))
-            {
-                if (reg[-k] == "EBP")
-                    k = -k;
-                if (reg[-k] == "RBP")
-                    k = -k;
-                if (disp == 0)
-                    Assembler.SetMod(modrm, 0, 1);
-                if (reg[-k] != "")  //sib needed
-                {
-                    SetRm(modrm, 0, 4);
-                    modrm.SetLength(2);
-                    SetSibBase(modrm, 1, 5);
-                    CreateSibScaleIndex(modrm, 1, reg[-k]);
-                }
-                else
-                    SetRm(modrm, 0, 5); //no sib needed
-                found = true;
-                return;
-            }
-            if ((reg[k] == "ESI") || (reg[-k] == "ESI") || (reg[k] == "RSI") || (reg[-k] == "RSI"))
-            {
-                if (reg[-k] == "ESI")
-                    k = -k;
-                if (reg[-k] == "RSI")
-                    k = -k;
-                if (reg[-k] != "")  //sib needed
-                {
-                    SetRm(modrm, 0, 4);
-                    modrm.SetLength(2);
-                    SetSibBase(modrm, 1, 6);
-                    CreateSibScaleIndex(modrm, 1, reg[-k]);
-                }
-                else
-                    SetRm(modrm, 0, 6); //no sib needed
-                found = true;
-                return;
-            }
-            if ((reg[k] == "EDI") || (reg[-k] == "EDI") || (reg[k] == "RDI") || (reg[-k] == "RDI"))
-            {
-                if (reg[-k] == "EDI") k = -k;
-                if (reg[-k] == "RDI") k = -k;
-
-                if (reg[-k] != "")  //sib needed
-                {
-                    SetRm(modrm, 0, 4);
-                    modrm.SetLength(2);
-                    SetSibBase(modrm, 1, 7);
-                    CreateSibScaleIndex(modrm, 1, reg[-k]);
-                }
-                else
-                    SetRm(modrm, 0, 7); //no sib needed
-                found = true;
-                return;
-            }
-            if (Assembler.SymHandler.Process.IsX64)
-            {
-                if ((reg[k] == "R8") || (reg[-k] == "R8"))
-                {
-                    if (reg[-k] == "R8")
-                        k = -k;
                     if (reg[-k] != "")  //sib needed
                     {
                         SetRm(modrm, 0, 4);
                         modrm.SetLength(2);
-                        SetSibBase(modrm, 1, 8);
+                        SetSibBase(modrm, 1, 3);
                         CreateSibScaleIndex(modrm, 1, reg[-k]);
                     }
                     else
-                        SetRm(modrm, 0, 8); //no sib needed
+                        SetRm(modrm, 0, 3); //no sib needed
                     found = true;
                     return;
                 }
-                if ((reg[k] == "R9") || (reg[-k] == "R9"))
+                if ((reg[k] == "ESP") || (reg[-k] == "ESP") || (reg[k] == "RSP") || (reg[-k] == "RSP"))
                 {
-                    if (reg[-k] == "R9")
+                    if (reg[-k] == "ESP")
                         k = -k;
-                    if (reg[-k] != "")  //sib needed
-                    {
-                        SetRm(modrm, 0, 4);
-                        modrm.SetLength(2);
-                        SetSibBase(modrm, 1, 9);
-                        CreateSibScaleIndex(modrm, 1, reg[-k]);
-                    }
-                    else
-                        SetRm(modrm, 0, 9); //no sib needed
-                    found = true;
-                    return;
-                }
-                if ((reg[k] == "R10") || (reg[-k] == "R10"))
-                {
-                    if (reg[-k] == "R10")
-                        k = -k;
-                    if (reg[-k] != "")  //sib needed
-                    {
-                        SetRm(modrm, 0, 4);
-                        modrm.SetLength(2);
-                        SetSibBase(modrm, 1, 10);
-                        CreateSibScaleIndex(modrm, 1, reg[-k]);
-                    }
-                    else
-                        SetRm(modrm, 0, 10); //no sib needed
-                    found = true;
-                    return;
-                }
-                if ((reg[k] == "R11") || (reg[-k] == "R11"))
-                {
-                    if (reg[-k] == "R11")
-                        k = -k;
-                    if (reg[-k] != "")  //sib needed
-                    {
-                        SetRm(modrm, 0, 4);
-                        modrm.SetLength(2);
-                        SetSibBase(modrm, 1, 11);
-                        CreateSibScaleIndex(modrm, 1, reg[-k]);
-                    }
-                    else
-                        SetRm(modrm, 0, 11); //no sib needed
-                    found = true;
-                    return;
-                }
-                if ((reg[k] == "R12") || (reg[-k] == "R12"))
-                {
-                    if (reg[-k] == "R12")
+                    if (reg[-k] == "RSP")
                         k = -k;
                     SetRm(modrm, 0, 4);
                     modrm.SetLength(2);
-                    SetSibBase(modrm, 1, 12);
+                    SetSibBase(modrm, 1, 4);
                     CreateSibScaleIndex(modrm, 1, reg[-k]);
                     found = true;
                     return;
                 }
-                if ((reg[k] == "R13") || (reg[-k] == "R13"))
+                if ((reg[k] == "EBP") || (reg[-k] == "EBP") || (reg[k] == "RBP") || (reg[-k] == "RBP"))
                 {
-                    if (reg[-k] == "R13")
+                    if (reg[-k] == "EBP")
+                        k = -k;
+                    if (reg[-k] == "RBP")
                         k = -k;
                     if (disp == 0)
                         Assembler.SetMod(modrm, 0, 1);
@@ -902,56 +774,188 @@ namespace SputnikAsm.LAssembler
                     {
                         SetRm(modrm, 0, 4);
                         modrm.SetLength(2);
-                        SetSibBase(modrm, 1, 13);
+                        SetSibBase(modrm, 1, 5);
                         CreateSibScaleIndex(modrm, 1, reg[-k]);
                     }
                     else
-                        SetRm(modrm, 0, 13); //no sib needed
+                        SetRm(modrm, 0, 5); //no sib needed
                     found = true;
                     return;
                 }
-                if ((reg[k] == "R14") || (reg[-k] == "R14"))
+                if ((reg[k] == "ESI") || (reg[-k] == "ESI") || (reg[k] == "RSI") || (reg[-k] == "RSI"))
                 {
-                    if (reg[-k] == "R14")
+                    if (reg[-k] == "ESI")
+                        k = -k;
+                    if (reg[-k] == "RSI")
                         k = -k;
                     if (reg[-k] != "")  //sib needed
                     {
                         SetRm(modrm, 0, 4);
                         modrm.SetLength(2);
-                        SetSibBase(modrm, 1, 14);
+                        SetSibBase(modrm, 1, 6);
                         CreateSibScaleIndex(modrm, 1, reg[-k]);
                     }
                     else
-                        SetRm(modrm, 0, 14); //no sib needed
+                        SetRm(modrm, 0, 6); //no sib needed
                     found = true;
                     return;
                 }
-                if ((reg[k] == "R15") || (reg[-k] == "R15"))
+                if ((reg[k] == "EDI") || (reg[-k] == "EDI") || (reg[k] == "RDI") || (reg[-k] == "RDI"))
                 {
-                    if (reg[-k] == "R15")
-                        k = -k;
+                    if (reg[-k] == "EDI") k = -k;
+                    if (reg[-k] == "RDI") k = -k;
+
                     if (reg[-k] != "")  //sib needed
                     {
                         SetRm(modrm, 0, 4);
                         modrm.SetLength(2);
-                        SetSibBase(modrm, 1, 15);
+                        SetSibBase(modrm, 1, 7);
                         CreateSibScaleIndex(modrm, 1, reg[-k]);
                     }
                     else
-                        SetRm(modrm, 0, 15); //no sib needed
+                        SetRm(modrm, 0, 7); //no sib needed
                     found = true;
                     return;
+                }
+                if (Assembler.SymHandler.Process.IsX64)
+                {
+                    if ((reg[k] == "R8") || (reg[-k] == "R8"))
+                    {
+                        if (reg[-k] == "R8")
+                            k = -k;
+                        if (reg[-k] != "")  //sib needed
+                        {
+                            SetRm(modrm, 0, 4);
+                            modrm.SetLength(2);
+                            SetSibBase(modrm, 1, 8);
+                            CreateSibScaleIndex(modrm, 1, reg[-k]);
+                        }
+                        else
+                            SetRm(modrm, 0, 8); //no sib needed
+                        found = true;
+                        return;
+                    }
+                    if ((reg[k] == "R9") || (reg[-k] == "R9"))
+                    {
+                        if (reg[-k] == "R9")
+                            k = -k;
+                        if (reg[-k] != "")  //sib needed
+                        {
+                            SetRm(modrm, 0, 4);
+                            modrm.SetLength(2);
+                            SetSibBase(modrm, 1, 9);
+                            CreateSibScaleIndex(modrm, 1, reg[-k]);
+                        }
+                        else
+                            SetRm(modrm, 0, 9); //no sib needed
+                        found = true;
+                        return;
+                    }
+                    if ((reg[k] == "R10") || (reg[-k] == "R10"))
+                    {
+                        if (reg[-k] == "R10")
+                            k = -k;
+                        if (reg[-k] != "")  //sib needed
+                        {
+                            SetRm(modrm, 0, 4);
+                            modrm.SetLength(2);
+                            SetSibBase(modrm, 1, 10);
+                            CreateSibScaleIndex(modrm, 1, reg[-k]);
+                        }
+                        else
+                            SetRm(modrm, 0, 10); //no sib needed
+                        found = true;
+                        return;
+                    }
+                    if ((reg[k] == "R11") || (reg[-k] == "R11"))
+                    {
+                        if (reg[-k] == "R11")
+                            k = -k;
+                        if (reg[-k] != "")  //sib needed
+                        {
+                            SetRm(modrm, 0, 4);
+                            modrm.SetLength(2);
+                            SetSibBase(modrm, 1, 11);
+                            CreateSibScaleIndex(modrm, 1, reg[-k]);
+                        }
+                        else
+                            SetRm(modrm, 0, 11); //no sib needed
+                        found = true;
+                        return;
+                    }
+                    if ((reg[k] == "R12") || (reg[-k] == "R12"))
+                    {
+                        if (reg[-k] == "R12")
+                            k = -k;
+                        SetRm(modrm, 0, 4);
+                        modrm.SetLength(2);
+                        SetSibBase(modrm, 1, 12);
+                        CreateSibScaleIndex(modrm, 1, reg[-k]);
+                        found = true;
+                        return;
+                    }
+                    if ((reg[k] == "R13") || (reg[-k] == "R13"))
+                    {
+                        if (reg[-k] == "R13")
+                            k = -k;
+                        if (disp == 0)
+                            Assembler.SetMod(modrm, 0, 1);
+                        if (reg[-k] != "")  //sib needed
+                        {
+                            SetRm(modrm, 0, 4);
+                            modrm.SetLength(2);
+                            SetSibBase(modrm, 1, 13);
+                            CreateSibScaleIndex(modrm, 1, reg[-k]);
+                        }
+                        else
+                            SetRm(modrm, 0, 13); //no sib needed
+                        found = true;
+                        return;
+                    }
+                    if ((reg[k] == "R14") || (reg[-k] == "R14"))
+                    {
+                        if (reg[-k] == "R14")
+                            k = -k;
+                        if (reg[-k] != "")  //sib needed
+                        {
+                            SetRm(modrm, 0, 4);
+                            modrm.SetLength(2);
+                            SetSibBase(modrm, 1, 14);
+                            CreateSibScaleIndex(modrm, 1, reg[-k]);
+                        }
+                        else
+                            SetRm(modrm, 0, 14); //no sib needed
+                        found = true;
+                        return;
+                    }
+                    if ((reg[k] == "R15") || (reg[-k] == "R15"))
+                    {
+                        if (reg[-k] == "R15")
+                            k = -k;
+                        if (reg[-k] != "")  //sib needed
+                        {
+                            SetRm(modrm, 0, 4);
+                            modrm.SetLength(2);
+                            SetSibBase(modrm, 1, 15);
+                            CreateSibScaleIndex(modrm, 1, reg[-k]);
+                        }
+                        else
+                            SetRm(modrm, 0, 15); //no sib needed
+                        found = true;
+                        return;
+                    }
                 }
             }
-            // catch
-            // finally
-            if (!found)
-                throw new Exception("Invalid address");
-            i = Assembler.GetMod(modrm[0]);
-            if (i == 1)
-                Assembler.Add(modrm, (Byte)disp);
-            if (i == 2)
-                Assembler.AddDWord(modrm, (UInt32)disp);
+            finally
+            {
+                if (!found)
+                    throw new Exception("Invalid address");
+                i = Assembler.GetMod(modrm[0]);
+                if (i == 1)
+                    Assembler.Add(modrm, (Byte) disp);
+                if (i == 2)
+                    Assembler.AddDWord(modrm, (UInt32) disp);
+            }
         }
         #endregion
         #region Assemble

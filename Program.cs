@@ -13,49 +13,43 @@ namespace SputnikAsm
     {
         static void Main(string[] args)
         {
-            // var k2 = new AArrayManager<int>();
-            // k2.Add(10);
-            // k2.Add(20);
-            // k2.Add(30);
-            // k2.Insert(1, new [] { 4, 5, 6 });
-            // foreach (var o in k2.Raw)
-            // {
-            //     Console.WriteLine("Raw: " + o);
-            // }
-            // Console.ReadKey();
-            // Environment.Exit(1);
-
-
             var pacWin = new AProcess("pacwin.exe");
             var a = new AAssembler();
             var b = new AByteArray();
             a.SymHandler.Process = pacWin;
 
-            // //var result = a.Assemble("mov eax, edx", 0x400300, b); // 
-            // var result = a.Assemble("mov eax, dword ptr [400500]", 0x400300, b); // A1 09 00 00 00
-            // //var result = a.Assemble("jmp 400500", 0x400300, b); // E9 FB 01 00 00
-            // Console.WriteLine("Result: " + result);
-            // Console.WriteLine("Bytes:");
-            // Console.WriteLine(UBinaryUtils.Expand(b.Raw));
-            
-            
+            //var result = a.Assemble("mov eax, edx", 0x400300, b); // 
+            var result = a.Assemble("mov eax, dword ptr [400500]", 0x400300, b); // A1 09 00 00 00
+            //var result = a.Assemble("jmp 400500", 0x400300, b); // E9 FB 01 00 00
+            //var result = a.Assemble("mov eax, [eax+esi+7]", 0x400300, b); // 8B 44 30 07
+            Console.WriteLine("Result: " + result);
+            Console.WriteLine("Bytes:");
+            Console.WriteLine(UBinaryUtils.Expand(b.Raw));
+
+             Console.ReadKey();
+             Environment.Exit(1);
+
+
             var cc = @"
             [ENABLE]
+registersymbol(cat);
+unregistersymbol(cat);
 STRUCT at
-param1: DD ?
-param2: DD ? ? ? ? ?
-param3: DD ?
+param1: DB ?
+param2: DB ?
+param3: DB ?
 ENDSTRUCT
 
 label(cat);
 400300:
+mov eax, dword ptr [400500]
 jmp 600700
 mov eax, edx
 inc esi
 cat:
 mov eax, [at.param1]
 mov ecx, [at.param2]
-mov edx, [eax+at.param3]
+mov edx, [eax+at.param3+7]
 
 [DISABLE]
 dealloc(dog);
