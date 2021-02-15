@@ -41,26 +41,21 @@ namespace SputnikAsm
             
             var cc = @"
             [ENABLE]
-alloc(dog,$1000);
-alloc(dog2,$1000);
+STRUCT at
+param1: DD ?
+param2: DD ? ? ? ? ?
+param3: DD ?
+ENDSTRUCT
+
 label(cat);
 400300:
 jmp 600700
 mov eax, edx
 inc esi
 cat:
-jmp dog
-jmp dog2
-
-dog:
-push 10
-push 20
-mov eax, edx
-call 400700
-
-dog2:
-push 777
-mov eax, edx
+mov eax, [at.param1]
+mov ecx, [at.param2]
+mov edx, [eax+at.param3]
 
 [DISABLE]
 dealloc(dog);
@@ -74,9 +69,7 @@ dealloc(dog);
             var allocs = new AAllocArray();
             var ret = aa.AutoAssemble(pacWin, code, false, true, false, allocs, new AStringArray(), false, scr);
             Console.WriteLine("Result: " + ret);
-            Console.ReadKey();
-            ret = aa.AutoAssemble(pacWin, code, false, false, false, allocs, new AStringArray(), false, scr);
-            Console.WriteLine("Result: " + ret);
+            aa.AutoAssemble(pacWin, code, false, true, false, allocs, new AStringArray(), true, scr);
             foreach (var o in scr.Raw)
             {
                 Console.WriteLine("Line: " + o.Value);

@@ -1093,69 +1093,61 @@ namespace SputnikAsm.LAutoAssembler
                             }
                             */
                             #endregion
-                            #region Command DEFINE() -- todo
-                            /*
-                            if (uppercase(copy(currentline, 1, 7)) == "DEFINE(")
+                            #region Command DEFINE()
+                            if (AStringUtils.Copy(currentline, 0, 7).ToUpper() == "DEFINE(")
                             {
                                 //syntax: alloc(x,size)    x=variable name size=bytes
                                 //allocate memory
-                                a = pos("(", currentline);
-                                b = pos(",", currentline);
-                                c = pos(")", currentline);
+                                a = AStringUtils.Pos("(", currentline);
+                                b = AStringUtils.Pos(",", currentline);
+                                c = AStringUtils.Pos(")", currentline);
                                 if ((a > 0) && (b > 0) && (c > 0))
                                 {
-                                    s1 = trim(copy(currentline, a + 1, b - a - 1));
-                                    s2 = copy(currentline, b + 1, c - b - 1);
-
-                                    for (j = 0; j <= length(defines) - 1; j++)
-                                        if (uppercase(defines[j].name) == uppercase(s1))
-                                            throw new Exception(UStringUtils.Sprintf(rsDefineAlreadyDefined, set::of(s1, eos)));
-
-                                    setlength(defines, length(defines) + 1);
-                                    defines[length(defines) - 1].name = s1;
-                                    defines[length(defines) - 1].whatever = s2;
-
-                                    setlength(assemblerlines, length(assemblerlines) - 1);   //don't bother with this in the 2nd pass
-                                    continue_;
+                                    s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
+                                    s2 = AStringUtils.Copy(currentline, b + 1, c - b - 1);
+                                    for (j = 0; j < defines.Length; j++)
+                                    {
+                                        if (String.Equals(defines[j].Name, s1, StringComparison.CurrentCultureIgnoreCase))
+                                            throw new Exception(UStringUtils.Sprintf(rsDefineAlreadyDefined, s1));
+                                    }
+                                    defines.SetLength(defines.Length + 1);
+                                    defines.Last.Name = s1;
+                                    defines.Last.Whatever = s2;
+                                    assemblerlines.SetLength(assemblerlines.Length - 1);   //don't bother with this in the 2nd pass
+                                    continue;
                                 }
-                                else throw new Exception(rsWrongSyntaxDEFINENameWhatever);
+                                else
+                                    throw new Exception(rsWrongSyntaxDEFINENameWhatever);
                             }
-                            */
                             #endregion
-                            #region Command STRUCT() -- todo
-                            /*
-                            if (uppercase(copy(currentline, 1, 7)) == "STRUCT ")
+                            #region Command STRUCT()
+                            if (AStringUtils.Copy(currentline, 0, 7).ToUpper() == "STRUCT ")
                             {
-                                replaceStructWithDefines(code, i);
-                                setlength(assemblerlines, length(assemblerlines) - 1);
+                                ReplaceStructWithDefines(code, i);
+                                assemblerlines.SetLength(assemblerlines.Length - 1);
                                 i -= 1; //repeat from this line
-                                continue_;
+                                continue;
                             }
-                            */
                             #endregion
-                            #region Command FULLACCESS() -- todo
-                            /*
-                            if (uppercase(copy(currentline, 1, 11)) == "FULLACCESS(")
+                            #region Command FULLACCESS()
+                            if (AStringUtils.Copy(currentline, 0, 11).ToUpper() == "FULLACCESS(")
                             {
-                                a = pos("(", currentline);
-                                b = pos(",", currentline);
-                                c = pos(")", currentline);
-
-                                if ((a > 0) && (b > 0) && (c > 0))
+                                a = AStringUtils.Pos("(", currentline);
+                                b = AStringUtils.Pos(",", currentline);
+                                c = AStringUtils.Pos(")", currentline);
+                                if (a > 0 && b > 0 && c > 0)
                                 {
-                                    s1 = trim(copy(currentline, a + 1, b - a - 1));
-                                    s2 = trim(copy(currentline, b + 1, c - b - 1));
-
-                                    setlength(fullaccess, length(fullaccess) + 1);
-                                    fullaccess[length(fullaccess) - 1].address = symHandler.getAddressFromName(s1);
-                                    fullaccess[length(fullaccess) - 1].size = strtoint(s2);
+                                    s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
+                                    s2 = AStringUtils.Copy(currentline, b + 1, c - b - 1).Trim();
+                                    fullaccess.SetLength(fullaccess.Length + 1);
+                                    fullaccess.Last.Address = symHandler.GetAddressFromName(s1);
+                                    fullaccess.Last.Size = AStringUtils.StrToDWord(s2);
                                 }
-                                else throw new Exception(rsSyntaxErrorFullAccessAddressSize);
-
-                                setlength(assemblerlines, length(assemblerlines) - 1);
-                                continue_;
+                                else
+                                    throw new Exception(rsSyntaxErrorFullAccessAddressSize);
+                                assemblerlines.SetLength(assemblerlines.Length - 1);
+                                continue;
                             }
-                            */
                             #endregion
                             #region Command LABEL()
                             if (AStringUtils.Copy(currentline, 0, 6).ToUpper() == "LABEL(")
