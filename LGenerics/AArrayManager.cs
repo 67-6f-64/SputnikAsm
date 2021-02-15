@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 
 namespace SputnikAsm.LGenerics
 {
@@ -31,9 +33,20 @@ namespace SputnikAsm.LGenerics
             Raw = tokens;
         }
         #endregion
+        #region Clear
+        public void Clear()
+        {
+            SetLength(0);
+        }
+        #endregion
         #region SetLength
         public void SetLength(int size)
         {
+            if (size <= 0)
+            {
+                Raw = new T[0];
+                return;
+            }
             if (size < Raw.Length)
             {
                 var newBuffer = new T[size];
@@ -72,17 +85,43 @@ namespace SputnikAsm.LGenerics
             return default;
         }
         #endregion
+        #region Contains
+        public Boolean Contains(T item)
+        {
+            var comp = EqualityComparer<T>.Default;
+            for (var i = 0; i < Length; ++i)
+            {
+                if (comp.Equals(Raw[i], item))
+                    return true;
+            }
+            return false;
+        }
+        #endregion
         #region Assign
         public void Assign(params T[] values)
         {
             Raw = values;
         }
         #endregion
+        #region Add
+        public void Add(T item)
+        {
+            EnsureCapacity(Length + 1);
+            Last = item;
+        }
+        #endregion
+        #region AddRange
+        public void AddRange(IEnumerable<T> array)
+        {
+            foreach (var item in array)
+                Add(item);
+        }
+        #endregion
         #region Get
         public T Get(int index)
         {
             if (index < 0 || index >= Raw.Length)
-                return default;
+                throw new Exception("outside bounds of array");
             return Raw[index];
         }
         #endregion
@@ -95,9 +134,17 @@ namespace SputnikAsm.LGenerics
         }
         #endregion
         #region Remove
-        public void Remove(int startIndex)
+        public void Remove(T item)
         {
-            Remove(startIndex, 1);
+            var comp = EqualityComparer<T>.Default;
+            for (var i = 0; i < Length; ++i)
+            {
+                if (comp.Equals(Raw[i], item))
+                {
+                    RemoveAt(i);
+                    return;
+                }
+            }
         }
         public void Remove(int startIndex, int length)
         {
@@ -122,6 +169,26 @@ namespace SputnikAsm.LGenerics
             var newBuffer = new T[Raw.Length - removed];
             Array.Copy(Raw, newBuffer, Raw.Length - removed);
             Raw = newBuffer;
+        }
+        #endregion
+        #region RemoveAt
+        public void RemoveAt(int index)
+        {
+            Remove(index, 1);
+        }
+        #endregion
+        #region Sort
+        public void Sort()
+        {
+            Array.Sort(Raw, 0, Length);
+        }
+        public void Sort(IComparer comparer)
+        {
+            Array.Sort(Raw, 0, Length, comparer);
+        }
+        public void Sort(IComparer<T> comparer)
+        {
+            Array.Sort(Raw, 0, Length, comparer);
         }
         #endregion
     }

@@ -22,5 +22,15 @@ namespace SputnikAsm.LCollections
             return UStringUtils.Empty;
         }
         #endregion
+        #region ToString
+        public override String ToString()
+        {
+            return String.Join("\n", Raw);
+        }
+        public String ToString(String separator)
+        {
+            return String.Join(separator, Raw);
+        }
+        #endregion
     }
 }

@@ -8,6 +8,19 @@ namespace SputnikAsm.LUtils
 {
     public static class AStringUtils
     {
+        #region Properties
+        public static ACharArray Brackets { get; }
+        public static ACharArray StdWordDelims { get; }
+        #endregion
+        #region Constants
+        static AStringUtils()
+        {
+            Brackets = new ACharArray('(', ')', '[', ']', '{', '}');
+            StdWordDelims = new ACharArray(',', '.', ';', '/', '\\', ':', '\'', '"', '`', '(', ')', '[', ']', '{', '}');
+            StdWordDelims.AddRange(Brackets.Raw);
+            StdWordDelims.AddRange(ACharUtils.Range('\0', ' ').Raw);
+        }
+        #endregion
         #region Pos
         public static int Pos(String needle, String str)
         {
@@ -421,6 +434,91 @@ namespace SputnikAsm.LUtils
             if (str.Length > 0 && str[0] == '$')
                 str = "0x" + str.Substring(1);
             return UStringUtils.StringToUInt64(str);
+        }
+        #endregion
+        #region BinToStr
+        public static String BinToStr(Byte[] bin)
+        {
+            return UBinaryUtils.BinToString(bin);
+        }
+        #endregion
+        #region BinToAscii
+        public static String BinToAscii(Byte[] bin)
+        {
+            return UBinaryUtils.BinToAsciiString(bin);
+        }
+        #endregion
+        #region WordCount
+        public static int WordCount(String source)
+        {
+            return WordCount(source, StdWordDelims);
+        }
+        public static int WordCount(String source, ACharArray wordDelims)
+        {
+            var result = 0;
+            var i = 0;
+            var lev = source.Length;
+            while (i < lev)
+            {
+                while (i < lev && wordDelims.Contains(source[i]))
+                    i += 1;
+                if (i <= lev)
+                    result += 1;
+                while (i < lev && !wordDelims.Contains(source[i]))
+                    i += 1;
+            }
+            return result;
+        }
+        #endregion
+        #region ExtractWord
+        public static String ExtractWord(int n, String s)
+        {
+            return ExtractWord(n, s, StdWordDelims);
+        }
+        public static String ExtractWord(int n, String s, ACharArray wordDelims)
+        {
+            using (var sb = new UStringBuilder())
+            {
+                var i = WordPosition(n, s, wordDelims);
+                if (i == -1)
+                    return sb.ToString();
+                /* find the end of the current word */
+                while (i < s.Length && !(wordDelims.Contains(s[i])))
+                {
+                    /* add the I'th character to result */
+                    sb.Append(s[i]);
+                    i++;
+                }
+                return sb.ToString();
+            }
+        }
+        #endregion
+        #region WordPosition
+        public static int WordPosition(int n, String s)
+        {
+            return WordPosition(n, s, StdWordDelims);
+        }
+        public static int WordPosition(int n, String s, ACharArray wordDelims)
+        {
+            var count = 0;
+            var i = 0;
+            var result = 0;
+            while (i < s.Length && count != n)
+            {
+                /* skip over delimiters */
+                while ((i < s.Length) && (wordDelims.Contains(s[i])))
+                    i++;
+                /* if we're not beyond end of S, we're at the start of a word */
+                if (i < s.Length)
+                    count++;
+                /* if not finished, find the end of the current word */
+                if (count != n)
+                    while ((i < s.Length) && !(wordDelims.Contains(s[i])))
+                        i++;
+                else
+                    result = i;
+            }
+            return result;
         }
         #endregion
     }

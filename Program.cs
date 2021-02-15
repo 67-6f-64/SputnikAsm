@@ -1,8 +1,10 @@
 ﻿using System;
+using Sputnik.LBinary;
 using Sputnik.LUtils;
 using SputnikAsm.LAssembler;
 using SputnikAsm.LAutoAssembler;
 using SputnikAsm.LCollections;
+using SputnikAsm.LUtils;
 
 namespace SputnikAsm
 {
@@ -21,22 +23,38 @@ namespace SputnikAsm
 
 
             var cc = @"
-            mov eax, edx
             [Enable]
             mov esi, edi
+push 7
             [Disable]
             lea eax, [esi]
+            call kittenmeister
             ";
             var aa = new AAutoAssembler();
-            var code = new AStringArray();
+            var code = new ARefStringArray();
             code.Assign(UStringUtils.GetLines(cc).ToArray());
             aa.RemoveComments(code);
-            foreach(var l in code.Raw)
-                Console.WriteLine("Code: " + l);
+            Console.WriteLine("Full Script:\n" + code);
+
+            Console.WriteLine("Enable Script:\n" + aa.GetScript(code, true));
+            Console.WriteLine("Disable Script:\n" + aa.GetScript(code, false));
 
             var ret = aa.GetEnableAndDisablePos(code, out var epos, out var dpos);
             Console.WriteLine("Found " + ret + " Enable " + epos + " Disable " + dpos);
 
+            var tt = new ARefStringArray();
+            aa.Tokenize("cat dog f:ox@ mitt:ens", tt);
+            foreach (var tok in tt.Raw)
+            {
+                Console.WriteLine("Token: " + tok);
+            }
+            Console.WriteLine(aa.TokenCheck("mittens cat fox", "cat"));
+            Console.WriteLine(aa.ReplaceToken("mov edx:ds, eax", "ds", "777"));
+
+            Console.WriteLine(AStringUtils.WordCount("a"));
+            Console.WriteLine(AStringUtils.ExtractWord(1, "cat dog meow"));
+            Console.WriteLine(AStringUtils.ExtractWord(2, "cat dog meow"));
+            Console.WriteLine(AStringUtils.ExtractWord(3, "cat dog meow"));
 
             Console.ReadKey();
         }
