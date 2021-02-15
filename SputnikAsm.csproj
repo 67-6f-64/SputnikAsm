@@ -62,10 +62,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="LAssembler\AAssembler.cs" />
-    <Compile Include="LAssembler\LCollections\AAssemblerBytes.cs" />
+    <Compile Include="LCollections\ATByteArray.cs" />
+    <Compile Include="LCollections\AByteArray.cs" />
     <Compile Include="LAssembler\AIndex.cs" />
-    <Compile Include="LAssembler\LCollections\AIndexArray.cs" />
-    <Compile Include="LAssembler\LCollections\ATokens.cs" />
+    <Compile Include="LCollections\AIndexArray.cs" />
+    <Compile Include="LCollections\AStringArray.cs" />
     <Compile Include="LAssembler\LEnums\AAssemblerPreference.cs" />
     <Compile Include="LAssembler\LEnums\AExtraOpCode.cs" />
     <Compile Include="LAssembler\LEnums\AParam.cs" />
@@ -73,13 +74,17 @@
     <Compile Include="LAssembler\AOpCode.cs" />
     <Compile Include="LAssembler\AOpCodes.cs" />
     <Compile Include="LAssembler\ASingleLineAssembler.cs" />
+    <Compile Include="LAutoAssembler\AAutoAssembler.cs" />
     <Compile Include="LGenerics\AArrayManager.cs" />
     <Compile Include="LUtils\AArrayUtils.cs" />
+    <Compile Include="LUtils\AMathUtils.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="LUtils\AStringUtils.cs" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="LAssembler\LCollections\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

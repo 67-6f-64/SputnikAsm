@@ -1,16 +1,16 @@
 ﻿using System;
 using SputnikAsm.LGenerics;
 
-namespace SputnikAsm.LAssembler.LCollections
+namespace SputnikAsm.LCollections
 {
-    public class AAssemblerBytes : AArrayManager<Byte>
+    public class ATByteArray : AArrayManager<UInt16>
     {
         #region Constructor
-        public AAssemblerBytes()
+        public ATByteArray()
             : base()
         {
         }
-        public AAssemblerBytes(params Byte[] bytes)
+        public ATByteArray(params UInt16[] bytes)
             : base(bytes)
         {
         }

@@ -1,12 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Sputnik.LGenerics;
 using Sputnik.LUtils;
-using SputnikAsm.LAssembler.LCollections;
 using SputnikAsm.LAssembler.LEnums;
+using SputnikAsm.LCollections;
 using SputnikAsm.LUtils;
 
 namespace SputnikAsm.LAssembler
@@ -181,26 +176,26 @@ namespace SputnikAsm.LAssembler
         }
         #endregion
         #region add
-        public void add(AAssemblerBytes bytes, params Byte[] a)
+        public void add(AByteArray bytes, params Byte[] a)
         {
             bytes.EnsureCapacity(bytes.Length + a.Length);
             for (var i = 0; i < a.Length; i++)
                 bytes[bytes.Length - a.Length + i] = a[i];
         }
-        public void add(AAssemblerBytes bytes, Byte a)
+        public void add(AByteArray bytes, Byte a)
         {
             add(bytes, new[] {a});
         }
         #endregion
         #region addword
-        public void addword(AAssemblerBytes bytes, UInt16 a)
+        public void addword(AByteArray bytes, UInt16 a)
         {
             add(bytes, (Byte)a);
             add(bytes, (Byte)(a >> 8));
         }
         #endregion
         #region adddword
-        public void adddword(AAssemblerBytes bytes, UInt32 a)
+        public void adddword(AByteArray bytes, UInt32 a)
         {
             add(bytes, (Byte)a);
             add(bytes, (Byte)(a >> 8));
@@ -209,7 +204,7 @@ namespace SputnikAsm.LAssembler
         }
         #endregion
         #region addqword
-        public void addqword(AAssemblerBytes bytes, UInt64 a)
+        public void addqword(AByteArray bytes, UInt64 a)
         {
             add(bytes, (Byte)a);
             add(bytes, (Byte)(a >> 8));
@@ -222,7 +217,7 @@ namespace SputnikAsm.LAssembler
         }
         #endregion
         #region addstring
-        public void addstring(AAssemblerBytes bytes, String s)
+        public void addstring(AByteArray bytes, String s)
         {
             var j = bytes.Length;
             bytes.EnsureCapacity(bytes.Length + s.Length - 2); //not the quotes;
@@ -233,7 +228,7 @@ namespace SputnikAsm.LAssembler
         #region valuetotype
         public int valuetotype(UInt32 value)
         {
-            int result = 32;
+            var result = 32;
             if (value <= 0xffff) 
             {
                 result = 16;
@@ -695,14 +690,30 @@ namespace SputnikAsm.LAssembler
             var result = -1;
             switch (eo)
             {
-                case AExtraOpCode.eo_reg0: result = 0; break;
-                case AExtraOpCode.eo_reg1: result = 1; break;
-                case AExtraOpCode.eo_reg2: result = 2; break;
-                case AExtraOpCode.eo_reg3: result = 3; break;
-                case AExtraOpCode.eo_reg4: result = 4; break;
-                case AExtraOpCode.eo_reg5: result = 5; break;
-                case AExtraOpCode.eo_reg6: result = 6; break;
-                case AExtraOpCode.eo_reg7: result = 7; break;
+                case AExtraOpCode.eo_reg0:
+                    result = 0;
+                    break;
+                case AExtraOpCode.eo_reg1:
+                    result = 1;
+                    break;
+                case AExtraOpCode.eo_reg2:
+                    result = 2;
+                    break;
+                case AExtraOpCode.eo_reg3:
+                    result = 3;
+                    break;
+                case AExtraOpCode.eo_reg4:
+                    result = 4;
+                    break;
+                case AExtraOpCode.eo_reg5:
+                    result = 5;
+                    break;
+                case AExtraOpCode.eo_reg6:
+                    result = 6;
+                    break;
+                case AExtraOpCode.eo_reg7:
+                    result = 7;
+                    break;
             }
             return result;
         }
@@ -714,7 +725,7 @@ namespace SputnikAsm.LAssembler
             setmod(ref tmp, i);
             modrm[index] = tmp;
         }
-        public void setmod(AAssemblerBytes modrm, int index, byte i)
+        public void setmod(AByteArray modrm, int index, byte i)
         {
             var tmp = modrm[index];
             setmod(ref tmp, i);
@@ -738,7 +749,7 @@ namespace SputnikAsm.LAssembler
             setsibscale(ref tmp, i);
             sib[index] = tmp;
         }
-        public void setsibscale(AAssemblerBytes sib, int index, byte i)
+        public void setsibscale(AByteArray sib, int index, byte i)
         {
             var tmp = sib[index];
             setsibscale(ref tmp, i);
@@ -751,7 +762,6 @@ namespace SputnikAsm.LAssembler
         #endregion
         #region gettokentype
         public ATokenType gettokentype(ref string token, string token2)
-        /*i,*/
         {
             var result = ATokenType.ttinvalidtoken;
             if (token.Length == 0)
@@ -768,7 +778,7 @@ namespace SputnikAsm.LAssembler
                 result = ATokenType.ttvalue;
                 token = temp;
             }
-            if (AStringUtils.Pos("[", token) > 0)
+            if (AStringUtils.Pos("[", token) != -1)
             {
                 if (AStringUtils.Pos("DQWORD ", token) != -1)
                     result = ATokenType.ttmemorylocation128;
@@ -817,7 +827,7 @@ namespace SputnikAsm.LAssembler
         }
         #endregion
         #region tokenize
-        public Boolean tokenize(String opcode, ATokens tokens)
+        public Boolean tokenize(String opcode, AStringArray tokens)
         {
             int i, j, last;
             Boolean quoted;
@@ -856,7 +866,7 @@ namespace SputnikAsm.LAssembler
                     else
                         j = i - last;
                     tokens.Last = AStringUtils.Copy(opcode, last, j);
-                    if ((j > 0) && (tokens.Last[0] != '$') && ((j < 7) || (AStringUtils.Pos("KERNEL_", tokens.Last.ToUpper()) == 0)))  //only uppercase if it's not kernel_
+                    if ((j > 0) && (tokens.Last[0] != '$') && ((j < 7) || (AStringUtils.Pos("KERNEL_", tokens.Last.ToUpper()) == -1)))  //only uppercase if it's not kernel_
                     {
                         //don't uppercase empty strings, kernel_ strings or strings starting with $
                         if (tokens.Last.Length > 2)
@@ -986,7 +996,7 @@ namespace SputnikAsm.LAssembler
         {
             if (token.Length == 0)
                 return false; //empty string
-            var tokens = new ATokens();
+            var tokens = new AStringArray();
             var quotechar = '\0';
             tokens.SetLength(0);
             String temp;
@@ -1133,7 +1143,7 @@ namespace SputnikAsm.LAssembler
         }
         #endregion
         #region assmble
-        public Boolean assemble(String opcode, UInt64 address, AAssemblerBytes bytes, AAssemblerPreference assemblerPreference = AAssemblerPreference.apnone, Boolean skiprangecheck = false)
+        public Boolean assemble(String opcode, UInt64 address, AByteArray bytes, AAssemblerPreference assemblerPreference = AAssemblerPreference.apnone, Boolean skiprangecheck = false)
         {
             var result = singlelineassembler.assemble(opcode, address, bytes, assemblerPreference, skiprangecheck);
             return result;

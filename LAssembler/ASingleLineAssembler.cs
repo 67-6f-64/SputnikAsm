@@ -1,7 +1,9 @@
 ﻿using System;
+using Sputnik.LBinary;
 using Sputnik.LEngine;
-using SputnikAsm.LAssembler.LCollections;
+using Sputnik.LUtils;
 using SputnikAsm.LAssembler.LEnums;
+using SputnikAsm.LCollections;
 using SputnikAsm.LUtils;
 
 namespace SputnikAsm.LAssembler
@@ -126,7 +128,7 @@ namespace SputnikAsm.LAssembler
             createsibscaleindex(ref tmp, reg);
             sib[index] = tmp;
         }
-        public void createsibscaleindex(AAssemblerBytes sib, int index, string reg)
+        public void createsibscaleindex(AByteArray sib, int index, string reg)
         {
             var tmp = sib[index];
             createsibscaleindex(ref tmp, reg);
@@ -188,7 +190,7 @@ namespace SputnikAsm.LAssembler
             setsibindex(ref tmp, i);
             sib[index] = tmp;
         }
-        public void setsibindex(AAssemblerBytes sib, int index, byte i)
+        public void setsibindex(AByteArray sib, int index, byte i)
         {
             var tmp = sib[index];
             setsibindex(ref tmp, i);
@@ -208,7 +210,7 @@ namespace SputnikAsm.LAssembler
             setsibbase(ref tmp, i);
             sib[index] = tmp;
         }
-        public void setsibbase(AAssemblerBytes sib, int index, byte i)
+        public void setsibbase(AByteArray sib, int index, byte i)
         {
             var tmp = sib[index];
             setsibbase(ref tmp, i);
@@ -228,7 +230,7 @@ namespace SputnikAsm.LAssembler
             setrm(ref tmp, i);
             sib[index] = tmp;
         }
-        public void setrm(AAssemblerBytes sib, int index, byte i)
+        public void setrm(AByteArray sib, int index, byte i)
         {
             var tmp = sib[index];
             setrm(ref tmp, i);
@@ -242,10 +244,10 @@ namespace SputnikAsm.LAssembler
         }
         #endregion
         #region createmodrm
-        public Boolean createmodrm(AAssemblerBytes bytes, int reg, string param)
+        public Boolean createmodrm(AByteArray bytes, int reg, string param)
         {
             string address;
-            var modrm = new AAssemblerBytes();
+            var modrm = new AByteArray();
             int i, j;
             modrm.EnsureCapacity(1);
             modrm[0] = 0;
@@ -316,7 +318,7 @@ namespace SputnikAsm.LAssembler
         }
         #endregion
         #region addopcode
-        public void addopcode(AAssemblerBytes bytes, int i)
+        public void addopcode(AByteArray bytes, int i)
         {
             rexprefixlocation = bytes.Length;
             if (AArrayUtils.InArray(Assembler.opcodes[i].bt1, 0x66, 0xf2, 0xf3))
@@ -329,10 +331,10 @@ namespace SputnikAsm.LAssembler
         }
         #endregion
         #region setmodrm
-        public void setmodrm(AAssemblerBytes modrm, string address, int offset)
+        public void setmodrm(AByteArray modrm, string address, int offset)
         {
             var reg = new UAv();
-            var splitup = new ATokens();
+            var splitup = new AStringArray();
             var regs = "";
             var reg1 = "";
             var reg2 = "";
@@ -771,13 +773,11 @@ namespace SputnikAsm.LAssembler
         }
         #endregion
         #region assemble
-        public Boolean assemble(string opcode, UInt64 address, AAssemblerBytes bytes, AAssemblerPreference assemblerpreference = AAssemblerPreference.apnone, Boolean skiprangecheck = false)
+        public Boolean assemble(string opcode, UInt64 address, AByteArray bytes, AAssemblerPreference assemblerpreference = AAssemblerPreference.apnone, Boolean skiprangecheck = false)
         {
-            ATokens tokens = new ATokens();
+            AStringArray tokens = new AStringArray();
             var i = 0;
             var j = 0;
-            var k = 0;
-            var l = 0;
             UInt64 v = 0;
             UInt64 v2 = 0;
             var mnemonic = 0;
@@ -815,7 +815,7 @@ namespace SputnikAsm.LAssembler
                     {
                         //find the original non uppercase stringpos in the opcode
                         j = AStringUtils.Pos(tokens[i], opcode.ToUpper());
-                        if (j > 0)
+                        if (j != -1)
                         {
                             tempstring = AStringUtils.Copy(opcode, j, tokens[i].Length);
                             Assembler.addstring(bytes, tempstring);
@@ -866,12 +866,12 @@ namespace SputnikAsm.LAssembler
                 parameter3 = tokens[mnemonic + 3];
             else
                 parameter3 = "";
-            overrideshort = AStringUtils.Pos("SHORT ", parameter1) > 0;
-            overridelong = (AStringUtils.Pos("LONG ", parameter1) > 0);
+            overrideshort = AStringUtils.Pos("SHORT ", parameter1) != -1;
+            overridelong = (AStringUtils.Pos("LONG ", parameter1) != -1);
             if (Assembler.symhandler.process.is64bit)
-                overridefar = (AStringUtils.Pos("FAR ", parameter1) > 0);
+                overridefar = (AStringUtils.Pos("FAR ", parameter1) != -1);
             else
-                overridelong = overridelong | (AStringUtils.Pos("FAR ", parameter1) > 0);
+                overridelong |= (AStringUtils.Pos("FAR ", parameter1) != -1);
             if (!(overrideshort | overridelong) & (assemblerpreference != AAssemblerPreference.apnone))  //no override chooce by the user and not a normal preference
             {
                 if (assemblerpreference == AAssemblerPreference.aplong)
@@ -940,27 +940,27 @@ namespace SputnikAsm.LAssembler
             }
             if ((paramtype1 >= ATokenType.ttmemorylocation) && (paramtype1 <= ATokenType.ttmemorylocation128))
             {
-                if (AStringUtils.Pos("ES:", parameter1) > 0)
+                if (AStringUtils.Pos("ES:", parameter1) != -1)
                 {
                     bytes.SetLength(bytes.Length + 1);
                     bytes[bytes.Length - 1] = 0x26;
                 }
-                if (AStringUtils.Pos("CS:", parameter1) > 0)
+                if (AStringUtils.Pos("CS:", parameter1) != -1)
                 {
                     bytes.SetLength(bytes.Length + 1);
                     bytes[bytes.Length - 1] = 0x2e;
                 }
-                if (AStringUtils.Pos("SS:", parameter1) > 0)
+                if (AStringUtils.Pos("SS:", parameter1) != -1)
                 {
                     bytes.SetLength(bytes.Length + 1);
                     bytes[bytes.Length - 1] = 0x36;
                 }
-                if (AStringUtils.Pos("FS:", parameter1) > 0)
+                if (AStringUtils.Pos("FS:", parameter1) != -1)
                 {
                     bytes.SetLength(bytes.Length + 1);
                     bytes[bytes.Length - 1] = 0x64;
                 }
-                if (AStringUtils.Pos("GS:", parameter1) > 0)
+                if (AStringUtils.Pos("GS:", parameter1) != -1)
                 {
                     bytes.SetLength(bytes.Length + 1);
                     bytes[bytes.Length - 1] = 0x65;
@@ -968,27 +968,27 @@ namespace SputnikAsm.LAssembler
             }
             if ((paramtype2 >= ATokenType.ttmemorylocation) && (paramtype2 <= ATokenType.ttmemorylocation128))
             {
-                if (AStringUtils.Pos("ES:", parameter2) > 0)
+                if (AStringUtils.Pos("ES:", parameter2) != -1)
                 {
                     bytes.SetLength(bytes.Length + 1);
                     bytes[bytes.Length - 1] = 0x26;
                 }
-                if (AStringUtils.Pos("CS:", parameter2) > 0)
+                if (AStringUtils.Pos("CS:", parameter2) != -1)
                 {
                     bytes.SetLength(bytes.Length + 1);
                     bytes[bytes.Length - 1] = 0x2e;
                 }
-                if (AStringUtils.Pos("SS:", parameter2) > 0)
+                if (AStringUtils.Pos("SS:", parameter2) != -1)
                 {
                     bytes.SetLength(bytes.Length + 1);
                     bytes[bytes.Length - 1] = 0x36;
                 }
-                if (AStringUtils.Pos("FS:", parameter2) > 0)
+                if (AStringUtils.Pos("FS:", parameter2) != -1)
                 {
                     bytes.SetLength(bytes.Length + 1);
                     bytes[bytes.Length - 1] = 0x64;
                 }
-                if (AStringUtils.Pos("GS:", parameter2) > 0)
+                if (AStringUtils.Pos("GS:", parameter2) != -1)
                 {
                     bytes.SetLength(bytes.Length + 1);
                     bytes[bytes.Length - 1] = 0x65;
@@ -1079,1873 +1079,1877 @@ namespace SputnikAsm.LAssembler
             while ((endoflist <= Assembler.opcodecount) && (Assembler.opcodes[endoflist].mnemonic == tokens[mnemonic]))
                 endoflist += 1;
             endoflist -= 1;
-            //create("try");
-            while (j <= Assembler.opcodecount)
+            try
             {
-                if (Assembler.opcodes[j].mnemonic != tokens[mnemonic])
-                    return result;
-                if ((Assembler.opcodes[j].invalidin32bit & !is64bit) | (Assembler.opcodes[j].invalidin64bit & is64bit))
+                while (j <= Assembler.opcodecount)
                 {
-                    j += 1;
-                    continue; // todo figure out if this is meant to be break/continue
-                }
-                switch (Assembler.opcodes[j].paramtype1)
-                {
-                    case AParam.par_noparam:
-                        if (parameter1 == "")      //no param
-                        {
-                            //no param
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
+                    if (Assembler.opcodes[j].mnemonic != tokens[mnemonic])
+                        return result;
+                    if ((Assembler.opcodes[j].invalidin32bit & !is64bit) | (Assembler.opcodes[j].invalidin64bit & is64bit))
+                    {
+                        j += 1;
+                        continue; // todo figure out if this is meant to be break/continue
+                    }
+                    switch (Assembler.opcodes[j].paramtype1)
+                    {
+                        case AParam.par_noparam:
+                            if (parameter1 == "")      //no param
                             {
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                //no param
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
                                 {
-                                    //no_param,no_param,no_param
-                                    if ((Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_none) && (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_none))
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                     {
-                                        //textraopcode.eo_none,textraopcode.eo_none--no_param,no_param,no_param
-                                        addopcode(bytes, j);
-                                        result = true;
-                                        return result;
-                                    }
-                                }
-                            }
-                        }
-                        break;
-                    case AParam.par_imm8:
-                        if (paramtype1 == ATokenType.ttvalue)
-                        {
-                            //imm8,
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_al) && (parameter2 == "AL"))
-                            {
-                                //imm8,al
-                                addopcode(bytes, j);
-                                Assembler.add(bytes, (Byte)v);
-                                result = true;
-                                return result;
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_ax) && (parameter2 == "AX"))
-                            {
-                                //imm8,ax /?
-                                addopcode(bytes, j);
-                                Assembler.add(bytes, (Byte)v);
-                                result = true;
-                                return result;
-                            }
-
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_eax) && ((parameter2 == "EAX") || (parameter2 == "RAX")))
-                            {
-                                //imm8,eax
-                                addopcode(bytes, j);
-                                Assembler.add(bytes, (Byte)v);
-                                result = true;
-                                return result;
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
-                            {
-                                if (vtype == 16)
-                                {
-                                    //see if there is also a 'opcode imm16' variant
-                                    k = startoflist;
-                                    while ((k <= Assembler.opcodecount) && (Assembler.opcodes[k].mnemonic == tokens[mnemonic]))
-                                    {
-                                        if (Assembler.opcodes[k].paramtype1 == AParam.par_imm16)
+                                        //no_param,no_param,no_param
+                                        if ((Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_none) && (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_none))
                                         {
-                                            addopcode(bytes, k);
-                                            Assembler.addword(bytes, (UInt16)v);
+                                            //textraopcode.eo_none,textraopcode.eo_none--no_param,no_param,no_param
+                                            addopcode(bytes, j);
                                             result = true;
                                             return result;
                                         }
-                                        k += 1;
                                     }
                                 }
-                                if ((vtype == 32) || (signedvtype > 8))
-                                {
-                                    //see if there is also a 'opcode imm32' variant
-                                    k = startoflist;
-                                    while ((k <= Assembler.opcodecount) && (Assembler.opcodes[k].mnemonic == tokens[mnemonic]))
-                                    {
-                                        if (Assembler.opcodes[k].paramtype1 == AParam.par_imm32)
-                                        {
-                                            addopcode(bytes, k);
-                                            Assembler.adddword(bytes, (UInt32)v);
-                                            result = true;
-                                            return result;
-                                        }
-                                        k += 1;
-                                    }
-                                }
-                                //op imm8
-                                addopcode(bytes, j);
-                                Assembler.add(bytes, (Byte)v);
-                                result = true;
-                                return result;
                             }
-                        }
-                        break;
-                    case AParam.par_imm16:
-                        if (paramtype1 == ATokenType.ttvalue)
-                        {
-                            //imm16,
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
+                            break;
+                        case AParam.par_imm8:
+                            if (paramtype1 == ATokenType.ttvalue)
                             {
-                                //imm16
-                                addopcode(bytes, j);
-                                Assembler.addword(bytes, (UInt16)v);
-                                result = true;
-                                return result;
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm8) && (paramtype2 == ATokenType.ttvalue))
-                            {
-                                //imm16,imm8,
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                //imm8,
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_al) && (parameter2 == "AL"))
                                 {
+                                    //imm8,al
                                     addopcode(bytes, j);
-                                    Assembler.addword(bytes, (UInt16)v);
-                                    Assembler.add(bytes, (Byte)v2);
+                                    Assembler.add(bytes, (Byte)v);
+                                    result = true;
+                                    return result;
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_ax) && (parameter2 == "AX"))
+                                {
+                                    //imm8,ax /?
+                                    addopcode(bytes, j);
+                                    Assembler.add(bytes, (Byte)v);
+                                    result = true;
+                                    return result;
+                                }
+
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_eax) && ((parameter2 == "EAX") || (parameter2 == "RAX")))
+                                {
+                                    //imm8,eax
+                                    addopcode(bytes, j);
+                                    Assembler.add(bytes, (Byte)v);
+                                    result = true;
+                                    return result;
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
+                                {
+                                    if (vtype == 16)
+                                    {
+                                        //see if there is also a 'opcode imm16' variant
+                                        var k = startoflist;
+                                        while ((k <= Assembler.opcodecount) && (Assembler.opcodes[k].mnemonic == tokens[mnemonic]))
+                                        {
+                                            if (Assembler.opcodes[k].paramtype1 == AParam.par_imm16)
+                                            {
+                                                addopcode(bytes, k);
+                                                Assembler.addword(bytes, (UInt16)v);
+                                                result = true;
+                                                return result;
+                                            }
+                                            k += 1;
+                                        }
+                                    }
+                                    if ((vtype == 32) || (signedvtype > 8))
+                                    {
+                                        //see if there is also a 'opcode imm32' variant
+                                        var k = startoflist;
+                                        while ((k <= Assembler.opcodecount) && (Assembler.opcodes[k].mnemonic == tokens[mnemonic]))
+                                        {
+                                            if (Assembler.opcodes[k].paramtype1 == AParam.par_imm32)
+                                            {
+                                                addopcode(bytes, k);
+                                                Assembler.adddword(bytes, (UInt32)v);
+                                                result = true;
+                                                return result;
+                                            }
+                                            k += 1;
+                                        }
+                                    }
+                                    //op imm8
+                                    addopcode(bytes, j);
+                                    Assembler.add(bytes, (Byte)v);
                                     result = true;
                                     return result;
                                 }
                             }
-                        }
-                        break;
-                    case AParam.par_imm32:
-                        if (paramtype1 == ATokenType.ttvalue)
-                        {
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
+                            break;
+                        case AParam.par_imm16:
+                            if (paramtype1 == ATokenType.ttvalue)
                             {
-                                //imm32
+                                //imm16,
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
+                                {
+                                    //imm16
+                                    addopcode(bytes, j);
+                                    Assembler.addword(bytes, (UInt16)v);
+                                    result = true;
+                                    return result;
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm8) && (paramtype2 == ATokenType.ttvalue))
+                                {
+                                    //imm16,imm8,
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        addopcode(bytes, j);
+                                        Assembler.addword(bytes, (UInt16)v);
+                                        Assembler.add(bytes, (Byte)v2);
+                                        result = true;
+                                        return result;
+                                    }
+                                }
+                            }
+                            break;
+                        case AParam.par_imm32:
+                            if (paramtype1 == ATokenType.ttvalue)
+                            {
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
+                                {
+                                    //imm32
+                                    addopcode(bytes, j);
+                                    Assembler.adddword(bytes, (UInt32)v);
+                                    result = true;
+                                    return result;
+                                }
+                            }
+                            break;
+                        case AParam.par_moffs8:
+                            if ((paramtype1 == ATokenType.ttmemorylocation8) | (Assembler.ismemorylocationdefault(parameter1)))
+                            {
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_al) && (parameter2 == "AL"))
+                                {
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        var k = AStringUtils.Pos("[", parameter1);
+                                        var l = AStringUtils.Pos("]", parameter1);
+                                        AStringUtils.Val("$" + AStringUtils.Copy(parameter1, k + 1, l - k - 1), out v, out k);
+                                        if (k == -1)
+                                        {
+                                            //verified, it doesn't have a registerbase in it
+                                            addopcode(bytes, j);
+                                            Assembler.adddword(bytes, (UInt32)v);
+                                            result = true;
+                                            return result;
+                                        }
+                                    }
+                                }
+                            }
+                            break;
+                        case AParam.par_moffs16:
+                            if ((paramtype1 == ATokenType.ttmemorylocation16) | (Assembler.ismemorylocationdefault(parameter1)))
+                            {
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_ax) && (parameter2 == "AX"))
+                                {
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        var k = AStringUtils.Pos("[", parameter1);
+                                        var l = AStringUtils.Pos("]", parameter1);
+                                        AStringUtils.Val("$" + AStringUtils.Copy(parameter1, k + 1, l - k - 1), out v, out k);
+                                        if (k == -1)
+                                        {
+                                            //verified, it doesn't have a registerbase in it
+                                            addopcode(bytes, j);
+                                            Assembler.adddword(bytes, (UInt32)v);
+                                            result = true;
+                                            return result;
+                                        }
+                                    }
+                                }
+                            }
+                            break;
+                        case AParam.par_moffs32:
+                            if (paramtype1 == ATokenType.ttmemorylocation32)
+                            {
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_eax) && ((parameter2 == "EAX") || (parameter2 == "RAX")))
+                                {
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        var k = AStringUtils.Pos("[", parameter1);
+                                        var l = AStringUtils.Pos("]", parameter1);
+                                        AStringUtils.Val("$" + AStringUtils.Copy(parameter1, k + l, l - k - 1), out v, out k);
+                                        if (k == -1)
+                                        {
+                                            //verified, it doesn't have a registerbase in it
+                                            addopcode(bytes, j);
+                                            Assembler.adddword(bytes, (UInt32)v);
+                                            result = true;
+                                            return result;
+                                        }
+                                    }
+                                }
+                            }
+                            break;
+                        case AParam.par_3:
+                            if ((paramtype1 == ATokenType.ttvalue) && (v == 3))
+                            {
+                                //int 3
                                 addopcode(bytes, j);
-                                Assembler.adddword(bytes, (UInt32)v);
                                 result = true;
                                 return result;
                             }
-                        }
-                        break;
-                    case AParam.par_moffs8:
-                        if ((paramtype1 == ATokenType.ttmemorylocation8) | (Assembler.ismemorylocationdefault(parameter1)))
-                        {
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_al) && (parameter2 == "AL"))
+                            break;
+                        case AParam.par_al:
+                            if (parameter1 == "AL")
                             {
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                //AL,
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_dx) && (parameter2 == "DX"))
                                 {
-                                    k = AStringUtils.Pos("[", parameter1);
-                                    l = AStringUtils.Pos("]", parameter1);
-                                    AStringUtils.Val("$" + AStringUtils.Copy(parameter1, k + 1, l - k - 1), out v, out k);
-                                    if (k == 0)
+                                    //opcode al,dx
+                                    addopcode(bytes, j);
+                                    result = true;
+                                    return result;
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm8) && (paramtype2 == ATokenType.ttvalue))
+                                {
+                                    //AL,imm8
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                     {
-                                        //verified, it doesn't have a registerbase in it
-                                        addopcode(bytes, j);
-                                        Assembler.adddword(bytes, (UInt32)v);
-                                        result = true;
-                                        return result;
+                                        if ((Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_ib) && (Assembler.opcodes[j].opcode2 == AExtraOpCode.eo_none))
+                                        {
+                                            //verified: AL,imm8
+                                            addopcode(bytes, j);
+                                            Assembler.add(bytes, (Byte)v);
+                                            result = true;
+                                            return result;
+                                        }
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_moffs8) & ((paramtype2 == ATokenType.ttmemorylocation8) | (Assembler.ismemorylocationdefault(parameter2))))
+                                {
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        var k = AStringUtils.Pos("[", parameter2);
+                                        var l = AStringUtils.Pos("]", parameter2);
+                                        AStringUtils.Val("$" + AStringUtils.Copy(parameter2, k + l, l - k - 1), out v, out k);
+                                        if (k == -1)
+                                        {
+                                            //verified, it doesn't have a registerbase in it
+                                            addopcode(bytes, j);
+                                            Assembler.adddword(bytes, (UInt32)v);
+                                            result = true;
+                                            return result;
+                                        }
+
+
                                     }
                                 }
                             }
-                        }
-                        break;
-                    case AParam.par_moffs16:
-                        if ((paramtype1 == ATokenType.ttmemorylocation16) | (Assembler.ismemorylocationdefault(parameter1)))
-                        {
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_ax) && (parameter2 == "AX"))
+                            break;
+                        case AParam.par_ax:
+                            if (parameter1 == "AX")
                             {
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                //AX,
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
                                 {
-                                    k = AStringUtils.Pos("[", parameter1);
-                                    l = AStringUtils.Pos("]", parameter1);
-                                    AStringUtils.Val("$" + AStringUtils.Copy(parameter1, k + 1, l - k - 1), out v, out k);
-                                    if (k == 0)
+                                    //opcode AX
+                                    addopcode(bytes, j);
+                                    result = true;
+                                    return result;
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_dx) && (parameter2 == "DX"))
+                                {
+                                    //opcode ax,dx
+                                    addopcode(bytes, j);
+                                    result = true;
+                                    return result;
+                                }
+                                //r16
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_r16) && (paramtype2 == ATokenType.ttregister16bit))
+                                {
+                                    //eax,r32
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                     {
-                                        //verified, it doesn't have a registerbase in it
-                                        addopcode(bytes, j);
-                                        Assembler.adddword(bytes, (UInt32)v);
-                                        result = true;
-                                        return result;
+                                        //r32,eax
+                                        if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_prw)
+                                        {
+                                            //opcode+rd
+                                            addopcode(bytes, j);
+                                            bytes[bytes.Length - 1] += (Byte)getreg(parameter2);
+                                            result = true;
+                                            return result;
+                                        }
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm16) && (paramtype2 == ATokenType.ttvalue))
+                                {
+                                    //AX,imm16
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        //params confirmed it is a ax,imm16
+                                        if ((Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_iw) && (Assembler.opcodes[j].opcode2 == AExtraOpCode.eo_none))
+                                        {
+                                            addopcode(bytes, j);
+                                            Assembler.addword(bytes, (UInt16)(v));
+                                            result = true;
+                                            return result;
+                                        }
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_moffs16) & ((paramtype2 == ATokenType.ttmemorylocation16) | (Assembler.ismemorylocationdefault(parameter2))))
+                                {
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        var k = AStringUtils.Pos("[", parameter2);
+                                        var l = AStringUtils.Pos("]", parameter2);
+                                        AStringUtils.Val("$" + AStringUtils.Copy(parameter2, k + l, l - k - 1), out v, out k);
+                                        if (k == -1)
+                                        {
+                                            //verified, it doesn't have a registerbase in it
+                                            addopcode(bytes, j);
+                                            Assembler.adddword(bytes, (UInt32)v);
+                                            result = true;
+                                            return result;
+                                        }
                                     }
                                 }
                             }
-                        }
-                        break;
-                    case AParam.par_moffs32:
-                        if (paramtype1 == ATokenType.ttmemorylocation32)
-                        {
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_eax) && ((parameter2 == "EAX") || (parameter2 == "RAX")))
+                            break;
+                        case AParam.par_eax:
+                            if ((parameter1 == "EAX") || (parameter1 == "RAX"))
                             {
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                //eAX,
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_dx) && (parameter2 == "DX"))
                                 {
-                                    k = AStringUtils.Pos("[", parameter1);
-                                    l = AStringUtils.Pos("]", parameter1);
-                                    AStringUtils.Val("$" + AStringUtils.Copy(parameter1, k + l, l - k - 1), out v, out k);
-                                    if (k == 0)
+                                    //opcode eax,dx
+                                    addopcode(bytes, j);
+                                    result = true;
+                                    return result;
+                                }
+                                //r32
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_r32) && (paramtype2 == ATokenType.ttregister32bit))
+                                {
+                                    //eax,r32
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                     {
-                                        //verified, it doesn't have a registerbase in it
-                                        addopcode(bytes, j);
-                                        Assembler.adddword(bytes, (UInt32)v);
-                                        result = true;
-                                        return result;
+                                        //r32,eax
+                                        if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_prd)
+                                        {
+                                            //opcode+rd
+                                            addopcode(bytes, j);
+                                            var k = getreg(parameter2);
+                                            if (k > 7)
+                                            {
+                                                rex_b = true; //extention to the opcode field
+                                                k &= 7;
+                                            }
+                                            bytes[bytes.Length - 1] += (Byte)k;
+                                            result = true;
+                                            return result;
+                                        }
                                     }
                                 }
-                            }
-                        }
-                        break;
-                    case AParam.par_3:
-                        if ((paramtype1 == ATokenType.ttvalue) && (v == 3))
-                        {
-                            //int 3
-                            addopcode(bytes, j);
-                            result = true;
-                            return result;
-                        }
-                        break;
-                    case AParam.par_al:
-                        if (parameter1 == "AL")
-                        {
-                            //AL,
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_dx) && (parameter2 == "DX"))
-                            {
-                                //opcode al,dx
-                                addopcode(bytes, j);
-                                result = true;
-                                return result;
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm8) && (paramtype2 == ATokenType.ttvalue))
-                            {
-                                //AL,imm8
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm8) && (paramtype2 == ATokenType.ttvalue))
                                 {
-                                    if ((Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_ib) && (Assembler.opcodes[j].opcode2 == AExtraOpCode.eo_none))
+                                    //eax,imm8
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                     {
-                                        //verified: AL,imm8
                                         addopcode(bytes, j);
                                         Assembler.add(bytes, (Byte)v);
                                         result = true;
                                         return result;
                                     }
                                 }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_moffs8) & ((paramtype2 == ATokenType.ttmemorylocation8) | (Assembler.ismemorylocationdefault(parameter2))))
-                            {
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm32) && (paramtype2 == ATokenType.ttvalue))
                                 {
-                                    k = AStringUtils.Pos("[", parameter2);
-                                    l = AStringUtils.Pos("]", parameter2);
-                                    AStringUtils.Val("$" + AStringUtils.Copy(parameter2, k + l, l - k - 1), out v, out k);
-                                    if (k == 0)
+                                    //EAX,imm32,
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                     {
-                                        //verified, it doesn't have a registerbase in it
-                                        addopcode(bytes, j);
-                                        Assembler.adddword(bytes, (UInt32)v);
-                                        result = true;
-                                        return result;
+                                        //eax,imm32
+                                        if (signedvtype == 8)
+                                        {
+                                            //check if there isn't a rm32,imm8 , since that's less bytes
+                                            var k = startoflist;
+                                            while ((k <= Assembler.opcodecount) && (Assembler.opcodes[k].mnemonic == tokens[mnemonic]))
+                                            {
+                                                if ((Assembler.opcodes[k].paramtype1 == AParam.par_rm32) &&
+                                                   (Assembler.opcodes[k].paramtype2 == AParam.par_imm8))
+                                                {
+                                                    //yes, there is
+                                                    addopcode(bytes, k);
+                                                    result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[k].opcode1), parameter1);
+                                                    Assembler.add(bytes, (Byte)v);
+                                                    return result;
+                                                }
+                                                k += 1;
+                                            }
+                                        }
+                                        if ((Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_id) && (Assembler.opcodes[j].opcode2 == AExtraOpCode.eo_none))
+                                        {
+                                            addopcode(bytes, j);
+                                            Assembler.adddword(bytes, (UInt32)v);
+                                            result = true;
+                                            return result;
+                                        }
                                     }
-
-
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_moffs32) & ((paramtype2 == ATokenType.ttmemorylocation32) | (Assembler.ismemorylocationdefault(parameter2))))
+                                {
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        var k = AStringUtils.Pos("[", parameter2);
+                                        var l = AStringUtils.Pos("]", parameter2);
+                                        AStringUtils.Val("$" + AStringUtils.Copy(parameter2, k + 1, l - k - 1), out v, out k);
+                                        if (k == -1)
+                                        {
+                                            //verified, it doesn't have a registerbase in it
+                                            addopcode(bytes, j);
+                                            Assembler.adddword(bytes, (UInt32)v);
+                                            result = true;
+                                            return result;
+                                        }
+                                    }
                                 }
                             }
-                        }
-                        break;
-                    case AParam.par_ax:
-                        if (parameter1 == "AX")
-                        {
-                            //AX,
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
+                            break;
+                        case AParam.par_dx:
+                            if (parameter1 == "DX")
                             {
-                                //opcode AX
-                                addopcode(bytes, j);
-                                result = true;
-                                return result;
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_dx) && (parameter2 == "DX"))
-                            {
-                                //opcode ax,dx
-                                addopcode(bytes, j);
-                                result = true;
-                                return result;
-                            }
-                            //r16
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_r16) && (paramtype2 == ATokenType.ttregister16bit))
-                            {
-                                //eax,r32
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_al) && (parameter2 == "AL"))
                                 {
-                                    //r32,eax
-                                    if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_prw)
+                                    addopcode(bytes, j);
+                                    result = true;
+                                    return result;
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_ax) && (parameter2 == "AX"))
+                                {
+                                    addopcode(bytes, j);
+                                    result = true;
+                                    return result;
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_eax) && ((parameter2 == "EAX") || (parameter2 == "RAX")))
+                                {
+                                    addopcode(bytes, j);
+                                    result = true;
+                                    return result;
+                                }
+                            }
+                            break;
+                        case AParam.par_cs:
+                            if (parameter1 == "CS")
+                            {
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
+                                {
+                                    addopcode(bytes, j);
+                                    result = true;
+                                    return result;
+                                }
+                            }
+                            break;
+                        case AParam.par_ds:
+                            if (parameter1 == "DS")
+                            {
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
+                                {
+                                    addopcode(bytes, j);
+                                    result = true;
+                                    return result;
+                                }
+                            }
+                            break;
+                        case AParam.par_es:
+                            if (parameter1 == "ES")
+                            {
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
+                                {
+                                    addopcode(bytes, j);
+                                    result = true;
+                                    return result;
+                                }
+                            }
+                            break;
+                        case AParam.par_ss:
+                            if (parameter1 == "SS")
+                            {
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
+                                {
+                                    addopcode(bytes, j);
+                                    result = true;
+                                    return result;
+                                }
+                            }
+                            break;
+                        case AParam.par_fs:
+                            if (parameter1 == "FS")
+                            {
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
+                                {
+                                    addopcode(bytes, j);
+                                    result = true;
+                                    return result;
+                                }
+                            }
+                            break;
+
+                        case AParam.par_gs:
+                            if (parameter1 == "GS")
+                            {
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
+                                {
+                                    addopcode(bytes, j);
+                                    result = true;
+                                    return result;
+                                }
+                            }
+                            break;
+                        case AParam.par_r8:
+                            if (paramtype1 == ATokenType.ttregister8bit)
+                            {
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
+                                {
+                                    //opcode r8
+                                    if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_prb)
                                     {
                                         //opcode+rd
                                         addopcode(bytes, j);
-                                        bytes[bytes.Length - 1] += (Byte)getreg(parameter2);
+                                        var k = getreg(parameter1);
+                                        if (k > 7)
+                                        {
+                                            rex_b = true;
+                                            k &= 7;
+                                        }
+                                        bytes[bytes.Length - 1] += (Byte)k;
                                         result = true;
                                         return result;
                                     }
                                 }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm16) && (paramtype2 == ATokenType.ttvalue))
-                            {
-                                //AX,imm16
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm8) && (paramtype2 == ATokenType.ttvalue))
                                 {
-                                    //params confirmed it is a ax,imm16
-                                    if ((Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_iw) && (Assembler.opcodes[j].opcode2 == AExtraOpCode.eo_none))
+                                    //r8, imm8
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_prb)
+                                        {
+                                            addopcode(bytes, j);
+                                            var k = getreg(parameter1);
+                                            if (k > 7)
+                                            {
+                                                rex_b = true; //extension to the opcode
+                                                k &= 7;
+                                            }
+                                            bytes[bytes.Length - 1] += (Byte)k;
+                                            Assembler.add(bytes, (Byte)v);
+                                            result = true;
+                                            return result;
+                                        }
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_rm8) & (Assembler.isrm8(paramtype2)))
+                                {
+                                    //r8,rm8
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                     {
                                         addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                        return result;
+                                    }
+                                }
+                            }
+                            break;
+                        case AParam.par_r16:
+                            if (paramtype1 == ATokenType.ttregister16bit)
+                            {
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
+                                {
+                                    //opcode r16
+                                    if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_prw)
+                                    {
+                                        //opcode+rw
+                                        addopcode(bytes, j);
+                                        var k = getreg(parameter1);
+                                        if (k > 7)
+                                        {
+                                            rex_b = true;
+                                            k &= 7;
+                                        }
+                                        bytes[bytes.Length - 1] += (Byte)k;
+                                        result = true;
+                                        return result;
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_ax) && (parameter2 == "AX"))
+                                {
+                                    //r16,ax,
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        //r16,ax
+                                        if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_prw)
+                                        {
+                                            //opcode+rd
+                                            addopcode(bytes, j);
+                                            var k = getreg(parameter1);
+                                            if (k > 7)
+                                            {
+                                                rex_b = true;
+                                                k &= 7;
+                                            }
+                                            bytes[bytes.Length - 1] += (Byte)k;
+                                            result = true;
+                                            return result;
+                                        }
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm8) && (paramtype2 == ATokenType.ttvalue))
+                                {
+                                    //r16, imm8
+                                    if ((Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_reg) && (Assembler.opcodes[j].opcode2 == AExtraOpCode.eo_ib))
+                                    {
+                                        if (vtype > 8)
+                                        {
+                                            //search for r16/imm16
+                                            var k = startoflist;
+                                            while ((k <= Assembler.opcodecount) && (Assembler.opcodes[k].mnemonic == tokens[mnemonic]))
+                                            {
+                                                if ((Assembler.opcodes[k].paramtype1 == AParam.par_r16) &&
+                                                   (Assembler.opcodes[k].paramtype2 == AParam.par_imm16))
+                                                {
+                                                    if ((Assembler.opcodes[k].opcode1 == AExtraOpCode.eo_reg) && (Assembler.opcodes[j].opcode2 == AExtraOpCode.eo_ib))
+                                                    {
+                                                        addopcode(bytes, k);
+                                                        result = createmodrm(bytes, getreg(parameter1), parameter1);
+                                                        Assembler.addword(bytes, (UInt16)v);
+                                                        return result;
+                                                    }
+                                                }
+                                                k += 1;
+                                            }
+                                        }
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                        Assembler.add(bytes, (Byte)v);
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm16) && (paramtype2 == ATokenType.ttvalue))
+                                {
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_prw)
+                                        {
+                                            addopcode(bytes, j);
+                                            var k = getreg(parameter1);
+                                            if (k > 7)
+                                            {
+                                                rex_b = true;
+                                                k &= 7;
+                                            }
+                                            bytes[bytes.Length - 1] += (Byte)k;
+                                            Assembler.addword(bytes, (UInt16)v);
+                                            result = true;
+                                            return result;
+                                        }
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_rm8) & (Assembler.isrm8(paramtype2)))
+                                {
+                                    //r16,r/m8 (eg: movzx)
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                        return result;
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_rm16) & (Assembler.isrm16(paramtype2)))
+                                {
+                                    //r16,r/m16
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                        return result;
+                                    }
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_imm8) && (paramtype3 == ATokenType.ttvalue))
+                                    {
+                                        if (Assembler.opcodes[j].opcode2 == AExtraOpCode.eo_ib)
+                                        {
+                                            //r16,r/m16,imm8
+                                            if (vtype > 8)
+                                            {
+                                                //see if there is a //r16,r/m16,imm16
+                                                var k = startoflist;
+                                                while ((k <= Assembler.opcodecount) && (Assembler.opcodes[k].mnemonic == tokens[mnemonic]))
+                                                {
+                                                    if ((Assembler.opcodes[k].paramtype1 == AParam.par_r16) &&
+                                                       (Assembler.opcodes[k].paramtype2 == AParam.par_rm16) &&
+                                                       (Assembler.opcodes[k].paramtype3 == AParam.par_imm16))
+                                                    {
+                                                        addopcode(bytes, k);
+                                                        result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                                        Assembler.addword(bytes, (UInt16)v);
+                                                        return result;
+                                                    }
+                                                    k += 1;
+                                                }
+                                            }
+                                            addopcode(bytes, j);
+                                            result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                            Assembler.add(bytes, (Byte)v);
+                                            return result;
+                                        }
+                                    }
+                                }
+                            }
+                            break;
+                        case AParam.par_r32:
+                            if (paramtype1 == ATokenType.ttregister32bit)
+                            {
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
+                                {
+                                    //opcode r32
+                                    if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_prd)
+                                    {
+                                        //opcode+rd
+                                        addopcode(bytes, j);
+                                        var k = getreg(parameter1);
+                                        if (k > 7)
+                                        {
+                                            rex_b = true;
+                                            k &= 7;
+                                        }
+                                        bytes[bytes.Length - 1] += (Byte)k;
+                                        result = true;
+                                        return result;
+                                    }
+                                    else
+                                    {
+                                        //reg0..reg7
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
+                                        return result;
+                                    }
+                                }
+                                //eax
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_eax) && ((parameter2 == "EAX") || (parameter2 == "RAX")))
+                                {
+                                    //r32,eax,
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        //r32,eax
+                                        if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_prd)
+                                        {
+                                            //opcode+rd
+                                            addopcode(bytes, j);
+                                            var k = getreg(parameter1);
+                                            if (k > 7)
+                                            {
+                                                rex_b = true;
+                                                k &= 7;
+                                            }
+                                            bytes[bytes.Length - 1] += (Byte)k;
+                                            result = true;
+                                            return result;
+                                        }
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_mm) && (paramtype2 == ATokenType.ttregistermm))
+                                {
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                        return result;
+                                    }
+
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_imm8) && (parameter3 == ""))
+                                    {
+                                        //32, mm,imm8
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                        Assembler.add(bytes, (Byte)v);
+                                        return result;
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm) && (paramtype2 == ATokenType.ttregisterxmm))
+                                {
+                                    //r32,xmm,
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter2), parameter1);
+                                        return result;
+                                    }
+
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_imm8) && (parameter3 == ""))
+                                    {
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter2), parameter1);
+                                        Assembler.add(bytes, (Byte)v);
+                                        return result;
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_cr) && (paramtype2 == ATokenType.ttregistercr))
+                                {
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter2), parameter1);
+                                        return result;
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_dr) && (paramtype2 == ATokenType.ttregisterdr))
+                                {
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter2), parameter1);
+                                        return result;
+                                    }
+                                }
+
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm_m32) & (Assembler.isxmm_m32(paramtype2)))
+                                {
+                                    //r32,xmm/m32
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                        return result;
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_mm_m64) && (Assembler.ismm_m64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
+                                {
+                                    //r32,mm/m64
+                                    addopcode(bytes, j);
+                                    result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                    return result;
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm_m64) && (Assembler.isxmm_m64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
+                                {
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                        return result;
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm_m128) && (Assembler.isxmm_m64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
+                                {
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                        return result;
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_m32) && (paramtype2 == ATokenType.ttmemorylocation32))
+                                {
+                                    //r32,m32,
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        //r32,m32
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                        return result;
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_rm8) & (Assembler.isrm8(paramtype2) | (Assembler.ismemorylocationdefault(parameter2))))
+                                {
+                                    //r32,rm8
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                        return result;
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_rm16) & (Assembler.isrm16(paramtype2) | (Assembler.ismemorylocationdefault(parameter2))))
+                                {
+                                    //r32,rm16
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                        return result;
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_rm32) & (Assembler.isrm32(paramtype2)))
+                                {
+                                    //r32,r/m32
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                        return result;
+                                    }
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_imm8) && (paramtype3 == ATokenType.ttvalue))
+                                    {
+                                        if (Assembler.opcodes[j].opcode2 == AExtraOpCode.eo_ib)
+                                        {
+                                            if (vtype > 8)
+                                            {
+                                                var k = startoflist;
+                                                while ((k <= endoflist) && (Assembler.opcodes[k].mnemonic == tokens[mnemonic]))
+                                                {
+                                                    if ((Assembler.opcodes[k].paramtype1 == AParam.par_r32) &&
+                                                       (Assembler.opcodes[k].paramtype2 == AParam.par_rm32) &&
+                                                       (Assembler.opcodes[k].paramtype3 == AParam.par_imm32))
+                                                    {
+                                                        addopcode(bytes, k);
+                                                        result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                                        Assembler.adddword(bytes, (UInt32)v);
+                                                        return result;
+                                                    }
+                                                    k += 1;
+                                                }
+                                            }
+                                            //r32,r/m32,imm8
+                                            addopcode(bytes, j);
+                                            result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                            Assembler.add(bytes, (Byte)v);
+                                            return result;
+                                        }
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm32) && (paramtype2 == ATokenType.ttvalue))
+                                {
+                                    //r32,imm32
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        if (signedvtype == 8)
+                                        {
+                                            //check if there isn't a rm32,imm8 , since that's less bytes
+                                            var k = startoflist;
+                                            while ((k <= Assembler.opcodecount) && (Assembler.opcodes[k].mnemonic == tokens[mnemonic]))
+                                            {
+                                                if ((Assembler.opcodes[k].paramtype1 == AParam.par_rm32) &&
+                                                   (Assembler.opcodes[k].paramtype2 == AParam.par_imm8))
+                                                {
+                                                    //yes, there is
+                                                    addopcode(bytes, k);
+                                                    result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[k].opcode1), parameter1);
+                                                    Assembler.add(bytes, (Byte)v);
+                                                    return result;
+                                                }
+                                                k += 1;
+                                            }
+                                        }
+                                        if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_prd)
+                                        {
+                                            addopcode(bytes, j);
+                                            var k = getreg(parameter1);
+                                            if (k > 7)
+                                            {
+                                                rex_b = true;
+                                                k &= 7;
+                                            }
+                                            bytes[bytes.Length - 1] += (Byte)k;
+                                            if (rex_w)
+                                                Assembler.addqword(bytes, v);
+                                            else
+                                                Assembler.adddword(bytes, (UInt32)v);
+                                            result = true;
+                                            return result;
+                                        }
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm8) && (paramtype2 == ATokenType.ttvalue))
+                                {
+                                    //r32, imm8
+                                    addopcode(bytes, j);
+                                    createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
+                                    Assembler.add(bytes, (Byte)v);
+                                    result = true;
+                                    return result;
+                                }
+                            }
+                            break;
+                        case AParam.par_sreg:
+                            if (paramtype1 == ATokenType.ttregistersreg)
+                            {
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_rm16) & (Assembler.isrm16(paramtype2)))
+                                {
+                                    //sreg,rm16
+                                    addopcode(bytes, j);
+                                    result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                    return result;
+                                }
+                            }
+                            break;
+                        case AParam.par_cr:
+                            if (paramtype1 == ATokenType.ttregistercr)
+                            {
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_r32) && (paramtype2 == ATokenType.ttregister32bit))
+                                {
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                        return result;
+                                    }
+                                }
+                            }
+                            break;
+                        case AParam.par_dr:
+                            if (paramtype1 == ATokenType.ttregisterdr)
+                            {
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_r32) && (paramtype2 == ATokenType.ttregister32bit))
+                                {
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                        return result;
+                                    }
+                                }
+                            }
+                            break;
+                        case AParam.par_rm8:
+                            if (Assembler.isrm8(paramtype1))
+                            {
+                                //r/m8,
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
+                                {
+                                    //opcode r/m8
+                                    addopcode(bytes, j);
+                                    result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
+                                    return result;
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_1) && (paramtype2 == ATokenType.ttvalue) && (v == 1))
+                                {
+                                    addopcode(bytes, j);
+                                    result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
+                                    return result;
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_cl) && (parameter2 == "CL"))
+                                {
+                                    addopcode(bytes, j);
+                                    result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
+                                    return result;
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm8) && (paramtype2 == ATokenType.ttvalue))
+                                {
+                                    //r/m8,imm8,
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        //verified it IS r/m8,imm8
+                                        addopcode(bytes, j);
+                                        createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
+                                        Assembler.add(bytes, (Byte)v);
+                                        result = true;
+                                        return result;
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_r8) && (paramtype2 == ATokenType.ttregister8bit))
+                                {
+                                    // r/m8,r8
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter2), parameter1);
+                                        return result;
+                                    }
+                                }
+                            }
+                            break;
+                        case AParam.par_rm16:
+                            if (Assembler.isrm16(paramtype1))
+                            {
+                                //r/m16,
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
+                                {
+                                    //opcode r/m16
+                                    addopcode(bytes, j);
+                                    result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
+                                    return result;
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_1) && (paramtype2 == ATokenType.ttvalue) && (v == 1))
+                                {
+                                    addopcode(bytes, j);
+                                    result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
+                                    return result;
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm8) && (paramtype2 == ATokenType.ttvalue))
+                                {
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        if (vtype == 16)
+                                        {
+                                            //perhaps there is a r/m16,imm16
+                                            var k = startoflist;
+                                            while (k <= endoflist)
+                                            {
+                                                if (Assembler.opcodes[k].mnemonic != tokens[mnemonic])
+                                                    //nope, so continue with r/m,imm16
+                                                    continue; // todo figure out if this is meant to be break/continue
+                                                if (((Assembler.opcodes[k].paramtype1 == AParam.par_rm16) && (Assembler.opcodes[k].paramtype2 == AParam.par_imm16)) && ((Assembler.opcodes[k].paramtype3 == AParam.par_noparam) && (parameter3 == "")))
+                                                {
+                                                    //yes, there is
+                                                    //r/m16,imm16
+                                                    addopcode(bytes, k);
+                                                    createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[k].opcode1), parameter1);
+                                                    Assembler.addword(bytes, (UInt16)(v));
+                                                    result = true;
+                                                    return result;
+                                                }
+                                                k += 1;
+                                            }
+                                        }
+                                        //nope, so it IS r/m16,8
+                                        addopcode(bytes, j);
+                                        createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
+                                        Assembler.add(bytes, (Byte)v);
+                                        result = true;
+                                        return result;
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm16) && (paramtype2 == ATokenType.ttvalue))
+                                {
+                                    //r/m16,imm
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        if (vtype == 8)
+                                        {
+                                            //see if there is a r/m16,imm8 (or if this is the one) (optimisation)
+                                            var k = startoflist;
+                                            while (k <= endoflist)
+                                            {
+                                                if (Assembler.opcodes[k].mnemonic != tokens[mnemonic])
+                                                    //nope, so continue with r/m,imm16
+                                                    continue; // todo figure out if this is meant to be break/continue
+                                                if (((Assembler.opcodes[k].paramtype1 == AParam.par_rm16) && (Assembler.opcodes[k].paramtype2 == AParam.par_imm8)) && ((Assembler.opcodes[k].paramtype3 == AParam.par_noparam) && (parameter3 == "")))
+                                                {
+                                                    //yes, there is
+                                                    //r/m16,imm8
+                                                    addopcode(bytes, k);
+                                                    createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[k].opcode1), parameter1);
+                                                    Assembler.add(bytes, (Byte)v);
+                                                    result = true;
+                                                    return result;
+                                                }
+                                                k += 1;
+                                            }
+                                        }
+                                        addopcode(bytes, j);
+                                        createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
                                         Assembler.addword(bytes, (UInt16)(v));
                                         result = true;
                                         return result;
                                     }
                                 }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_moffs16) & ((paramtype2 == ATokenType.ttmemorylocation16) | (Assembler.ismemorylocationdefault(parameter2))))
-                            {
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_r16) && (paramtype2 == ATokenType.ttregister16bit))
                                 {
-                                    k = AStringUtils.Pos("[", parameter2);
-                                    l = AStringUtils.Pos("]", parameter2);
-                                    AStringUtils.Val("$" + AStringUtils.Copy(parameter2, k + l, l - k - 1), out v, out k);
-                                    if (k == 0)
+                                    //r/m16,r16,
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_cl) && (parameter3 == "CL"))
                                     {
-                                        //verified, it doesn't have a registerbase in it
                                         addopcode(bytes, j);
-                                        Assembler.adddword(bytes, (UInt32)v);
-                                        result = true;
+                                        result = createmodrm(bytes, getreg(parameter2), parameter1);
                                         return result;
                                     }
-                                }
-                            }
-                        }
-                        break;
-                    case AParam.par_eax:
-                        if ((parameter1 == "EAX") || (parameter1 == "RAX"))
-                        {
-                            //eAX,
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_dx) && (parameter2 == "DX"))
-                            {
-                                //opcode eax,dx
-                                addopcode(bytes, j);
-                                result = true;
-                                return result;
-                            }
-                            //r32
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_r32) && (paramtype2 == ATokenType.ttregister32bit))
-                            {
-                                //eax,r32
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    //r32,eax
-                                    if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_prd)
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                     {
-                                        //opcode+rd
                                         addopcode(bytes, j);
-                                        k = getreg(parameter2);
-                                        if (k > 7)
-                                        {
-                                            rex_b = true; //extention to the opcode field
-                                            k = k & 7;
-                                        }
-                                        bytes[bytes.Length - 1] += (Byte)k;
-                                        result = true;
+                                        result = createmodrm(bytes, getreg(parameter2), parameter1);
                                         return result;
                                     }
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm8) && (paramtype2 == ATokenType.ttvalue))
-                            {
-                                //eax,imm8
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    addopcode(bytes, j);
-                                    Assembler.add(bytes, (Byte)v);
-                                    result = true;
-                                    return result;
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm32) && (paramtype2 == ATokenType.ttvalue))
-                            {
-                                //EAX,imm32,
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    //eax,imm32
-                                    if (signedvtype == 8)
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_imm8) && (paramtype3 == ATokenType.ttvalue))
                                     {
-                                        //check if there isn't a rm32,imm8 , since that's less bytes
-                                        k = startoflist;
-                                        while ((k <= Assembler.opcodecount) && (Assembler.opcodes[k].mnemonic == tokens[mnemonic]))
-                                        {
-                                            if ((Assembler.opcodes[k].paramtype1 == AParam.par_rm32) &&
-                                               (Assembler.opcodes[k].paramtype2 == AParam.par_imm8))
-                                            {
-                                                //yes, there is
-                                                addopcode(bytes, k);
-                                                result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[k].opcode1), parameter1);
-                                                Assembler.add(bytes, (Byte)v);
-                                                return result;
-                                            }
-                                            k += 1;
-                                        }
-                                    }
-                                    if ((Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_id) && (Assembler.opcodes[j].opcode2 == AExtraOpCode.eo_none))
-                                    {
+                                        //rm16, r16,imm8
                                         addopcode(bytes, j);
-                                        Assembler.adddword(bytes, (UInt32)v);
-                                        result = true;
-                                        return result;
-                                    }
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_moffs32) & ((paramtype2 == ATokenType.ttmemorylocation32) | (Assembler.ismemorylocationdefault(parameter2))))
-                            {
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    k = AStringUtils.Pos("[", parameter2);
-                                    l = AStringUtils.Pos("]", parameter2);
-                                    AStringUtils.Val("$" + AStringUtils.Copy(parameter2, k + 1, l - k - 1), out v, out k);
-                                    if (k == 0)
-                                    {
-                                        //verified, it doesn't have a registerbase in it
-                                        addopcode(bytes, j);
-                                        Assembler.adddword(bytes, (UInt32)v);
-                                        result = true;
-                                        return result;
-                                    }
-                                }
-                            }
-                        }
-                        break;
-                    case AParam.par_dx:
-                        if (parameter1 == "DX")
-                        {
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_al) && (parameter2 == "AL"))
-                            {
-                                addopcode(bytes, j);
-                                result = true;
-                                return result;
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_ax) && (parameter2 == "AX"))
-                            {
-                                addopcode(bytes, j);
-                                result = true;
-                                return result;
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_eax) && ((parameter2 == "EAX") || (parameter2 == "RAX")))
-                            {
-                                addopcode(bytes, j);
-                                result = true;
-                                return result;
-                            }
-                        }
-                        break;
-                    case AParam.par_cs:
-                        if (parameter1 == "CS")
-                        {
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
-                            {
-                                addopcode(bytes, j);
-                                result = true;
-                                return result;
-                            }
-                        }
-                        break;
-                    case AParam.par_ds:
-                        if (parameter1 == "DS")
-                        {
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
-                            {
-                                addopcode(bytes, j);
-                                result = true;
-                                return result;
-                            }
-                        }
-                        break;
-                    case AParam.par_es:
-                        if (parameter1 == "ES")
-                        {
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
-                            {
-                                addopcode(bytes, j);
-                                result = true;
-                                return result;
-                            }
-                        }
-                        break;
-                    case AParam.par_ss:
-                        if (parameter1 == "SS")
-                        {
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
-                            {
-                                addopcode(bytes, j);
-                                result = true;
-                                return result;
-                            }
-                        }
-                        break;
-                    case AParam.par_fs:
-                        if (parameter1 == "FS")
-                        {
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
-                            {
-                                addopcode(bytes, j);
-                                result = true;
-                                return result;
-                            }
-                        }
-                        break;
-
-                    case AParam.par_gs:
-                        if (parameter1 == "GS")
-                        {
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
-                            {
-                                addopcode(bytes, j);
-                                result = true;
-                                return result;
-                            }
-                        }
-                        break;
-                    case AParam.par_r8:
-                        if (paramtype1 == ATokenType.ttregister8bit)
-                        {
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
-                            {
-                                //opcode r8
-                                if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_prb)
-                                {
-                                    //opcode+rd
-                                    addopcode(bytes, j);
-                                    k = getreg(parameter1);
-                                    if (k > 7)
-                                    {
-                                        rex_b = true;
-                                        k = k & 7;
-                                    }
-                                    bytes[bytes.Length - 1] += (Byte)k;
-                                    result = true;
-                                    return result;
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm8) && (paramtype2 == ATokenType.ttvalue))
-                            {
-                                //r8, imm8
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_prb)
-                                    {
-                                        addopcode(bytes, j);
-                                        k = getreg(parameter1);
-                                        if (k > 7)
-                                        {
-                                            rex_b = true; //extension to the opcode
-                                            k = k & 7;
-                                        }
-                                        bytes[bytes.Length - 1] += (Byte)k;
-                                        Assembler.add(bytes, (Byte)v);
-                                        result = true;
-                                        return result;
-                                    }
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_rm8) & (Assembler.isrm8(paramtype2)))
-                            {
-                                //r8,rm8
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter1), parameter2);
-                                    return result;
-                                }
-                            }
-                        }
-                        break;
-                    case AParam.par_r16:
-                        if (paramtype1 == ATokenType.ttregister16bit)
-                        {
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
-                            {
-                                //opcode r16
-                                if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_prw)
-                                {
-                                    //opcode+rw
-                                    addopcode(bytes, j);
-                                    k = getreg(parameter1);
-                                    if (k > 7)
-                                    {
-                                        rex_b = true;
-                                        k = k & 7;
-                                    }
-                                    bytes[bytes.Length - 1] += (Byte)k;
-                                    result = true;
-                                    return result;
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_ax) && (parameter2 == "AX"))
-                            {
-                                //r16,ax,
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    //r16,ax
-                                    if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_prw)
-                                    {
-                                        //opcode+rd
-                                        addopcode(bytes, j);
-                                        k = getreg(parameter1);
-                                        if (k > 7)
-                                        {
-                                            rex_b = true;
-                                            k = k & 7;
-                                        }
-                                        bytes[bytes.Length - 1] += (Byte)k;
-                                        result = true;
-                                        return result;
-                                    }
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm8) && (paramtype2 == ATokenType.ttvalue))
-                            {
-                                //r16, imm8
-                                if ((Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_reg) && (Assembler.opcodes[j].opcode2 == AExtraOpCode.eo_ib))
-                                {
-                                    if (vtype > 8)
-                                    {
-                                        //search for r16/imm16
-                                        k = startoflist;
-                                        while ((k <= Assembler.opcodecount) && (Assembler.opcodes[k].mnemonic == tokens[mnemonic]))
-                                        {
-                                            if ((Assembler.opcodes[k].paramtype1 == AParam.par_r16) &&
-                                               (Assembler.opcodes[k].paramtype2 == AParam.par_imm16))
-                                            {
-                                                if ((Assembler.opcodes[k].opcode1 == AExtraOpCode.eo_reg) && (Assembler.opcodes[j].opcode2 == AExtraOpCode.eo_ib))
-                                                {
-                                                    addopcode(bytes, k);
-                                                    result = createmodrm(bytes, getreg(parameter1), parameter1);
-                                                    Assembler.addword(bytes, (UInt16)v);
-                                                    return result;
-                                                }
-                                            }
-                                            k += 1;
-                                        }
-                                    }
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter1), parameter2);
-                                    Assembler.add(bytes, (Byte)v);
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm16) && (paramtype2 == ATokenType.ttvalue))
-                            {
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_prw)
-                                    {
-                                        addopcode(bytes, j);
-                                        k = getreg(parameter1);
-                                        if (k > 7)
-                                        {
-                                            rex_b = true;
-                                            k = k & 7;
-                                        }
-                                        bytes[bytes.Length - 1] += (Byte)k;
-                                        Assembler.addword(bytes, (UInt16)v);
-                                        result = true;
-                                        return result;
-                                    }
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_rm8) & (Assembler.isrm8(paramtype2)))
-                            {
-                                //r16,r/m8 (eg: movzx)
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter1), parameter2);
-                                    return result;
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_rm16) & (Assembler.isrm16(paramtype2)))
-                            {
-                                //r16,r/m16
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter1), parameter2);
-                                    return result;
-                                }
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_imm8) && (paramtype3 == ATokenType.ttvalue))
-                                {
-                                    if (Assembler.opcodes[j].opcode2 == AExtraOpCode.eo_ib)
-                                    {
-                                        //r16,r/m16,imm8
-                                        if (vtype > 8)
-                                        {
-                                            //see if there is a //r16,r/m16,imm16
-                                            k = startoflist;
-                                            while ((k <= Assembler.opcodecount) && (Assembler.opcodes[k].mnemonic == tokens[mnemonic]))
-                                            {
-                                                if ((Assembler.opcodes[k].paramtype1 == AParam.par_r16) &&
-                                                   (Assembler.opcodes[k].paramtype2 == AParam.par_rm16) &&
-                                                   (Assembler.opcodes[k].paramtype3 == AParam.par_imm16))
-                                                {
-                                                    addopcode(bytes, k);
-                                                    result = createmodrm(bytes, getreg(parameter1), parameter2);
-                                                    Assembler.addword(bytes, (UInt16)v);
-                                                    return result;
-                                                }
-                                                k += 1;
-                                            }
-                                        }
-                                        addopcode(bytes, j);
-                                        result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                        result = createmodrm(bytes, getreg(parameter2), parameter1);
                                         Assembler.add(bytes, (Byte)v);
                                         return result;
                                     }
                                 }
-                            }
-                        }
-                        break;
-                    case AParam.par_r32:
-                        if (paramtype1 == ATokenType.ttregister32bit)
-                        {
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
-                            {
-                                //opcode r32
-                                if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_prd)
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_sreg) && (paramtype2 == ATokenType.ttregistersreg))
                                 {
-                                    //opcode+rd
-                                    addopcode(bytes, j);
-                                    k = getreg(parameter1);
-                                    if (k > 7)
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                     {
-                                        rex_b = true;
-                                        k = k & 7;
+                                        //r/m16,sreg
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter2), parameter1);
+                                        return result;
                                     }
-                                    bytes[bytes.Length - 1] += (Byte)k;
-                                    result = true;
-                                    return result;
                                 }
-                                else
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_cl) && (parameter2 == "CL"))
                                 {
-                                    //reg0..reg7
+                                    //rm16,cl
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
                                     return result;
                                 }
                             }
-                            //eax
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_eax) && ((parameter2 == "EAX") || (parameter2 == "RAX")))
+                            break;
+                        case AParam.par_rm32:
+                            if (Assembler.isrm32(paramtype1))
                             {
-                                //r32,eax,
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                //r/m32,
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
                                 {
-                                    //r32,eax
-                                    if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_prd)
+                                    //no 2nd parameter so it is 'opcode r/m32'
+                                    addopcode(bytes, j);
+                                    result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
+                                    return result;
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_1) && (paramtype2 == ATokenType.ttvalue) && (v == 1))
+                                {
+                                    addopcode(bytes, j);
+                                    result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
+                                    return result;
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm8) && (paramtype2 == ATokenType.ttvalue))
+                                {
+                                    //rm32,imm8
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                     {
-                                        //opcode+rd
-                                        addopcode(bytes, j);
-                                        k = getreg(parameter1);
-                                        if (k > 7)
+                                        if ((vtype > 8) || (Assembler.opcodes[j].signed & (signedvtype > 8)))
                                         {
-                                            rex_b = true;
-                                            k = k & 7;
-                                        }
-                                        bytes[bytes.Length - 1] += (Byte)k;
-                                        result = true;
-                                        return result;
-                                    }
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_mm) && (paramtype2 == ATokenType.ttregistermm))
-                            {
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter1), parameter2);
-                                    return result;
-                                }
-
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_imm8) && (parameter3 == ""))
-                                {
-                                    //32, mm,imm8
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter1), parameter2);
-                                    Assembler.add(bytes, (Byte)v);
-                                    return result;
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm) && (paramtype2 == ATokenType.ttregisterxmm))
-                            {
-                                //r32,xmm,
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter2), parameter1);
-                                    return result;
-                                }
-
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_imm8) && (parameter3 == ""))
-                                {
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter2), parameter1);
-                                    Assembler.add(bytes, (Byte)v);
-                                    return result;
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_cr) && (paramtype2 == ATokenType.ttregistercr))
-                            {
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter2), parameter1);
-                                    return result;
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_dr) && (paramtype2 == ATokenType.ttregisterdr))
-                            {
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter2), parameter1);
-                                    return result;
-                                }
-                            }
-
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm_m32) & (Assembler.isxmm_m32(paramtype2)))
-                            {
-                                //r32,xmm/m32
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter1), parameter2);
-                                    return result;
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_mm_m64) && (Assembler.ismm_m64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
-                            {
-                                //r32,mm/m64
-                                addopcode(bytes, j);
-                                result = createmodrm(bytes, getreg(parameter1), parameter2);
-                                return result;
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm_m64) && (Assembler.isxmm_m64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
-                            {
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter1), parameter2);
-                                    return result;
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm_m128) && (Assembler.isxmm_m64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
-                            {
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter1), parameter2);
-                                    return result;
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_m32) && (paramtype2 == ATokenType.ttmemorylocation32))
-                            {
-                                //r32,m32,
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    //r32,m32
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter1), parameter2);
-                                    return result;
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_rm8) & (Assembler.isrm8(paramtype2) | (Assembler.ismemorylocationdefault(parameter2))))
-                            {
-                                //r32,rm8
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter1), parameter2);
-                                    return result;
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_rm16) & (Assembler.isrm16(paramtype2) | (Assembler.ismemorylocationdefault(parameter2))))
-                            {
-                                //r32,rm16
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter1), parameter2);
-                                    return result;
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_rm32) & (Assembler.isrm32(paramtype2)))
-                            {
-                                //r32,r/m32
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter1), parameter2);
-                                    return result;
-                                }
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_imm8) && (paramtype3 == ATokenType.ttvalue))
-                                {
-                                    if (Assembler.opcodes[j].opcode2 == AExtraOpCode.eo_ib)
-                                    {
-                                        if (vtype > 8)
-                                        {
-                                            k = startoflist;
-                                            while ((k <= endoflist) && (Assembler.opcodes[k].mnemonic == tokens[mnemonic]))
+                                            //the user requests a bigger than 8-bit value, so see if there is also a rm32,imm32 (there are no r/m32,imm16)
+                                            var k = startoflist;
+                                            while (k <= endoflist)
                                             {
-                                                if ((Assembler.opcodes[k].paramtype1 == AParam.par_r32) &&
-                                                   (Assembler.opcodes[k].paramtype2 == AParam.par_rm32) &&
-                                                   (Assembler.opcodes[k].paramtype3 == AParam.par_imm32))
+                                                if (Assembler.opcodes[k].mnemonic != tokens[mnemonic])
+                                                    continue; // todo figure out if this is meant to be break/continue
+                                                if (((Assembler.opcodes[k].paramtype1 == AParam.par_rm32) && (Assembler.opcodes[k].paramtype2 == AParam.par_imm32)) && ((Assembler.opcodes[k].paramtype3 == AParam.par_noparam) && (parameter3 == "")))
                                                 {
+                                                    //yes, there is
                                                     addopcode(bytes, k);
-                                                    result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                                    createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[k].opcode1), parameter1);
                                                     Assembler.adddword(bytes, (UInt32)v);
+                                                    result = true;
                                                     return result;
                                                 }
                                                 k += 1;
                                             }
                                         }
-                                        //r32,r/m32,imm8
+                                        //r/m32,imm8
                                         addopcode(bytes, j);
-                                        result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                        createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
                                         Assembler.add(bytes, (Byte)v);
-                                        return result;
-                                    }
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm32) && (paramtype2 == ATokenType.ttvalue))
-                            {
-                                //r32,imm32
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    if (signedvtype == 8)
-                                    {
-                                        //check if there isn't a rm32,imm8 , since that's less bytes
-                                        k = startoflist;
-                                        while ((k <= Assembler.opcodecount) && (Assembler.opcodes[k].mnemonic == tokens[mnemonic]))
-                                        {
-                                            if ((Assembler.opcodes[k].paramtype1 == AParam.par_rm32) &&
-                                               (Assembler.opcodes[k].paramtype2 == AParam.par_imm8))
-                                            {
-                                                //yes, there is
-                                                addopcode(bytes, k);
-                                                result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[k].opcode1), parameter1);
-                                                Assembler.add(bytes, (Byte)v);
-                                                return result;
-                                            }
-                                            k += 1;
-                                        }
-                                    }
-                                    if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_prd)
-                                    {
-                                        addopcode(bytes, j);
-                                        k = getreg(parameter1);
-                                        if (k > 7)
-                                        {
-                                            rex_b = true;
-                                            k = k & 7;
-                                        }
-                                        bytes[bytes.Length - 1] += (Byte)k;
-                                        if (rex_w)
-                                            Assembler.addqword(bytes, v);
-                                        else
-                                            Assembler.adddword(bytes, (UInt32)v);
                                         result = true;
                                         return result;
                                     }
                                 }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm8) && (paramtype2 == ATokenType.ttvalue))
-                            {
-                                //r32, imm8
-                                addopcode(bytes, j);
-                                createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
-                                Assembler.add(bytes, (Byte)v);
-                                result = true;
-                                return result;
-                            }
-                        }
-                        break;
-                    case AParam.par_sreg:
-                        if (paramtype1 == ATokenType.ttregistersreg)
-                        {
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_rm16) & (Assembler.isrm16(paramtype2)))
-                            {
-                                //sreg,rm16
-                                addopcode(bytes, j);
-                                result = createmodrm(bytes, getreg(parameter1), parameter2);
-                                return result;
-                            }
-                        }
-                        break;
-                    case AParam.par_cr:
-                        if (paramtype1 == ATokenType.ttregistercr)
-                        {
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_r32) && (paramtype2 == ATokenType.ttregister32bit))
-                            {
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm32) && (paramtype2 == ATokenType.ttvalue))
                                 {
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter1), parameter2);
-                                    return result;
-                                }
-                            }
-                        }
-                        break;
-                    case AParam.par_dr:
-                        if (paramtype1 == ATokenType.ttregisterdr)
-                        {
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_r32) && (paramtype2 == ATokenType.ttregister32bit))
-                            {
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter1), parameter2);
-                                    return result;
-                                }
-                            }
-                        }
-                        break;
-                    case AParam.par_rm8:
-                        if (Assembler.isrm8(paramtype1))
-                        {
-                            //r/m8,
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
-                            {
-                                //opcode r/m8
-                                addopcode(bytes, j);
-                                result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
-                                return result;
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_1) && (paramtype2 == ATokenType.ttvalue) && (v == 1))
-                            {
-                                addopcode(bytes, j);
-                                result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
-                                return result;
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_cl) && (parameter2 == "CL"))
-                            {
-                                addopcode(bytes, j);
-                                result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
-                                return result;
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm8) && (paramtype2 == ATokenType.ttvalue))
-                            {
-                                //r/m8,imm8,
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    //verified it IS r/m8,imm8
-                                    addopcode(bytes, j);
-                                    createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
-                                    Assembler.add(bytes, (Byte)v);
-                                    result = true;
-                                    return result;
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_r8) && (paramtype2 == ATokenType.ttregister8bit))
-                            {
-                                // r/m8,r8
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter2), parameter1);
-                                    return result;
-                                }
-                            }
-                        }
-                        break;
-                    case AParam.par_rm16:
-                        if (Assembler.isrm16(paramtype1))
-                        {
-                            //r/m16,
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
-                            {
-                                //opcode r/m16
-                                addopcode(bytes, j);
-                                result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
-                                return result;
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_1) && (paramtype2 == ATokenType.ttvalue) && (v == 1))
-                            {
-                                addopcode(bytes, j);
-                                result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
-                                return result;
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm8) && (paramtype2 == ATokenType.ttvalue))
-                            {
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    if (vtype == 16)
+                                    //r/m32,imm
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                     {
-                                        //perhaps there is a r/m16,imm16
-                                        k = startoflist;
-                                        while (k <= endoflist)
+                                        if (signedvtype == 8)
                                         {
-                                            if (Assembler.opcodes[k].mnemonic != tokens[mnemonic])
-                                                //nope, so continue with r/m,imm16
-                                                continue; // todo figure out if this is meant to be break/continue
-                                            if (((Assembler.opcodes[k].paramtype1 == AParam.par_rm16) && (Assembler.opcodes[k].paramtype2 == AParam.par_imm16)) && ((Assembler.opcodes[k].paramtype3 == AParam.par_noparam) && (parameter3 == "")))
+                                            //see if there is a r/m32,imm8 (or if this is the one) (optimisation)
+                                            var k = startoflist;
+                                            while (k <= endoflist)
                                             {
-                                                //yes, there is
-                                                //r/m16,imm16
-                                                addopcode(bytes, k);
-                                                createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[k].opcode1), parameter1);
-                                                Assembler.addword(bytes, (UInt16)(v));
-                                                result = true;
-                                                return result;
+                                                if (Assembler.opcodes[k].mnemonic != tokens[mnemonic])
+                                                    //nope, so continue with r/m,imm16
+                                                    continue; // todo figure out if this is meant to be break/continue
+                                                if (((Assembler.opcodes[k].paramtype1 == AParam.par_rm32) && (Assembler.opcodes[k].paramtype2 == AParam.par_imm8)) && ((Assembler.opcodes[k].paramtype3 == AParam.par_noparam) && (parameter3 == "")) && ((!Assembler.opcodes[k].signed) | (signedvtype == 8)))
+                                                {
+                                                    //yes, there is
+                                                    addopcode(bytes, k);
+                                                    createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[k].opcode1), parameter1);
+                                                    Assembler.add(bytes, (Byte)v);
+                                                    result = true;
+                                                    return result;
+                                                }
+                                                k += 1;
                                             }
-                                            k += 1;
                                         }
+                                        //no there's none
+                                        addopcode(bytes, j);
+                                        createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
+                                        Assembler.adddword(bytes, (UInt32)v);
+                                        result = true;
+                                        return result;
                                     }
-                                    //nope, so it IS r/m16,8
-                                    addopcode(bytes, j);
-                                    createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
-                                    Assembler.add(bytes, (Byte)v);
-                                    result = true;
-                                    return result;
                                 }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm16) && (paramtype2 == ATokenType.ttvalue))
-                            {
-                                //r/m16,imm
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_cl) && (parameter2 == "CL"))
                                 {
-                                    if (vtype == 8)
-                                    {
-                                        //see if there is a r/m16,imm8 (or if this is the one) (optimisation)
-                                        k = startoflist;
-                                        while (k <= endoflist)
-                                        {
-                                            if (Assembler.opcodes[k].mnemonic != tokens[mnemonic])
-                                                //nope, so continue with r/m,imm16
-                                                continue; // todo figure out if this is meant to be break/continue
-                                            if (((Assembler.opcodes[k].paramtype1 == AParam.par_rm16) && (Assembler.opcodes[k].paramtype2 == AParam.par_imm8)) && ((Assembler.opcodes[k].paramtype3 == AParam.par_noparam) && (parameter3 == "")))
-                                            {
-                                                //yes, there is
-                                                //r/m16,imm8
-                                                addopcode(bytes, k);
-                                                createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[k].opcode1), parameter1);
-                                                Assembler.add(bytes, (Byte)v);
-                                                result = true;
-                                                return result;
-                                            }
-                                            k += 1;
-                                        }
-                                    }
-                                    addopcode(bytes, j);
-                                    createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
-                                    Assembler.addword(bytes, (UInt16)(v));
-                                    result = true;
-                                    return result;
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_r16) && (paramtype2 == ATokenType.ttregister16bit))
-                            {
-                                //r/m16,r16,
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_cl) && (parameter3 == "CL"))
-                                {
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter2), parameter1);
-                                    return result;
-                                }
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter2), parameter1);
-                                    return result;
-                                }
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_imm8) && (paramtype3 == ATokenType.ttvalue))
-                                {
-                                    //rm16, r16,imm8
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter2), parameter1);
-                                    Assembler.add(bytes, (Byte)v);
-                                    return result;
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_sreg) && (paramtype2 == ATokenType.ttregistersreg))
-                            {
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    //r/m16,sreg
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter2), parameter1);
-                                    return result;
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_cl) && (parameter2 == "CL"))
-                            {
-                                //rm16,cl
-                                addopcode(bytes, j);
-                                result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
-                                return result;
-                            }
-                        }
-                        break;
-                    case AParam.par_rm32:
-                        if (Assembler.isrm32(paramtype1))
-                        {
-                            //r/m32,
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
-                            {
-                                //no 2nd parameter so it is 'opcode r/m32'
-                                addopcode(bytes, j);
-                                result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
-                                return result;
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_1) && (paramtype2 == ATokenType.ttvalue) && (v == 1))
-                            {
-                                addopcode(bytes, j);
-                                result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
-                                return result;
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm8) && (paramtype2 == ATokenType.ttvalue))
-                            {
-                                //rm32,imm8
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    if ((vtype > 8) || (Assembler.opcodes[j].signed & (signedvtype > 8)))
-                                    {
-                                        //the user requests a bigger than 8-bit value, so see if there is also a rm32,imm32 (there are no r/m32,imm16)
-                                        k = startoflist;
-                                        while (k <= endoflist)
-                                        {
-                                            if (Assembler.opcodes[k].mnemonic != tokens[mnemonic])
-                                                continue; // todo figure out if this is meant to be break/continue
-                                            if (((Assembler.opcodes[k].paramtype1 == AParam.par_rm32) && (Assembler.opcodes[k].paramtype2 == AParam.par_imm32)) && ((Assembler.opcodes[k].paramtype3 == AParam.par_noparam) && (parameter3 == "")))
-                                            {
-                                                //yes, there is
-                                                addopcode(bytes, k);
-                                                createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[k].opcode1), parameter1);
-                                                Assembler.adddword(bytes, (UInt32)v);
-                                                result = true;
-                                                return result;
-                                            }
-                                            k += 1;
-                                        }
-                                    }
-                                    //r/m32,imm8
-                                    addopcode(bytes, j);
-                                    createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
-                                    Assembler.add(bytes, (Byte)v);
-                                    result = true;
-                                    return result;
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm32) && (paramtype2 == ATokenType.ttvalue))
-                            {
-                                //r/m32,imm
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    if (signedvtype == 8)
-                                    {
-                                        //see if there is a r/m32,imm8 (or if this is the one) (optimisation)
-                                        k = startoflist;
-                                        while (k <= endoflist)
-                                        {
-                                            if (Assembler.opcodes[k].mnemonic != tokens[mnemonic])
-                                                //nope, so continue with r/m,imm16
-                                                continue; // todo figure out if this is meant to be break/continue
-                                            if (((Assembler.opcodes[k].paramtype1 == AParam.par_rm32) && (Assembler.opcodes[k].paramtype2 == AParam.par_imm8)) && ((Assembler.opcodes[k].paramtype3 == AParam.par_noparam) && (parameter3 == "")) && ((!Assembler.opcodes[k].signed) | (signedvtype == 8)))
-                                            {
-                                                //yes, there is
-                                                addopcode(bytes, k);
-                                                createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[k].opcode1), parameter1);
-                                                Assembler.add(bytes, (Byte)v);
-                                                result = true;
-                                                return result;
-                                            }
-                                            k += 1;
-                                        }
-                                    }
-                                    //no there's none
-                                    addopcode(bytes, j);
-                                    createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
-                                    Assembler.adddword(bytes, (UInt32)v);
-                                    result = true;
-                                    return result;
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_cl) && (parameter2 == "CL"))
-                            {
-                                //rm32,cl
-                                addopcode(bytes, j);
-                                result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
-                                return result;
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_r32) && (paramtype2 == ATokenType.ttregister32bit))
-                            {
-                                //r/m32,r32
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter2), parameter1);
-                                    return result;
-                                }
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_cl) && (parameter3 == "CL"))
-                                {
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter2), parameter1);
-                                    return result;
-                                }
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_imm8) && (paramtype3 == ATokenType.ttvalue))
-                                {
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter2), parameter1);
-                                    Assembler.add(bytes, (Byte)v);
-                                    return result;
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_mm) && (paramtype2 == ATokenType.ttregistermm))
-                            {
-                                //r32/m32,mm,
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    //r32/m32,mm
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter2), parameter1);
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm) && (paramtype2 == ATokenType.ttregisterxmm))
-                            {
-                                //r32/m32,xmm,  (movd for example)
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    //r32/m32,xmm
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter2), parameter1);
-                                }
-                            }
-                        }
-                        break;
-                    case AParam.par_mm:
-                        if (paramtype1 == ATokenType.ttregistermm)
-                        {
-                            //mm,xxxxx
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_mm) && (paramtype2 == ATokenType.ttregistermm))
-                            {
-                                addopcode(bytes, j);
-                                result = createmodrm(bytes, getreg(parameter1), parameter2);
-                                return result;
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm) && (paramtype2 == ATokenType.ttregisterxmm))
-                            {
-                                //mm,xmm
-                                addopcode(bytes, j);
-                                result = createmodrm(bytes, getreg(parameter1), parameter2);
-                                return result;
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_r32_m16) & ((paramtype1 == ATokenType.ttregister32bit) || (paramtype2 == ATokenType.ttmemorylocation16) | Assembler.ismemorylocationdefault(parameter2)))
-                            {
-                                //mm,r32/m16,
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_imm8) && (paramtype3 == ATokenType.ttvalue))
-                                {
-                                    //imm8
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter1), parameter2);
-                                    return result;
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_rm32) & (Assembler.isrm32(paramtype2)))
-                            {
-                                //mm,rm32
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    //xmm,rm32
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter1), parameter2);
-                                    return result;
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm_m32) & (Assembler.isxmm_m32(paramtype2)))
-                            {
-                                //mm,xmm/m32
-                                addopcode(bytes, j);
-                                result = createmodrm(bytes, getreg(parameter1), parameter2);
-                                return result;
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_mm_m64) && (Assembler.ismm_m64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
-                            {
-                                //mm,mm/m64
-                                addopcode(bytes, j);
-                                result = createmodrm(bytes, getreg(parameter1), parameter2);
-                                return result;
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm_m64) && (Assembler.isxmm_m64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
-                            {
-                                //mm,xmm/m64
-                                addopcode(bytes, j);
-                                result = createmodrm(bytes, getreg(parameter1), parameter2);
-                                return result;
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm_m128) && (Assembler.isxmm_m128(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
-                            {
-                                //mm,xmm/m128
-                                addopcode(bytes, j);
-                                result = createmodrm(bytes, getreg(parameter1), parameter2);
-                                return result;
-                            }
-                        }
-                        break;
-                    case AParam.par_mm_m64:
-                        if (Assembler.ismm_m64(paramtype1) | ((paramtype1 == ATokenType.ttmemorylocation32) && (parameter1[1] == '[')))
-                        {
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_mm) && (paramtype2 == ATokenType.ttregistermm))
-                            {
-                                //mm/m64, mm
-                                addopcode(bytes, j);
-                                result = createmodrm(bytes, getreg(parameter2), parameter1);
-                                return result;
-                            }
-                        }
-                        break;
-                    case AParam.par_xmm_m64:
-                        if (Assembler.isxmm_m64(paramtype1) | ((paramtype1 == ATokenType.ttmemorylocation32) && (parameter1[1] == '[')))
-                        {
-                            //xmm/m64,
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm) && (paramtype2 == ATokenType.ttregisterxmm))
-                            {
-                                //xmm/m64, xmm
-                                addopcode(bytes, j);
-                                result = createmodrm(bytes, getreg(parameter2), parameter1);
-                                return result;
-                            }
-                        }
-                        break;
-                    case AParam.par_xmm_m128:
-                        if (Assembler.isxmm_m128(paramtype1) | ((paramtype1 == ATokenType.ttmemorylocation32) && (parameter1[1] == '[')))
-                        {
-                            //xmm/m128,
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm) && (paramtype2 == ATokenType.ttregisterxmm))
-                            {
-                                //xmm/m128, xmm
-                                addopcode(bytes, j);
-                                result = createmodrm(bytes, getreg(parameter2), parameter1);
-                                return result;
-                            }
-                        }
-                        break;
-                    case AParam.par_xmm:
-                        if (paramtype1 == ATokenType.ttregisterxmm)
-                        {
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm8) && (paramtype2 == ATokenType.ttvalue))
-                            {
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
+                                    //rm32,cl
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
-                                    Assembler.add(bytes, (Byte)v);
                                     return result;
                                 }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_mm) && (paramtype2 == ATokenType.ttregistermm))
-                            {
-                                //xmm,xmm
-                                addopcode(bytes, j);
-                                result = createmodrm(bytes, getreg(parameter1), parameter2);
-                                return result;
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm) && (paramtype2 == ATokenType.ttregisterxmm))
-                            {
-                                //xmm,xmm
-                                addopcode(bytes, j);
-                                result = createmodrm(bytes, getreg(parameter1), parameter2);
-                                return result;
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_m64) & ((paramtype2 == ATokenType.ttmemorylocation64) | (Assembler.ismemorylocationdefault(parameter2))))
-                            {
-                                addopcode(bytes, j);
-                                result = createmodrm(bytes, getreg(parameter1), parameter2);
-                                return result;
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_rm32) & (Assembler.isrm32(paramtype2)))
-                            {
-                                //xmm,rm32,
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_r32) && (paramtype2 == ATokenType.ttregister32bit))
                                 {
-                                    //xmm,rm32
+                                    //r/m32,r32
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter2), parameter1);
+                                        return result;
+                                    }
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_cl) && (parameter3 == "CL"))
+                                    {
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter2), parameter1);
+                                        return result;
+                                    }
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_imm8) && (paramtype3 == ATokenType.ttvalue))
+                                    {
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter2), parameter1);
+                                        Assembler.add(bytes, (Byte)v);
+                                        return result;
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_mm) && (paramtype2 == ATokenType.ttregistermm))
+                                {
+                                    //r32/m32,mm,
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        //r32/m32,mm
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter2), parameter1);
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm) && (paramtype2 == ATokenType.ttregisterxmm))
+                                {
+                                    //r32/m32,xmm,  (movd for example)
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        //r32/m32,xmm
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter2), parameter1);
+                                    }
+                                }
+                            }
+                            break;
+                        case AParam.par_mm:
+                            if (paramtype1 == ATokenType.ttregistermm)
+                            {
+                                //mm,xxxxx
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_mm) && (paramtype2 == ATokenType.ttregistermm))
+                                {
+                                    addopcode(bytes, j);
+                                    result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                    return result;
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm) && (paramtype2 == ATokenType.ttregisterxmm))
+                                {
+                                    //mm,xmm
+                                    addopcode(bytes, j);
+                                    result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                    return result;
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_r32_m16) & ((paramtype1 == ATokenType.ttregister32bit) || (paramtype2 == ATokenType.ttmemorylocation16) | Assembler.ismemorylocationdefault(parameter2)))
+                                {
+                                    //mm,r32/m16,
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_imm8) && (paramtype3 == ATokenType.ttvalue))
+                                    {
+                                        //imm8
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                        return result;
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_rm32) & (Assembler.isrm32(paramtype2)))
+                                {
+                                    //mm,rm32
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        //xmm,rm32
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                        return result;
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm_m32) & (Assembler.isxmm_m32(paramtype2)))
+                                {
+                                    //mm,xmm/m32
+                                    addopcode(bytes, j);
+                                    result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                    return result;
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_mm_m64) && (Assembler.ismm_m64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
+                                {
+                                    //mm,mm/m64
+                                    addopcode(bytes, j);
+                                    result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                    return result;
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm_m64) && (Assembler.isxmm_m64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
+                                {
+                                    //mm,xmm/m64
+                                    addopcode(bytes, j);
+                                    result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                    return result;
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm_m128) && (Assembler.isxmm_m128(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
+                                {
+                                    //mm,xmm/m128
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, getreg(parameter1), parameter2);
                                     return result;
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_mm_m64) && (Assembler.ismm_m64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
+                            break;
+                        case AParam.par_mm_m64:
+                            if (Assembler.ismm_m64(paramtype1) | ((paramtype1 == ATokenType.ttmemorylocation32) && (parameter1[1] == '[')))
                             {
-                                //xmm,mm/m64
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_mm) && (paramtype2 == ATokenType.ttregistermm))
+                                {
+                                    //mm/m64, mm
+                                    addopcode(bytes, j);
+                                    result = createmodrm(bytes, getreg(parameter2), parameter1);
+                                    return result;
+                                }
+                            }
+                            break;
+                        case AParam.par_xmm_m64:
+                            if (Assembler.isxmm_m64(paramtype1) | ((paramtype1 == ATokenType.ttmemorylocation32) && (parameter1[1] == '[')))
+                            {
+                                //xmm/m64,
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm) && (paramtype2 == ATokenType.ttregisterxmm))
+                                {
+                                    //xmm/m64, xmm
+                                    addopcode(bytes, j);
+                                    result = createmodrm(bytes, getreg(parameter2), parameter1);
+                                    return result;
+                                }
+                            }
+                            break;
+                        case AParam.par_xmm_m128:
+                            if (Assembler.isxmm_m128(paramtype1) | ((paramtype1 == ATokenType.ttmemorylocation32) && (parameter1[1] == '[')))
+                            {
+                                //xmm/m128,
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm) && (paramtype2 == ATokenType.ttregisterxmm))
+                                {
+                                    //xmm/m128, xmm
+                                    addopcode(bytes, j);
+                                    result = createmodrm(bytes, getreg(parameter2), parameter1);
+                                    return result;
+                                }
+                            }
+                            break;
+                        case AParam.par_xmm:
+                            if (paramtype1 == ATokenType.ttregisterxmm)
+                            {
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm8) && (paramtype2 == ATokenType.ttvalue))
+                                {
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
+                                        Assembler.add(bytes, (Byte)v);
+                                        return result;
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_mm) && (paramtype2 == ATokenType.ttregistermm))
+                                {
+                                    //xmm,xmm
+                                    addopcode(bytes, j);
+                                    result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                    return result;
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm) && (paramtype2 == ATokenType.ttregisterxmm))
+                                {
+                                    //xmm,xmm
+                                    addopcode(bytes, j);
+                                    result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                    return result;
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_m64) & ((paramtype2 == ATokenType.ttmemorylocation64) | (Assembler.ismemorylocationdefault(parameter2))))
+                                {
+                                    addopcode(bytes, j);
+                                    result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                    return result;
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_rm32) & (Assembler.isrm32(paramtype2)))
+                                {
+                                    //xmm,rm32,
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        //xmm,rm32
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                        return result;
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_mm_m64) && (Assembler.ismm_m64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
                                 {
                                     //xmm,mm/m64
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter1), parameter2);
-                                    return result;
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm_m32) & Assembler.isxmm_m32(paramtype2))
-                            {
-                                //even if the user didn't intend for it to be xmm,m64 it will be, that'll teach the lazy user to forget opperand size
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    //xmm,xmm/m32
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter1), parameter2);
-                                    return result;
-                                }
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_imm8) && (paramtype3 == ATokenType.ttvalue))
-                                {
-                                    addopcode(bytes, j);
-                                    createmodrm(bytes, getreg(parameter1), parameter2);
-                                    Assembler.add(bytes, (Byte)v);
-                                    result = true;
-                                    return result;
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm_m64) && (Assembler.isxmm_m64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
-                            {
-                                //even if the user didn't intend for it to be xmm,m64 it will be, that'll teach the lazy user to forget opperand size
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    //xmm,xmm/m64
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter1), parameter2);
-                                    return result;
-                                }
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_imm8) && (paramtype3 == ATokenType.ttvalue))
-                                {
-                                    addopcode(bytes, j);
-                                    createmodrm(bytes, getreg(parameter1), parameter2);
-                                    Assembler.add(bytes, (Byte)v);
-                                    result = true;
-                                    return result;
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm_m128) && (Assembler.isxmm_m128(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
-                            {
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    //xmm,xmm/m128
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter1), parameter2);
-                                    return result;
-                                }
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_imm8) && (paramtype3 == ATokenType.ttvalue))
-                                {
-                                    addopcode(bytes, j);
-                                    createmodrm(bytes, getreg(parameter1), parameter2);
-                                    Assembler.add(bytes, (Byte)v);
-                                    result = true;
-                                    return result;
-                                }
-                            }
-                        }
-                        break;
-                    case AParam.par_m8:
-                        if ((paramtype1 == ATokenType.ttmemorylocation8) | Assembler.ismemorylocationdefault(parameter1))
-                        {
-                            //m8,xxx
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
-                            {
-                                //m8
-                                //                                 //check if it is especially designed to be 32 bit, or if it is a default anser
-                                //verified, it is a 8 bit location, and if it was detected as 8 it was due to defaulting to 32
-                                addopcode(bytes, j);
-                                result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
-                                return result;
-                            }
-                        }
-                        break;
-                    case AParam.par_m16:
-                        if ((paramtype1 == ATokenType.ttmemorylocation16) | Assembler.ismemorylocationdefault(parameter1))
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
-                            {
-                                //opcode+rd
-                                addopcode(bytes, j);
-                                result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
-                                return result;
-                            }
-                        break;
-                    case AParam.par_m32:
-                        if (paramtype1 == ATokenType.ttmemorylocation32)
-                        {
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
-                            {
-                                addopcode(bytes, j);
-                                result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
-                                return result;
-                            }
-                            if (Assembler.opcodes[j].paramtype2 == AParam.par_r32)
-                            {
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
-                                    return result;
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm) & ((paramtype2 == ATokenType.ttregisterxmm) | Assembler.ismemorylocationdefault(parameter2)))
-                            {
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) || (parameter3 == ""))
-                                {
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter2), parameter1);
-                                    return result;
-                                }
-                            }
-                        }
-                        break;
-                    case AParam.par_m64:
-                        if ((paramtype1 == ATokenType.ttmemorylocation64) || (paramtype1 == ATokenType.ttmemorylocation32))
-                        {
-                            //m64,
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
-                            {
-                                //m64
-                                if (Assembler.gettokentype(ref parameter1, parameter2) == ATokenType.ttmemorylocation64)
-                                {
-                                    //verified, it is a 64 bit location, and if it was detected as 32 it was due to defaulting to 32
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
-                                    return result;
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm) & ((paramtype2 == ATokenType.ttregisterxmm) | Assembler.ismemorylocationdefault(parameter2)))
-                            {
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) || (parameter3 == ""))
-                                {
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter2), parameter1);
-                                    return result;
-                                }
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm) & ((paramtype2 == ATokenType.ttregisterxmm) | Assembler.ismemorylocationdefault(parameter2)))
-                            {
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) || (parameter3 == ""))
-                                {
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter2), parameter1);
-                                    return result;
-                                }
-                            }
-                        }
-                        break;
-                    case AParam.par_m80:
-                        if ((paramtype1 == ATokenType.ttmemorylocation80) || ((paramtype1 == ATokenType.ttmemorylocation32) && (parameter1[1] == '[')))
-                        {
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
-                            {
-                                addopcode(bytes, j);
-                                result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
-                                return result;
-                            }
-                        }
-                        break;
-                    case AParam.par_m128:
-                        if ((paramtype1 == ATokenType.ttmemorylocation128) | (Assembler.ismemorylocationdefault(parameter1)))
-                        {
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm) && (paramtype2 == ATokenType.ttregisterxmm))
-                            {
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    addopcode(bytes, j);
-                                    result = createmodrm(bytes, getreg(parameter2), parameter1);
-                                    return result;
-                                }
-                            }
-                        }
-                        break;
-                    case AParam.par_rel8:
-                        if (paramtype1 == ATokenType.ttvalue)
-                        {
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
-                            {
-                                //rel8
-                                if (AArrayUtils.InArray(parameter1[1], '-', '+'))
-                                {
-                                    if (((!overrideshort) & (vtype > 8)) | (overridelong))
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                     {
-                                        //see if there is a 32 bit equivalent opcode (notice I dont do rel 16 because that'll completly screw up eip)
-                                        k = startoflist;
-                                        while ((k <= Assembler.opcodecount) && (Assembler.opcodes[k].mnemonic == tokens[mnemonic]))
-                                        {
-                                            if ((Assembler.opcodes[k].paramtype1 == AParam.par_rel32) && (Assembler.opcodes[k].paramtype2 == AParam.par_noparam))
-                                            {
-                                                //yes, there is a 32 bit version
-                                                addopcode(bytes, k);
-                                                Assembler.adddword(bytes, (UInt32)v);
-                                                result = true;
-                                                return result;
-                                            }
-                                            k += 1;
-                                        }
+                                        //xmm,mm/m64
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                        return result;
                                     }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm_m32) & Assembler.isxmm_m32(paramtype2))
+                                {
+                                    //even if the user didn't intend for it to be xmm,m64 it will be, that'll teach the lazy user to forget opperand size
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        //xmm,xmm/m32
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                        return result;
+                                    }
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_imm8) && (paramtype3 == ATokenType.ttvalue))
+                                    {
+                                        addopcode(bytes, j);
+                                        createmodrm(bytes, getreg(parameter1), parameter2);
+                                        Assembler.add(bytes, (Byte)v);
+                                        result = true;
+                                        return result;
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm_m64) && (Assembler.isxmm_m64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
+                                {
+                                    //even if the user didn't intend for it to be xmm,m64 it will be, that'll teach the lazy user to forget opperand size
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        //xmm,xmm/m64
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                        return result;
+                                    }
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_imm8) && (paramtype3 == ATokenType.ttvalue))
+                                    {
+                                        addopcode(bytes, j);
+                                        createmodrm(bytes, getreg(parameter1), parameter2);
+                                        Assembler.add(bytes, (Byte)v);
+                                        result = true;
+                                        return result;
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm_m128) && (Assembler.isxmm_m128(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
+                                {
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        //xmm,xmm/m128
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter1), parameter2);
+                                        return result;
+                                    }
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_imm8) && (paramtype3 == ATokenType.ttvalue))
+                                    {
+                                        addopcode(bytes, j);
+                                        createmodrm(bytes, getreg(parameter1), parameter2);
+                                        Assembler.add(bytes, (Byte)v);
+                                        result = true;
+                                        return result;
+                                    }
+                                }
+                            }
+                            break;
+                        case AParam.par_m8:
+                            if ((paramtype1 == ATokenType.ttmemorylocation8) | Assembler.ismemorylocationdefault(parameter1))
+                            {
+                                //m8,xxx
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
+                                {
+                                    //m8
+                                    //                                 //check if it is especially designed to be 32 bit, or if it is a default anser
+                                    //verified, it is a 8 bit location, and if it was detected as 8 it was due to defaulting to 32
                                     addopcode(bytes, j);
-                                    Assembler.add(bytes, (Byte)v);
-                                    result = true;
+                                    result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
                                     return result;
                                 }
-                                else
+                            }
+                            break;
+                        case AParam.par_m16:
+                            if ((paramtype1 == ATokenType.ttmemorylocation16) | Assembler.ismemorylocationdefault(parameter1))
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
                                 {
-                                    //user typed in a direct address
-                                    //        if (not overrideShort) and ((OverrideLong) or (valueTotype(      v-address-       (Assembler.opcodes[j].bytes+1) )>8) ) then
-                                    if ((!overrideshort) & ((overridelong) | (Assembler.valuetotype((UInt32)(v - address - (UInt32)(Assembler.opcodes[j].bytes + 1))) > 8)))
+                                    //opcode+rd
+                                    addopcode(bytes, j);
+                                    result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
+                                    return result;
+                                }
+                            break;
+                        case AParam.par_m32:
+                            if (paramtype1 == ATokenType.ttmemorylocation32)
+                            {
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
+                                {
+                                    addopcode(bytes, j);
+                                    result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
+                                    return result;
+                                }
+                                if (Assembler.opcodes[j].paramtype2 == AParam.par_r32)
+                                {
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                     {
-                                        //the user tried to find a relative address out of it's reach
-                                        //see if there is a 32 bit version of the opcode
-                                        k = startoflist;
-                                        while ((k <= Assembler.opcodecount) && (Assembler.opcodes[k].mnemonic == tokens[mnemonic]))
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
+                                        return result;
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm) & ((paramtype2 == ATokenType.ttregisterxmm) | Assembler.ismemorylocationdefault(parameter2)))
+                                {
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) || (parameter3 == ""))
+                                    {
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter2), parameter1);
+                                        return result;
+                                    }
+                                }
+                            }
+                            break;
+                        case AParam.par_m64:
+                            if ((paramtype1 == ATokenType.ttmemorylocation64) || (paramtype1 == ATokenType.ttmemorylocation32))
+                            {
+                                //m64,
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
+                                {
+                                    //m64
+                                    if (Assembler.gettokentype(ref parameter1, parameter2) == ATokenType.ttmemorylocation64)
+                                    {
+                                        //verified, it is a 64 bit location, and if it was detected as 32 it was due to defaulting to 32
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
+                                        return result;
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm) & ((paramtype2 == ATokenType.ttregisterxmm) | Assembler.ismemorylocationdefault(parameter2)))
+                                {
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) || (parameter3 == ""))
+                                    {
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter2), parameter1);
+                                        return result;
+                                    }
+                                }
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm) & ((paramtype2 == ATokenType.ttregisterxmm) | Assembler.ismemorylocationdefault(parameter2)))
+                                {
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) || (parameter3 == ""))
+                                    {
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter2), parameter1);
+                                        return result;
+                                    }
+                                }
+                            }
+                            break;
+                        case AParam.par_m80:
+                            if ((paramtype1 == ATokenType.ttmemorylocation80) || ((paramtype1 == ATokenType.ttmemorylocation32) && (parameter1[1] == '[')))
+                            {
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
+                                {
+                                    addopcode(bytes, j);
+                                    result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
+                                    return result;
+                                }
+                            }
+                            break;
+                        case AParam.par_m128:
+                            if ((paramtype1 == ATokenType.ttmemorylocation128) | (Assembler.ismemorylocationdefault(parameter1)))
+                            {
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm) && (paramtype2 == ATokenType.ttregisterxmm))
+                                {
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        addopcode(bytes, j);
+                                        result = createmodrm(bytes, getreg(parameter2), parameter1);
+                                        return result;
+                                    }
+                                }
+                            }
+                            break;
+                        case AParam.par_rel8:
+                            if (paramtype1 == ATokenType.ttvalue)
+                            {
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
+                                {
+                                    //rel8
+                                    if (AArrayUtils.InArray(parameter1[1], '-', '+'))
+                                    {
+                                        if (((!overrideshort) & (vtype > 8)) | (overridelong))
                                         {
-                                            if ((Assembler.opcodes[k].paramtype1 == AParam.par_rel32) && (Assembler.opcodes[k].paramtype2 == AParam.par_noparam))
+                                            //see if there is a 32 bit equivalent opcode (notice I dont do rel 16 because that'll completly screw up eip)
+                                            var k = startoflist;
+                                            while ((k <= Assembler.opcodecount) && (Assembler.opcodes[k].mnemonic == tokens[mnemonic]))
                                             {
-                                                //yes, there is a 32 bit version
-                                                addopcode(bytes, k);
-                                                Assembler.adddword(bytes, (UInt32)(v - address - (UInt32)(Assembler.opcodes[k].bytes + 4)));
-                                                result = true;
-                                                return result;
+                                                if ((Assembler.opcodes[k].paramtype1 == AParam.par_rel32) && (Assembler.opcodes[k].paramtype2 == AParam.par_noparam))
+                                                {
+                                                    //yes, there is a 32 bit version
+                                                    addopcode(bytes, k);
+                                                    Assembler.adddword(bytes, (UInt32)v);
+                                                    result = true;
+                                                    return result;
+                                                }
+                                                k += 1;
                                             }
-                                            k += 1;
                                         }
+                                        addopcode(bytes, j);
+                                        Assembler.add(bytes, (Byte)v);
+                                        result = true;
+                                        return result;
                                     }
                                     else
                                     {
-                                        //8 bit version
+                                        //user typed in a direct address
+                                        //        if (not overrideShort) and ((OverrideLong) or (valueTotype(      v-address-       (Assembler.opcodes[j].bytes+1) )>8) ) then
+                                        if ((!overrideshort) & ((overridelong) | (Assembler.valuetotype((UInt32)(v - address - (UInt32)(Assembler.opcodes[j].bytes + 1))) > 8)))
+                                        {
+                                            //the user tried to find a relative address out of it's reach
+                                            //see if there is a 32 bit version of the opcode
+                                            var k = startoflist;
+                                            while ((k <= Assembler.opcodecount) && (Assembler.opcodes[k].mnemonic == tokens[mnemonic]))
+                                            {
+                                                if ((Assembler.opcodes[k].paramtype1 == AParam.par_rel32) && (Assembler.opcodes[k].paramtype2 == AParam.par_noparam))
+                                                {
+                                                    //yes, there is a 32 bit version
+                                                    addopcode(bytes, k);
+                                                    Assembler.adddword(bytes, (UInt32)(v - address - (UInt32)(Assembler.opcodes[k].bytes + 4)));
+                                                    result = true;
+                                                    return result;
+                                                }
+                                                k += 1;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            //8 bit version
+                                            addopcode(bytes, j);
+                                            Assembler.add(bytes, (Byte)(v - address - (UInt32)(Assembler.opcodes[j].bytes + 1)));
+                                            result = true;
+                                            return result;
+                                        }
+                                    }
+                                }
+                            }
+                            break;
+                        case AParam.par_rel32:
+                            if (paramtype1 == ATokenType.ttvalue)
+                            {
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
+                                {
+                                    if (AArrayUtils.InArray(parameter1[1], '-', '+'))
+                                    {
+                                        //opcode rel32
                                         addopcode(bytes, j);
-                                        Assembler.add(bytes, (Byte)(v - address - (UInt32)(Assembler.opcodes[j].bytes + 1)));
+                                        Assembler.adddword(bytes, (UInt32)v);
+                                        result = true;
+                                        return result;
+                                    }
+                                    else
+                                    {
+                                        //user typed in a direct address
+                                        addopcode(bytes, j);
+                                        Assembler.adddword(bytes, (UInt32)(v - address - (UInt32)(Assembler.opcodes[j].bytes + 4)));
                                         result = true;
                                         return result;
                                     }
                                 }
                             }
-                        }
-                        break;
-                    case AParam.par_rel32:
-                        if (paramtype1 == ATokenType.ttvalue)
-                        {
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
+                            break;
+                        case AParam.par_st0:
+                            if ((parameter1 == "ST(0)") || (parameter1 == "ST"))
                             {
-                                if (AArrayUtils.InArray(parameter1[1], '-', '+'))
+                                //st(0),
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_st) && (paramtype2 == ATokenType.ttregisterst))
                                 {
-                                    //opcode rel32
+                                    //st(0),st(x),
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_pi)
+                                        {
+                                            //opcode+i
+                                            addopcode(bytes, j);
+                                            var k = getreg(parameter2);
+                                            if (k > 7)
+                                            {
+                                                rex_b = true;
+                                                k &= 7;
+                                            }
+                                            bytes[bytes.Length - 1] += (Byte)k;
+                                            result = true;
+                                            return result;
+                                        }
+                                    }
+                                }
+                            }
+                            break;
+                        case AParam.par_st:
+                            if (paramtype1 == ATokenType.ttregisterst)
+                            {
+                                //st(x),
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
+                                {
+                                    //st(x)
                                     addopcode(bytes, j);
-                                    Assembler.adddword(bytes, (UInt32)v);
+                                    var k = getreg(parameter1);
+                                    if (k > 7)
+                                    {
+                                        rex_b = true;
+                                        k &= 7;
+                                    }
+                                    bytes[bytes.Length - 1] += (Byte)k;
                                     result = true;
                                     return result;
                                 }
-                                else
+                                if ((Assembler.opcodes[j].paramtype2 == AParam.par_st0) && ((parameter2 == "ST(0)") || (parameter2 == "ST")))
                                 {
-                                    //user typed in a direct address
-                                    addopcode(bytes, j);
-                                    Assembler.adddword(bytes, (UInt32)(v - address - (UInt32)(Assembler.opcodes[j].bytes + 4)));
-                                    result = true;
-                                    return result;
-                                }
-                            }
-                        }
-                        break;
-                    case AParam.par_st0:
-                        if ((parameter1 == "ST(0)") || (parameter1 == "ST"))
-                        {
-                            //st(0),
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_st) && (paramtype2 == ATokenType.ttregisterst))
-                            {
-                                //st(0),st(x),
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_pi)
+                                    //st(x),st(0)
+                                    if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                     {
-                                        //opcode+i
-                                        addopcode(bytes, j);
-                                        k = getreg(parameter2);
-                                        if (k > 7)
+                                        if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_pi)
                                         {
-                                            rex_b = true;
-                                            k = k & 7;
+                                            //opcode+i
+                                            addopcode(bytes, j);
+                                            var k = getreg(parameter1);
+                                            if (k > 7)
+                                            {
+                                                rex_b = true;
+                                                k &= 7;
+                                            }
+                                            bytes[bytes.Length - 1] += (Byte)k;
+                                            result = true;
+                                            return result;
                                         }
-                                        bytes[bytes.Length - 1] += (Byte)k;
-                                        result = true;
-                                        return result;
                                     }
                                 }
                             }
+                            break;
                         }
-                        break;
-                    case AParam.par_st:
-                        if (paramtype1 == ATokenType.ttregisterst)
-                        {
-                            //st(x),
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
-                            {
-                                //st(x)
-                                addopcode(bytes, j);
-                                k = getreg(parameter1);
-                                if (k > 7)
-                                {
-                                    rex_b = true;
-                                    k = k & 7;
-                                }
-                                bytes[bytes.Length - 1] += (Byte)k;
-                                result = true;
-                                return result;
-                            }
-                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_st0) && ((parameter2 == "ST(0)") || (parameter2 == "ST")))
-                            {
-                                //st(x),st(0)
-                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
-                                {
-                                    if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_pi)
-                                    {
-                                        //opcode+i
-                                        addopcode(bytes, j);
-                                        k = getreg(parameter1);
-                                        if (k > 7)
-                                        {
-                                            rex_b = true;
-                                            k = k & 7;
-                                        }
-                                        bytes[bytes.Length - 1] += (Byte)k;
-                                        result = true;
-                                        return result;
-                                    }
-                                }
-                            }
-                        }
-                        break;
-                    }
-                j += 1;
+                    j += 1;
+                }
             }
-            //create("finally");
-            if (result)
+            finally
             {
-                //insert rex prefix if needed
-                if (Assembler.symhandler.process.is64bit)
+                if (result)
                 {
-                    if (Assembler.opcodes[j].norexw)
-                        rex_w = false;
-                    if (rexprefix != 0)
+                    //insert rex prefix if needed
+                    if (Assembler.symhandler.process.is64bit)
                     {
-                        if (rexprefixlocation == -1)
-                            throw new Exception("Assembler error");
-                        rexprefix = (Byte)(rexprefix | 0x40); //just make sure this is set
-                        bytes.SetLength(bytes.Length + 1);
-                        for (i = bytes.Length - 1; i >= rexprefixlocation + 1; i--)
-                            bytes[i] = bytes[i - 1];
-                        bytes[rexprefixlocation] = rexprefix;
-                        if (relativeaddresslocation != -1)
-                            relativeaddresslocation += 1;
-                    }
-                    if (relativeaddresslocation != -1)
-                    {
-                        //adjust the specified address so it's relative (The outside of range check is already done in the modrm generation)
-                        if (actualdisplacement > (address + (UInt32)bytes.Length))
-                            v = actualdisplacement - (address + (UInt32)bytes.Length);
-                        else
-                            v = (address + (UInt32)bytes.Length) - actualdisplacement;
-                        if (v > 0x7fffffff)
+                        if (Assembler.opcodes[j].norexw)
+                            rex_w = false;
+                        if (rexprefix != 0)
                         {
-                            bytes.SetLength(0);
-                            if (skiprangecheck == false)   //for syntax checking
-                                throw new Exception("offset too big");
+                            if (rexprefixlocation == -1)
+                                throw new Exception("Assembler error");
+                            rexprefix = (Byte)(rexprefix | 0x40); //just make sure this is set
+                            bytes.SetLength(bytes.Length + 1);
+                            for (i = bytes.Length - 1; i >= rexprefixlocation + 1; i--)
+                                bytes[i] = bytes[i - 1];
+                            bytes[rexprefixlocation] = rexprefix;
+                            if (relativeaddresslocation != -1)
+                                relativeaddresslocation += 1;
                         }
-                        else
+                        if (relativeaddresslocation != -1)
                         {
-                            unsafe
+                            //adjust the specified address so it's relative (The outside of range check is already done in the modrm generation)
+                            if (actualdisplacement > (address + (UInt32)bytes.Length))
+                                v = actualdisplacement - (address + (UInt32)bytes.Length);
+                            else
+                                v = (address + (UInt32)bytes.Length) - actualdisplacement;
+                            if (v > 0x7fffffff)
                             {
-                                fixed (byte* b = bytes.Raw)
+                                bytes.SetLength(0);
+                                if (skiprangecheck == false)   //for syntax checking
+                                    throw new Exception("offset too big");
+                            }
+                            else
+                            {
+                                unsafe
                                 {
-                                    var vp = (UInt32)(actualdisplacement - (address + (UInt32)bytes.Length));
-                                    *(UInt32*)b[relativeaddresslocation] = vp;
+                                    fixed (byte* b = bytes.Raw)
+                                    {
+                                        var vp = (UInt32)(actualdisplacement - (address + (UInt32)bytes.Length));
+                                        *(UInt32*)b[relativeaddresslocation] = vp;
+                                    }
                                 }
                             }
                         }

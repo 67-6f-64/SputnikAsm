@@ -2,10 +2,11 @@
 using Sputnik.LString;
 using Sputnik.LStructs;
 using Sputnik.LUtils;
+using SputnikAsm.LCollections;
 
 namespace SputnikAsm.LUtils
 {
-    public class AStringUtils
+    public static class AStringUtils
     {
         #region Pos
         public static int Pos(String needle, String str)
@@ -291,6 +292,72 @@ namespace SputnikAsm.LUtils
                 return result;
             }
             return result;
+        }
+        #endregion
+        #region ConvertStringToBytes
+        public static void ConvertStringToBytes(String aobStr, Boolean hex, ATByteArray bytes)
+        {
+            // vars
+            int i, j, k;
+            String temp;
+            // wildcard for AoBScan and AoBAssert.Bigger than $FF is ok.
+            var wildCard = (UInt16)0xf521;
+            var wildcardChars = new[] {'x', 'X', '?', '*'};
+            // size check
+            bytes.SetLength(0);
+            if (aobStr.Length == 0)
+                return;
+            aobStr = aobStr.Trim();
+            if ((Pos("-", aobStr) != -1) || (Pos(" ", aobStr) != -1) || (Pos(",", aobStr) != -1))
+            {
+                /*syntax is : (1)xx-xx-xx (2)or xx xx xx (3)or xx,xx,xx*/
+                j = 0;
+                k = 0;
+                aobStr += ' ';
+                for (i = 0; i < aobStr.Length; i++)
+                {
+                    if (AArrayUtils.InArray(aobStr[i], ' ', '-', ','))
+                    {
+                        temp = Copy(aobStr, j, i - j);
+                        j = i + 1;
+                        bytes.SetLength(k + 1);
+                        if (UStringUtils.IndexOfAny(temp, wildcardChars) == -1)
+                        {
+                            switch (hex)
+                            {
+                                case true:
+                                    bytes[k] = (UInt16)StrToInt("0x" + temp);
+                                    break;
+                                case false:
+                                    bytes[k] = (UInt16)StrToInt(temp);
+                                    break;
+                            }
+                        }
+                        else
+                            bytes[k] = wildCard;
+                        k += 1;
+                    }
+                }
+            }
+            else
+            {
+                /*syntax is: xxxxxx*/
+                k = 0;
+                j = 1;
+                for (i = 1; i <= aobStr.Length; i++)
+                {
+                    if ((i % 2) != 0)
+                        continue;
+                    temp = Copy(aobStr, j, i - j + 1);
+                    j = i + 1;
+                    bytes.SetLength(k + 1);
+                    if (UStringUtils.IndexOfAny(temp, wildcardChars) == -1)
+                        bytes[k] = (UInt16)StrToInt("0x" + temp);
+                    else
+                        bytes[k] = wildCard;
+                    k += 1;
+                }
+            }
         }
         #endregion
         #region HexStrToInt

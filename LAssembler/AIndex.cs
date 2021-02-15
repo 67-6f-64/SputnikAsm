@@ -1,4 +1,4 @@
-﻿using SputnikAsm.LAssembler.LCollections;
+﻿using SputnikAsm.LCollections;
 
 namespace SputnikAsm.LAssembler
 {

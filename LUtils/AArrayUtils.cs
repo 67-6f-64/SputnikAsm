@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace SputnikAsm.LUtils
 {
-    public class AArrayUtils
+    public static class AArrayUtils
     {
         #region InArray
         public static Boolean InArray(Byte needle, params Byte[] haystack)

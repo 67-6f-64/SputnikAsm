@@ -1,6 +1,7 @@
-﻿using SputnikAsm.LGenerics;
+﻿using SputnikAsm.LAssembler;
+using SputnikAsm.LGenerics;
 
-namespace SputnikAsm.LAssembler.LCollections
+namespace SputnikAsm.LCollections
 {
     public class AIndexArray : AArrayManager<AIndex>
     {

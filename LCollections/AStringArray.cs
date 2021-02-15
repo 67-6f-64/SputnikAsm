@@ -2,16 +2,16 @@
 using Sputnik.LUtils;
 using SputnikAsm.LGenerics;
 
-namespace SputnikAsm.LAssembler.LCollections
+namespace SputnikAsm.LCollections
 {
-    public class ATokens : AArrayManager<String>
+    public class AStringArray : AArrayManager<String>
     {
         #region Constructor
-        public ATokens()
+        public AStringArray()
             : base()
         {
         }
-        public ATokens(params String[] tokens)
+        public AStringArray(params String[] tokens)
             : base(tokens)
         {
         }
