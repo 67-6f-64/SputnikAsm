@@ -68,6 +68,7 @@
     <Compile Include="LAutoAssembler\LCollections\AExceptionInfoArray.cs" />
     <Compile Include="LAutoAssembler\LCollections\AAllocArray.cs" />
     <Compile Include="LAutoAssembler\LEnums\AScriptObjectType.cs" />
+    <Compile Include="LBinary\AMultiByte.cs" />
     <Compile Include="LCollections\ACharArray.cs" />
     <Compile Include="LCollections\ARefStringArray.cs" />
     <Compile Include="LCollections\ATByteArray.cs" />
@@ -83,14 +84,15 @@
     <Compile Include="LAssembler\AOpCodes.cs" />
     <Compile Include="LAssembler\ASingleLineAssembler.cs" />
     <Compile Include="LAutoAssembler\AAutoAssembler.cs" />
-    <Compile Include="LDisassembler\Disassembler.cs" />
-    <Compile Include="LDisassembler\LEnums\tdisassemblerclass.cs" />
-    <Compile Include="LDisassembler\LEnums\tdisassemblervaluetype.cs" />
-    <Compile Include="LDisassembler\LEnums\tmrpos.cs" />
-    <Compile Include="LDisassembler\LEnums\tregistertype.cs" />
-    <Compile Include="LDisassembler\opcodeflags.cs" />
-    <Compile Include="LDisassembler\tlastdisassembledata.cs" />
-    <Compile Include="LDisassembler\tprefix.cs" />
+    <Compile Include="LDisassembler\ADisassembler.cs" />
+    <Compile Include="LDisassembler\ADisassemblerProcessor.cs" />
+    <Compile Include="LDisassembler\LEnums\ADisassemblerClass.cs" />
+    <Compile Include="LDisassembler\LEnums\ADisassemblerValueType.cs" />
+    <Compile Include="LDisassembler\LEnums\ATmrPos.cs" />
+    <Compile Include="LDisassembler\LEnums\ARegisterType.cs" />
+    <Compile Include="LDisassembler\AOpCodeFlags.cs" />
+    <Compile Include="LDisassembler\ALastDisassembleData.cs" />
+    <Compile Include="LDisassembler\APrefix.cs" />
     <Compile Include="LExtensions\XPointerExt.cs" />
     <Compile Include="LGenerics\AArrayManager.cs" />
     <Compile Include="LProcess\AProcessSharp.cs" />
@@ -211,6 +213,8 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="LUtils\AStringUtils.cs" />
     <Compile Include="UTokenSp.cs" />
+    <Compile Include="LBinary\AVex3Byte.cs" />
+    <Compile Include="LBinary\AVex2Byte.cs" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -3,14 +3,14 @@ using SputnikAsm.LCollections;
 
 namespace SputnikAsm.LDisassembler
 {
-    public class tprefix : AByteArray
+    public class APrefix : AByteArray
     {
         #region Constructor
-        public tprefix()
+        public APrefix()
             : base()
         {
         }
-        public tprefix(params Byte[] values)
+        public APrefix(params Byte[] values)
             : base(values)
         {
         }

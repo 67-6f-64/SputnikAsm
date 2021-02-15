@@ -5,6 +5,7 @@ using Sputnik.LUtils;
 using SputnikAsm.LAssembler;
 using SputnikAsm.LAutoAssembler;
 using SputnikAsm.LAutoAssembler.LCollections;
+using SputnikAsm.LBinary;
 using SputnikAsm.LCollections;
 using SputnikAsm.LDisassembler;
 using SputnikAsm.LDisassembler.LEnums;
@@ -32,34 +33,42 @@ namespace SputnikAsm
             //
             //Console.WriteLine("done");
 
-
             UTokenSp.Activate();
-            //var a = new AAssembler();
-            //var b = new AByteArray();
+            var a = new AAssembler();
+            var b1 = new AByteArray();
             var m = new AProcessSharp(System.Diagnostics.Process.GetProcessesByName("pacwin")[0], AMemoryType.Remote);
-            //a.SymHandler.Process = m;
-            //var result = a.Assemble("mov eax, [edx+esi+66]", 0x400300, b); // E9 FB 01 00 00
-            //Console.WriteLine("Result: " + result);
-            //Console.WriteLine("Bytes:");
-            //Console.WriteLine(UBinaryUtils.Expand(b.Raw));
+            var m2 = new AProcessSharp(System.Diagnostics.Process.GetCurrentProcess(), AMemoryType.Remote);
+            a.SymHandler.Process = m2;
+            //var result = a.Assemble("mov eax, [edx+esi+66]", 0x400300, b1); // E9 FB 01 00 00
+            var result = a.Assemble("mov rax,[1122334455778899]", 0x400300, b1); // E9 FB 01 00 00
+            Console.WriteLine("Result: " + result);
+            Console.WriteLine("Bytes:");
+            Console.WriteLine(UBinaryUtils.Expand(b1.TakeAll()));
+
+
+            var d = new ADisassembler();
+            var sd = "";
+            using (var pt = new UBytePtr(b1.TakeAll()))
+            {
+                var ptt = pt.ToIntPtr().ToUIntPtr();
+                d.Disassemble(ref ptt, ref sd);
+            }
+            Console.WriteLine(d.LastDisassembleData.Prefix + ' ' + d.LastDisassembleData.OpCode + ' ' + d.LastDisassembleData.Parameters);
+
+            Console.ReadKey();
+            Environment.Exit(1);
+
             var aa = new AAutoAssembler();
-            aa.Assembler.SymHandler.Process = m;
-
-
-            //var b = new AByteArray();
-            //aa.Assembler.Assemble("mov eax, [edx+esi+66]", 0x400300, b);
-            //aa.Assembler.Assemble("mov eax, edx", 0x400300, b);
-
             var cd = @"
-mov rax, [FFFFFFFFFFFFFFFF]
+400300:
+fld dword ptr[411c88]
             ".Trim();
             var codex = new ARefStringArray();
             codex.Assign(UStringUtils.GetLines(cd).ToArray());
             aa.RemoveComments(codex);
 
             var b = aa.Assemble(aa.SelfSymbolHandler.Process, codex);
-            var d = new Disassembler();
-            d.dataonly = true;
+            d.IsDataOnly = false;
             //d.is64bit = true;
             d.SymbolHandler.Process = m;
             var s1 = "";
@@ -67,14 +76,13 @@ mov rax, [FFFFFFFFFFFFFFFF]
             //var ptr = bytes.ToIntPtr().ToUIntPtr();
 
             var ptr = (UIntPtr)0x40230F;
-            var i = 30;
+            var i = 20;
             while (i-- > 0)
             {
                 try
                 {
-                    d.disassemble(ref ptr, ref s1);
-                    var currentline = d.lastdisassembledata.prefix + ' ' + d.lastdisassembledata.opcode + ' ' +
-                                      d.lastdisassembledata.parameters;
+                    d.Disassemble(ref ptr, ref s1);
+                    var currentline = d.LastDisassembleData.Prefix + ' ' + d.LastDisassembleData.OpCode + ' ' + d.LastDisassembleData.Parameters;
                     Console.WriteLine(currentline);
                 }
                 catch
@@ -91,8 +99,8 @@ mov rax, [FFFFFFFFFFFFFFFF]
             var cc = @"
 [ENABLE]
 400300:
-mov eax, edx6
-lea edx, esi
+fld dword ptr[400300]
+mov eax, edx
 [DISABLE]
 dealloc(dog)
             ".Trim();
@@ -109,19 +117,19 @@ dealloc(dog)
             foreach (var o in scr)
                Console.WriteLine("Line: " + o.Type + " " + o.Address.ToUInt64().ToString("X") + " " + AStringUtils.BinToHexStr(o.Bytes.TakeAll()));
            
-            var f = new AAssemblyFactory(m, new ASharpAsm());
-            f.Inject(
-                new[]
-                {
-                    "mov, eax 7",
-                    "push 0",
-                    "add esp, 4",
-                    "retn"
-                },
-                (IntPtr) 0x400310);
-           
-            var v = f.Execute<int>((IntPtr)0x400310);
-            Console.WriteLine("Return: " + v);
+           // var f = new AAssemblyFactory(m, new ASharpAsm());
+           // f.Inject(
+           //     new[]
+           //     {
+           //         "mov, eax 7",
+           //         "push 0",
+           //         "add esp, 4",
+           //         "retn"
+           //     },
+           //     (IntPtr) 0x400310);
+           //
+           // var v = f.Execute<int>((IntPtr)0x400310);
+           // Console.WriteLine("Return: " + v);
 
 
          //f.InjectAndExecute(

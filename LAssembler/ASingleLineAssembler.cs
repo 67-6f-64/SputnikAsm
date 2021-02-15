@@ -1,7 +1,9 @@
 ﻿using System;
+using Sputnik.LBinary;
 using Sputnik.LGenerics;
 using Sputnik.LUtils;
 using SputnikAsm.LAssembler.LEnums;
+using SputnikAsm.LBinary;
 using SputnikAsm.LCollections;
 using SputnikAsm.LSymbolHandler;
 using SputnikAsm.LUtils;
@@ -1037,7 +1039,7 @@ namespace SputnikAsm.LAssembler
             //
             //if ((((cardinal)v >> 32) == 0) && ((((cardinal)v >> 31) & 1) == 1))  //could be saved
             //{
-            //    newv = qword(0) | v;
+            //    newv = qword($ffffffff00000000) | v;
             //    if ((naggedtheuseraboutwrongsignedvalue == false) && (getcurrentthreadid == mainthreadid))
             //    {
             //        naggedtheuseraboutwrongsignedvalueanswer = messagedlg(format(rsinvalid64bitvaluefor32bitfield, set::of(v, newv, eos)), mtwarning, set::of(mbyes, mbno, eos), 0) == mryes;
@@ -4041,11 +4043,11 @@ namespace SputnikAsm.LAssembler
                                 for (i = bytes.Length - 1; i >= RexPrefixLocation + 2; i--)
                                     bytes[i] = bytes[i - 2];
                                 bytes[RexPrefixLocation] = 0xc5; //2 byte VEX
-                                // todo get 2 byte vex working!
-                                //pvex2byte(&bytes[RexPrefixLocation + 1])->pp = (int) (Assembler.OpCodes[j].VexLeadingOpCode);
-                                //pvex2byte(&bytes[RexPrefixLocation + 1])->l = Assembler.OpCodes[j].VexL;
-                                //pvex2byte(&bytes[RexPrefixLocation + 1])->vvvv = vexvvvv;
-                                //pvex2byte(&bytes[RexPrefixLocation + 1])->r = RexR ? 0 : 1;
+                                var vex2 = new AVex2Byte(bytes, RexPrefixLocation + 1);
+                                vex2.Pp = (Byte)Assembler.OpCodes[j].VexLeadingOpCode;
+                                vex2.L = Assembler.OpCodes[j].VexL;
+                                vex2.Vvvv = (Byte)vexvvvv;
+                                vex2.R = (Byte)(RexR ? 0 : 1);
                                 if (RelativeAddressLocation != -1)
                                     RelativeAddressLocation += 2;
                             }
@@ -4056,15 +4058,15 @@ namespace SputnikAsm.LAssembler
                                 for (i = bytes.Length - 1; i >= RexPrefixLocation + 3; i--)
                                     bytes[i] = bytes[i - 3];
                                 bytes[RexPrefixLocation] = 0xc4; //3 byte VEX
-                                // todo get 3 byte vex working!
-                                //pvex3byte(&bytes[RexPrefixLocation + 1])->mmmmm = (int)(Assembler.OpCodes[j].VexLeadingOpCode);
-                                //pvex3byte(&bytes[RexPrefixLocation + 1])->b = RexB ? 0 : 1;
-                                //pvex3byte(&bytes[RexPrefixLocation + 1])->x = RexX ? 0 : 1;
-                                //pvex3byte(&bytes[RexPrefixLocation + 1])->r = RexR ? 0 : 1;
-                                //pvex3byte(&bytes[RexPrefixLocation + 1])->pp = (int)(Assembler.OpCodes[j].VexLeadingOpCode);
-                                //pvex3byte(&bytes[RexPrefixLocation + 1])->l = Assembler.OpCodes[j].VexL;
-                                //pvex3byte(&bytes[RexPrefixLocation + 1])->vvvv = vexvvvv;
-                                //pvex3byte(&bytes[RexPrefixLocation + 1])->w = RexW ? 1 : 0; //not inverted
+                                var vex3 = new AVex3Byte(bytes, RexPrefixLocation + 1);
+                                vex3.Mmmmm = (Byte)(Assembler.OpCodes[j].VexLeadingOpCode);
+                                vex3.B = (Byte)(RexB ? 0 : 1);
+                                vex3.X = (Byte)(RexX ? 0 : 1); 
+                                vex3.R = (Byte)(RexR ? 0 : 1);
+                                vex3.Pp = (Byte)(Assembler.OpCodes[j].VexLeadingOpCode);
+                                vex3.L = Assembler.OpCodes[j].VexL;
+                                vex3.Vvvv = (Byte)vexvvvv;
+                                vex3.W = (Byte)(RexW ? 1 : 0); //not inverted
                                 if (RelativeAddressLocation != -1)
                                     RelativeAddressLocation += 3;
                             }
@@ -4097,13 +4099,10 @@ namespace SputnikAsm.LAssembler
                             }
                             else
                             {
-                                unsafe
+                                using (var p = new UBytePtr(bytes.Buffer))
                                 {
-                                    fixed (byte* bt = bytes.Buffer)
-                                    {
-                                        var vp = (UInt32)(ActualDisplacement - (address + (UInt32)bytes.Length));
-                                        *(UInt32*)bt[RelativeAddressLocation] = vp;
-                                    }
+                                    var vp = (UInt32)(ActualDisplacement - (address + (UInt32)bytes.Length));
+                                    p.WriteUInt32(vp, RelativeAddressLocation);
                                 }
                             }
                         }
