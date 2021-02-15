@@ -4028,46 +4028,46 @@ namespace SputnikAsm.LAssembler
                             RexW = false;
                         if (Assembler.OpCodes[j].W1)
                             RexW = true;
-                        // if (Assembler.OpCodes[j].HasVex)
-                        // {
-                        //     //setup a vex prefix. Check if a 2 byte or 3 byte prefix is needed
-                        //     //3 byte is needed when mmmmmm(vexLeadingOpcode>1) or rex.X/B or W are used
-                        //     //vexOpcodeExtension: oe_F2; vexLeadingOpcode: lo_0f
-                        //     bigvex = (Assembler.OpCodes[j].VexLeadingOpCode > AVexLeadingOpCode.lo_0f) | RexB | RexX | RexW;
-                        //     if (bigvex == false)
-                        //     {
-                        //         //2byte vex
-                        //         bytes.SetLength(bytes.Length + 2);
-                        //         for (i = bytes.Length - 1; i >= RexPrefixLocation + 2; i--)
-                        //             bytes[i] = bytes[i - 2];
-                        //         bytes[RexPrefixLocation] = 0xc5; //2 byte VEX
-                        //         pvex2byte(&bytes[RexPrefixLocation + 1])->pp = (int)(Assembler.OpCodes[j].VexLeadingOpCode);
-                        //         pvex2byte(&bytes[RexPrefixLocation + 1])->l = Assembler.OpCodes[j].VexL;
-                        //         pvex2byte(&bytes[RexPrefixLocation + 1])->vvvv = vexvvvv;
-                        //         pvex2byte(&bytes[RexPrefixLocation + 1])->r = RexR ? 0 : 1;
-                        //         if (RelativeAddressLocation != -1)
-                        //             RelativeAddressLocation += 2;
-                        //     }
-                        //     else
-                        //     {
-                        //         //3byte vex
-                        //         bytes.SetLength(bytes.Length + 3);
-                        //         for (i = bytes.Length - 1; i >= RexPrefixLocation + 3; i--)
-                        //             bytes[i] = bytes[i - 3];
-                        //         bytes[RexPrefixLocation] = 0xc4; //3 byte VEX
-                        //         pvex3byte(&bytes[RexPrefixLocation + 1])->mmmmm = (int)(Assembler.OpCodes[j].VexLeadingOpCode);
-                        //         pvex3byte(&bytes[RexPrefixLocation + 1])->b = RexB ? 0 : 1;
-                        //         pvex3byte(&bytes[RexPrefixLocation + 1])->x = RexX ? 0 : 1;
-                        //         pvex3byte(&bytes[RexPrefixLocation + 1])->r = RexR ? 0 : 1;
-                        //         pvex3byte(&bytes[RexPrefixLocation + 1])->pp = (int)(Assembler.OpCodes[j].VexLeadingOpCode);
-                        //         pvex3byte(&bytes[RexPrefixLocation + 1])->l = Assembler.OpCodes[j].VexL;
-                        //         pvex3byte(&bytes[RexPrefixLocation + 1])->vvvv = vexvvvv;
-                        //         pvex3byte(&bytes[RexPrefixLocation + 1])->w = RexW ? 1 : 0; //not inverted
-                        //         if (RelativeAddressLocation != -1)
-                        //             RelativeAddressLocation += 3;
-                        //     }
-                        //     RexPrefix = 0;  //vex and rex can not co-exist
-                        // }
+                        if (Assembler.OpCodes[j].HasVex)
+                        {
+                            //setup a vex prefix. Check if a 2 byte or 3 byte prefix is needed
+                            //3 byte is needed when mmmmmm(vexLeadingOpcode>1) or rex.X/B or W are used
+                            //vexOpcodeExtension: oe_F2; vexLeadingOpcode: lo_0f
+                            bigvex = (Assembler.OpCodes[j].VexLeadingOpCode > AVexLeadingOpCode.lo_0f) | RexB | RexX | RexW;
+                            if (bigvex == false)
+                            {
+                                //2byte vex
+                                bytes.SetLength(bytes.Length + 2);
+                                for (i = bytes.Length - 1; i >= RexPrefixLocation + 2; i--)
+                                    bytes[i] = bytes[i - 2];
+                                bytes[RexPrefixLocation] = 0xc5; //2 byte VEX
+                                //pvex2byte(&bytes[RexPrefixLocation + 1])->pp = (int) (Assembler.OpCodes[j].VexLeadingOpCode);
+                                //pvex2byte(&bytes[RexPrefixLocation + 1])->l = Assembler.OpCodes[j].VexL;
+                                //pvex2byte(&bytes[RexPrefixLocation + 1])->vvvv = vexvvvv;
+                                //pvex2byte(&bytes[RexPrefixLocation + 1])->r = RexR ? 0 : 1;
+                                if (RelativeAddressLocation != -1)
+                                    RelativeAddressLocation += 2;
+                            }
+                            else
+                            {
+                                //3byte vex
+                                bytes.SetLength(bytes.Length + 3);
+                                for (i = bytes.Length - 1; i >= RexPrefixLocation + 3; i--)
+                                    bytes[i] = bytes[i - 3];
+                                bytes[RexPrefixLocation] = 0xc4; //3 byte VEX
+                                //pvex3byte(&bytes[RexPrefixLocation + 1])->mmmmm = (int)(Assembler.OpCodes[j].VexLeadingOpCode);
+                                //pvex3byte(&bytes[RexPrefixLocation + 1])->b = RexB ? 0 : 1;
+                                //pvex3byte(&bytes[RexPrefixLocation + 1])->x = RexX ? 0 : 1;
+                                //pvex3byte(&bytes[RexPrefixLocation + 1])->r = RexR ? 0 : 1;
+                                //pvex3byte(&bytes[RexPrefixLocation + 1])->pp = (int)(Assembler.OpCodes[j].VexLeadingOpCode);
+                                //pvex3byte(&bytes[RexPrefixLocation + 1])->l = Assembler.OpCodes[j].VexL;
+                                //pvex3byte(&bytes[RexPrefixLocation + 1])->vvvv = vexvvvv;
+                                //pvex3byte(&bytes[RexPrefixLocation + 1])->w = RexW ? 1 : 0; //not inverted
+                                if (RelativeAddressLocation != -1)
+                                    RelativeAddressLocation += 3;
+                            }
+                            RexPrefix = 0;  //vex and rex can not co-exist
+                        }
                         if (RexPrefix != 0)
                         {
                             if (RexPrefixLocation == -1)
