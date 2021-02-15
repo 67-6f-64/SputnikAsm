@@ -120,6 +120,10 @@ namespace SputnikAsm.LUtils
         }
         #endregion
         #region Copy
+        public static String Copy(String str)
+        {
+            return UStringUtils.Copy(str);
+        }
         public static String Copy(String str, int start, int length)
         {
             return UStringUtils.SubStr(str, start, length);

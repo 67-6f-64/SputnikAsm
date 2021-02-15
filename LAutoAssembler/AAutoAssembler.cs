@@ -1,5 +1,6 @@
 ﻿using System;
 using Sputnik.LString;
+using Sputnik.LUtils;
 using SputnikAsm.LAssembler;
 using SputnikAsm.LCollections;
 using SputnikAsm.LUtils;
@@ -122,6 +123,91 @@ namespace SputnikAsm.LAutoAssembler
             }
         }
         #endregion
+        #region UnlabeledLabels
+        public void UnlabeledLabels(ARefStringArray code)
+        {
+            //unlabeled label support
+            //For those reading the source, PLEASE , try not to code scripts like that
+            //the scripts you make look like crap, and are hard to read. (like using goto in a c app)
+            //this is just to make one guy happy
+            var labels = new AStringArray();
+            var i = 0;
+            while (i < code.Length)
+            {
+                var currentLine = code[i].Value;
+                if (currentLine.Length > 1)
+                {
+                    if (currentLine == "@@:")
+                    {
+                        currentLine = "RandomLabel" +
+                                      (Char) ('A' + UMathUtils.RandomByte(26)) +
+                                      (Char) ('A' + UMathUtils.RandomByte(26)) +
+                                      (Char) ('A' + UMathUtils.RandomByte(26)) +
+                                      (Char) ('A' + UMathUtils.RandomByte(26)) +
+                                      (Char) ('A' + UMathUtils.RandomByte(26)) +
+                                      (Char) ('A' + UMathUtils.RandomByte(26)) +
+                                      (Char) ('A' + UMathUtils.RandomByte(26)) +
+                                      (Char) ('A' + UMathUtils.RandomByte(26)) +
+                                      (Char) ('A' + UMathUtils.RandomByte(26)) +
+                                      ':';
+                        code[i].Value = currentLine;
+                        code.Insert(0, "label(" + AStringUtils.Copy(currentLine, 0, currentLine.Length - 1) + ')');
+                        i += 1;
+                        labels.SetLength(labels.Length + 1);
+                        labels.Last = AStringUtils.Copy(currentLine, 0, currentLine.Length - 1);
+                    }
+                    else if (currentLine[currentLine.Length - 1] == ':')
+                    {
+                        labels.SetLength(labels.Length + 1);
+                        labels.Last = AStringUtils.Copy(currentLine, 0, currentLine.Length - 1);
+                    }
+                }
+                i += 1;
+            }
+            //all label definitions have been filled in
+            //now change @F (forward) and @B (back) to the labels in front and behind
+            var lastSeenLabel = -1;
+            for (i = 0; i < code.Length; i++)
+            {
+                var currentLine = code[i].Value;
+                if (currentLine.Length > 1)
+                {
+                    if (currentLine[currentLine.Length - 1] == ':')
+                    {
+                        //find this in the array
+                        currentLine = AStringUtils.Copy(currentLine, 0, currentLine.Length - 1);
+                        for (var j = (lastSeenLabel + 1); j < labels.Length; j++)  //lastseenlabel+1 since it is ordered in definition
+                        {
+                            if (String.Equals(currentLine, labels[j], StringComparison.CurrentCultureIgnoreCase))
+                            {
+                                lastSeenLabel = j;
+                                break;
+                            }
+                        }
+                        currentLine += ':';
+                        //lastseenlabel is now updated to the current pos
+                    }
+                    else if (AStringUtils.Pos("@f", currentLine.ToLower()) != -1)   //forward
+                    {
+                        //forward label, so labels[lastseenlabel+1]
+                        if (lastSeenLabel + 1 >= labels.Length)
+                            throw new Exception(rsForwardJumpWithNoLabelDefined);
+                        currentLine = ReplaceToken(currentLine, "@f", labels[lastSeenLabel + 1]);
+                        currentLine = ReplaceToken(currentLine, "@F", labels[lastSeenLabel + 1]);
+                    }
+                    else if (AStringUtils.Pos("@b", currentLine.ToLower()) != -1)  //back
+                    {
+                        //forward label, so labels[lastseenlabel]
+                        if (lastSeenLabel == -1)
+                            throw new Exception(rsThereIsCodeDefinedWithoutSpecifyingTheAddressItBel);
+                        currentLine = ReplaceToken(currentLine, "@b", labels[lastSeenLabel]);
+                        currentLine = ReplaceToken(currentLine, "@B", labels[lastSeenLabel]);
+                    }
+                }
+                code[i].Value = currentLine;
+            }
+        }
+        #endregion
         #region GetEnableAndDisablePos
         public Boolean GetEnableAndDisablePos(ARefStringArray code, out int enablePos, out int disablePos)
         {
@@ -132,15 +218,12 @@ namespace SputnikAsm.LAutoAssembler
             {
                 var currentLine = code[i].Value;
                 var j = AStringUtils.Pos("//", currentLine);
-                if (j > 0)
+                if (j != -1)
                     currentLine = AStringUtils.Copy(currentLine, 1, j - 1);
-                while ((currentLine.Length > 0) && (currentLine[1] == ' '))
-                    currentLine = AStringUtils.Copy(currentLine, 2, currentLine.Length - 1);
-                while ((currentLine.Length > 0) && (currentLine[currentLine.Length - 1] == ' '))
-                    currentLine = AStringUtils.Copy(currentLine, 1, currentLine.Length - 1);
+                currentLine = currentLine.Trim();
                 if (currentLine.Length == 0)
                     continue;
-                if (AStringUtils.Copy(currentLine, 1, 2) == "//")
+                if (currentLine.StartsWith("//"))
                     continue; //skip
                 switch (currentLine.ToUpper())
                 {
@@ -247,7 +330,7 @@ namespace SputnikAsm.LAutoAssembler
         {
             var tokens = new ARefStringArray();
             Tokenize(input, tokens);
-            var result = "";
+            var result = input;
             for (var i = 0; i < tokens.Length; i++)
             {
                 if (tokens[i].Value != token)

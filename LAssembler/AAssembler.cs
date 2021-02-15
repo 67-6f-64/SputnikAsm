@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Diagnostics;
 using Sputnik.LUtils;
 using SputnikAsm.LAssembler.LEnums;
 using SputnikAsm.LCollections;
 using SputnikAsm.LUtils;
+using SputnikWin;
 
 namespace SputnikAsm.LAssembler
 {
@@ -42,11 +44,13 @@ namespace SputnikAsm.LAssembler
         public ASingleLineAssembler Assembler;
         #endregion
         #region Properties
+        public Boolean Is64Bit { get; }
         public int OpCodeCount => OpCodes.Length;
         #endregion
         #region Constructor
         public AAssembler()
         {
+            Is64Bit = UNativeWin.IsProcessId64Bit((IntPtr)Process.GetCurrentProcess().Id) == 1;
             OpCodes = AOpCodes.GetOpCodes();
             Parameter1 = 0;
             Parameter2 = 0;
