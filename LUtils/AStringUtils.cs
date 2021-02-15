@@ -1,40 +1,25 @@
 ﻿using System;
-using System.Linq;
 using Sputnik.LString;
 using Sputnik.LStructs;
 using Sputnik.LUtils;
 
-namespace Tack
+namespace SputnikAsm.LUtils
 {
-    public class TUtils
+    public class AStringUtils
     {
-        #region inarray
-        public static Boolean inarray(Byte needle, params Byte[] haystack)
-        {
-            if (haystack == null || haystack.Length <= 0)
-                return false;
-            return haystack.Any(c => needle == c);
-        }
-        public static Boolean inarray(Char needle, params Char[] haystack)
-        {
-            if (haystack == null || haystack.Length <= 0)
-                return false;
-            return haystack.Any(c => needle == c);
-        }
-        #endregion
-        #region pos
-        public static int pos(String needle, String str)
+        #region Pos
+        public static int Pos(String needle, String str)
         {
             return UStringUtils.IndexOf(str, needle);
         }
         #endregion
-        #region val
-        public static void val(String str, out Int32 v, out int code)
+        #region Val
+        public static void Val(String str, out Int32 v, out int code)
         {
-            val(str, out Int64 vv, out code);
+            Val(str, out Int64 vv, out code);
             v = (Int32)vv;
         }
-        public static void val(String str, out Int64 v, out int code)
+        public static void Val(String str, out Int64 v, out int code)
         {
             if (str.Length > 0 && str[0] == '$')
                 str = "0x" + str.Substring(1);
@@ -54,12 +39,12 @@ namespace Tack
                 v = 0;
             }
         }
-        public static void val(String str, out UInt32 v, out int code)
+        public static void Val(String str, out UInt32 v, out int code)
         {
-            val(str, out UInt64 vv, out code);
+            Val(str, out UInt64 vv, out code);
             v = (UInt32)vv;
         }
-        public static void val(String str, out UInt64 v, out int code)
+        public static void Val(String str, out UInt64 v, out int code)
         {
             if (str.Length > 0 && str[0] == '$')
                 str = "0x" + str.Substring(1);
@@ -79,7 +64,7 @@ namespace Tack
                 v = 0;
             }
         }
-        public static void val(String str, out Single v, out int code)
+        public static void Val(String str, out Single v, out int code)
         {
             if (str.Length > 0 && str[0] == '$')
                 str = "0x" + str.Substring(1);
@@ -99,7 +84,7 @@ namespace Tack
                 v = 0;
             }
         }
-        public static void val(String str, out Double v, out int code)
+        public static void Val(String str, out Double v, out int code)
         {
             if (str.Length > 0 && str[0] == '$')
                 str = "0x" + str.Substring(1);
@@ -120,14 +105,14 @@ namespace Tack
             }
         }
         #endregion
-        #region copy
-        public static String copy(String str, int start, int length)
+        #region Copy
+        public static String Copy(String str, int start, int length)
         {
             return UStringUtils.SubStr(str, start, length);
         }
         #endregion
-        #region inttohex
-        public static String inttohex(Int32 value, int digits)
+        #region IntToHex
+        public static String IntToHex(Int32 value, Int32 digits)
         {
             var hex = value.ToString("x");
             if (hex.Length < digits)
@@ -137,7 +122,7 @@ namespace Tack
             }
             return hex;
         }
-        public static String inttohex(Int64 value, int digits)
+        public static String IntToHex(Int64 value, Int32 digits)
         {
             var hex = value.ToString("x");
             if (hex.Length < digits)
@@ -147,7 +132,7 @@ namespace Tack
             }
             return hex;
         }
-        public static String inttohex(UInt32 value, int digits)
+        public static String IntToHex(UInt32 value, Int32 digits)
         {
             var hex = value.ToString("x");
             if (hex.Length < digits)
@@ -157,7 +142,7 @@ namespace Tack
             }
             return hex;
         }
-        public static String inttohex(UInt64 value, int digits)
+        public static String IntToHex(UInt64 value, Int32 digits)
         {
             var hex = value.ToString("x");
             if (hex.Length < digits)
@@ -167,35 +152,31 @@ namespace Tack
             }
             return hex;
         }
-        public static String inttohex(IntPtr value, int digits)
+        public static String IntToHex(IntPtr value, Int32 digits)
         {
-            return inttohex(value.ToInt64(), digits);
+            return IntToHex(value.ToInt64(), digits);
         }
-        public static String inttohex(UIntPtr value, int digits)
+        public static String IntToHex(UIntPtr value, Int32 digits)
         {
-            return inttohex(value.ToUInt64(), digits);
+            return IntToHex(value.ToUInt64(), digits);
         }
         #endregion
-        #region converthexstrtorealstr
-        public static String converthexstrtorealstr(String s)
+        #region ConvertHexStrToRealStr
+        public static String ConvertHexStrToRealStr(String s)
         {
             var result = "";
-            String ishex;
-            int start;
-            int i, j, k;
-            String bytes;
-            String t;
-            Single f;
-            Double d;
+            int i;
             if (s == "")
             {
                 result = s;
                 return result;
             }
-            start = 0;
-            ishex = "$";
+            var start = 0;
+            var isHex = "$";
             for (i = start; i < s.Length; i++)
             {
+                int k;
+                int j;
                 switch (s[i])
                 {
                     case '\'':
@@ -208,10 +189,10 @@ namespace Tack
                                 {
                                     if (s[j] == '\'' || s[j] == '"')
                                     {
-                                        bytes = copy(s, i + 1, j - (i + 1));
+                                        var bytes = Copy(s, i + 1, j - (i + 1));
                                         result = "$";
                                         for (k = bytes.Length - 1; k >= 0; k--)
-                                            result += inttohex((Byte)(bytes[k]), 2);
+                                            result += IntToHex((Byte)(bytes[k]), 2);
                                         return result; //this is it, no further process required, or appreciated...
                                     }
                                 }
@@ -220,19 +201,20 @@ namespace Tack
                         break;
                     case '#':
                         {
-                            ishex = "";
+                            isHex = "";
                             start = 1;
                             continue;
                         }
                     case '(':
                         {
-                            if (copy(s, 0, 5) == "(INT)")
+                            String t;
+                            if (Copy(s, 0, 5) == "(INT)")
                             {
-                                t = copy(s, 5, s.Length);
-                                val(t, out k, out j);
+                                t = Copy(s, 5, s.Length);
+                                Val(t, out k, out j);
                                 if (j == 0)
                                 {
-                                    result = "$" + inttohex(k, 4);
+                                    result = "$" + IntToHex(k, 4);
                                     switch (s[0])
                                     {
                                         case '-':
@@ -245,17 +227,17 @@ namespace Tack
                                     return result;
                                 }
                             }
-                            if (copy(s, 0, 8) == "(DOUBLE)")
+                            if (Copy(s, 0, 8) == "(DOUBLE)")
                             {
-                                t = copy(s, 8, s.Length);
-                                val(t, out d, out j);
+                                t = Copy(s, 8, s.Length);
+                                Val(t, out Double d, out j);
                                 if (j == 0)
                                 {
                                     var x = new UBitUnion
                                     {
                                         Double = d
                                     };
-                                    result = "$" + inttohex(x.Int64, 8);
+                                    result = "$" + IntToHex(x.Int64, 8);
                                     switch (s[0])
                                     {
                                         case '-':
@@ -268,17 +250,17 @@ namespace Tack
                                     return result;
                                 }
                             }
-                            if (copy(s, 0, 7) == "(FLOAT)")
+                            if (Copy(s, 0, 7) == "(FLOAT)")
                             {
-                                t = copy(s, 7, s.Length);
-                                val(t, out f, out j);
+                                t = Copy(s, 7, s.Length);
+                                Val(t, out Single f, out j);
                                 if (j == 0)
                                 {
                                     var x = new UBitUnion
                                     {
                                         Single = f
                                     };
-                                    result = "$" + inttohex(x.Int32, 8);
+                                    result = "$" + IntToHex(x.Int32, 8);
                                     switch (s[0])
                                     {
                                         case '-':
@@ -297,13 +279,13 @@ namespace Tack
                 switch (s[0])
                 {
                     case '-':
-                        result = "-" + ishex + copy(s, start + 1, s.Length);
+                        result = "-" + isHex + Copy(s, start + 1, s.Length);
                         break;
                     case '+':
-                        result = "+" + ishex + copy(s, start + 1, s.Length);
+                        result = "+" + isHex + Copy(s, start + 1, s.Length);
                         break;
                     default:
-                        result = ishex + copy(s, start, s.Length);
+                        result = isHex + Copy(s, start, s.Length);
                         break;
                 }
                 return result;
@@ -311,15 +293,20 @@ namespace Tack
             return result;
         }
         #endregion
-        public static int hexstrtoint(string s)
+        #region HexStrToInt
+        public static Int32 HexStrToInt(String s)
         {
-            return strtoint(converthexstrtorealstr(s));
+            return StrToInt(ConvertHexStrToRealStr(s));
         }
-        public static Int64 hexstrtoint64(string s)
+        #endregion
+        #region HexStrToInt64
+        public static Int64 HexStrToInt64(String s)
         {
-            return (Int64)strtoqwordex(converthexstrtorealstr(s));
+            return (Int64)StrToQWordEx(ConvertHexStrToRealStr(s));
         }
-        public static UInt64 strtoqwordex(string s)
+        #endregion
+        #region StrToQWordEx
+        public static UInt64 StrToQWordEx(String s)
         {
             s = s.Trim();
             if (s.Length == 0)
@@ -328,37 +315,46 @@ namespace Tack
             switch (s[1] == '-')
             {
                 case true:
-                    result = (UInt64)strtoint64(s);
+                    result = (UInt64)StrToInt64(s);
                     break;
                 case false:
-                    result = strtoqword(s);
+                    result = StrToQWord(s);
                     break;
             }
             return result;
         }
-        public static Int32 strtoint(string str)
+        #endregion
+        #region StrToInt
+        public static Int32 StrToInt(String str)
         {
             if (str.Length > 0 && str[0] == '$')
                 str = "0x" + str.Substring(1);
             return UStringUtils.StringToInt32(str);
         }
-        public static Int64 strtoint64(string str)
+        #endregion
+        #region StrToInt64
+        public static Int64 StrToInt64(String str)
         {
             if (str.Length > 0 && str[0] == '$')
                 str = "0x" + str.Substring(1);
             return UStringUtils.StringToInt64(str);
         }
-        public static UInt32 strtodword(string str)
+        #endregion
+        #region StrToDWord
+        public static UInt32 StrToDWord(String str)
         {
             if (str.Length > 0 && str[0] == '$')
                 str = "0x" + str.Substring(1);
             return UStringUtils.StringToUInt32(str);
         }
-        public static UInt64 strtoqword(string str)
+        #endregion
+        #region StrToQWord
+        public static UInt64 StrToQWord(String str)
         {
             if (str.Length > 0 && str[0] == '$')
                 str = "0x" + str.Substring(1);
             return UStringUtils.StringToUInt64(str);
         }
+        #endregion
     }
 }

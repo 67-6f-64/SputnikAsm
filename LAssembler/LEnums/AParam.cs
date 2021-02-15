@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Tack.LAutoAssembler
+﻿namespace SputnikAsm.LAssembler.LEnums
 {
-    public enum tparam
+    public enum AParam
     {
         par_noparam,
         par_1,

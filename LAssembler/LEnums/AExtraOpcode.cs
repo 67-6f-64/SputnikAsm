@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Tack.LAutoAssembler
+﻿namespace SputnikAsm.LAssembler.LEnums
 {
-    public enum textraopcode
+    public enum AExtraOpCode
     {
         eo_none,
         eo_reg0, eo_reg1, eo_reg2, eo_reg3, eo_reg4, eo_reg5, eo_reg6, eo_reg7, // /digit

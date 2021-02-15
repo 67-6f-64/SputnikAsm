@@ -1,12 +1,15 @@
 ﻿using System;
 using Sputnik.LEngine;
+using SputnikAsm.LAssembler.LCollections;
+using SputnikAsm.LAssembler.LEnums;
+using SputnikAsm.LUtils;
 
-namespace Tack.LAutoAssembler
+namespace SputnikAsm.LAssembler
 {
-    public class TSingleLineAssembler
+    public class ASingleLineAssembler
     {
         #region Variables
-        public AutoAssembler Assembler;
+        public AAssembler Assembler;
         public Byte rexprefix;
         public int rexprefixlocation;
         public int relativeaddresslocation;
@@ -63,7 +66,7 @@ namespace Tack.LAutoAssembler
         }
         #endregion
         #region Constructor
-        public TSingleLineAssembler(AutoAssembler assembler)
+        public ASingleLineAssembler(AAssembler assembler)
         {
             Assembler = assembler;
             rexprefix = 0;
@@ -123,7 +126,7 @@ namespace Tack.LAutoAssembler
             createsibscaleindex(ref tmp, reg);
             sib[index] = tmp;
         }
-        public void createsibscaleindex(tassemblerbytes sib, int index, string reg)
+        public void createsibscaleindex(AAssemblerBytes sib, int index, string reg)
         {
             var tmp = sib[index];
             createsibscaleindex(ref tmp, reg);
@@ -132,47 +135,47 @@ namespace Tack.LAutoAssembler
         public void createsibscaleindex(ref byte sib, string reg)
         //var i2,i4,i8: integer;
         {
-            if (TUtils.pos("*2", reg) != -1)
+            if (AStringUtils.Pos("*2", reg) != -1)
                 Assembler.setsibscale(ref sib, 1);
             else
-            if (TUtils.pos("*4", reg) != -1)
+            if (AStringUtils.Pos("*4", reg) != -1)
                 Assembler.setsibscale(ref sib, 2);
             else
-            if (TUtils.pos("*8", reg) != -1)
+            if (AStringUtils.Pos("*8", reg) != -1)
                 Assembler.setsibscale(ref sib, 3);
             else Assembler.setsibscale(ref sib, 0);
 
             if (Assembler.symhandler.process.is64bit)
             {
-                if (TUtils.pos("RAX", reg) != -1) setsibindex(ref sib, 0);
-                else if (TUtils.pos("RCX", reg) != -1) setsibindex(ref sib, 1);
-                else if (TUtils.pos("RDX", reg) != -1) setsibindex(ref sib, 2);
-                else if (TUtils.pos("RBX", reg) != -1) setsibindex(ref sib, 3);
-                else if ((reg == "") || (TUtils.pos("RSP", reg) != -1)) setsibindex(ref sib, 4);
-                else if (TUtils.pos("RBP", reg) != -1) setsibindex(ref sib, 5);
-                else if (TUtils.pos("RSI", reg) != -1) setsibindex(ref sib, 6);
-                else if (TUtils.pos("RDI", reg) != -1) setsibindex(ref sib, 7);
-                else if (TUtils.pos("R8", reg) != -1) setsibindex(ref sib, 8);
-                else if (TUtils.pos("R9", reg) != -1) setsibindex(ref sib, 9);
-                else if (TUtils.pos("R10", reg) != -1) setsibindex(ref sib, 10);
-                else if (TUtils.pos("R11", reg) != -1) setsibindex(ref sib, 11);
-                else if (TUtils.pos("R12", reg) != -1) setsibindex(ref sib, 12);
-                else if (TUtils.pos("R13", reg) != -1) setsibindex(ref sib, 13);
-                else if (TUtils.pos("R14", reg) != -1) setsibindex(ref sib, 14);
-                else if (TUtils.pos("R15", reg) != -1) setsibindex(ref sib, 15);
+                if (AStringUtils.Pos("RAX", reg) != -1) setsibindex(ref sib, 0);
+                else if (AStringUtils.Pos("RCX", reg) != -1) setsibindex(ref sib, 1);
+                else if (AStringUtils.Pos("RDX", reg) != -1) setsibindex(ref sib, 2);
+                else if (AStringUtils.Pos("RBX", reg) != -1) setsibindex(ref sib, 3);
+                else if ((reg == "") || (AStringUtils.Pos("RSP", reg) != -1)) setsibindex(ref sib, 4);
+                else if (AStringUtils.Pos("RBP", reg) != -1) setsibindex(ref sib, 5);
+                else if (AStringUtils.Pos("RSI", reg) != -1) setsibindex(ref sib, 6);
+                else if (AStringUtils.Pos("RDI", reg) != -1) setsibindex(ref sib, 7);
+                else if (AStringUtils.Pos("R8", reg) != -1) setsibindex(ref sib, 8);
+                else if (AStringUtils.Pos("R9", reg) != -1) setsibindex(ref sib, 9);
+                else if (AStringUtils.Pos("R10", reg) != -1) setsibindex(ref sib, 10);
+                else if (AStringUtils.Pos("R11", reg) != -1) setsibindex(ref sib, 11);
+                else if (AStringUtils.Pos("R12", reg) != -1) setsibindex(ref sib, 12);
+                else if (AStringUtils.Pos("R13", reg) != -1) setsibindex(ref sib, 13);
+                else if (AStringUtils.Pos("R14", reg) != -1) setsibindex(ref sib, 14);
+                else if (AStringUtils.Pos("R15", reg) != -1) setsibindex(ref sib, 15);
                 else
                     throw new Exception("WTF is a " + reg);
             }
             else
             {
-                if (TUtils.pos("EAX", reg) != -1) setsibindex(ref sib, 0);
-                else if (TUtils.pos("ECX", reg) != -1) setsibindex(ref sib, 1);
-                else if (TUtils.pos("EDX", reg) != -1) setsibindex(ref sib, 2);
-                else if (TUtils.pos("EBX", reg) != -1) setsibindex(ref sib, 3);
-                else if ((reg == "") || (TUtils.pos("ESP", reg) != -1)) setsibindex(ref sib, 4);
-                else if (TUtils.pos("EBP", reg) != -1) setsibindex(ref sib, 5);
-                else if (TUtils.pos("ESI", reg) != -1) setsibindex(ref sib, 6);
-                else if (TUtils.pos("EDI", reg) != -1) setsibindex(ref sib, 7);
+                if (AStringUtils.Pos("EAX", reg) != -1) setsibindex(ref sib, 0);
+                else if (AStringUtils.Pos("ECX", reg) != -1) setsibindex(ref sib, 1);
+                else if (AStringUtils.Pos("EDX", reg) != -1) setsibindex(ref sib, 2);
+                else if (AStringUtils.Pos("EBX", reg) != -1) setsibindex(ref sib, 3);
+                else if ((reg == "") || (AStringUtils.Pos("ESP", reg) != -1)) setsibindex(ref sib, 4);
+                else if (AStringUtils.Pos("EBP", reg) != -1) setsibindex(ref sib, 5);
+                else if (AStringUtils.Pos("ESI", reg) != -1) setsibindex(ref sib, 6);
+                else if (AStringUtils.Pos("EDI", reg) != -1) setsibindex(ref sib, 7);
                 else
                     throw new Exception("WTF is a " + reg);
             }
@@ -185,7 +188,7 @@ namespace Tack.LAutoAssembler
             setsibindex(ref tmp, i);
             sib[index] = tmp;
         }
-        public void setsibindex(tassemblerbytes sib, int index, byte i)
+        public void setsibindex(AAssemblerBytes sib, int index, byte i)
         {
             var tmp = sib[index];
             setsibindex(ref tmp, i);
@@ -205,7 +208,7 @@ namespace Tack.LAutoAssembler
             setsibbase(ref tmp, i);
             sib[index] = tmp;
         }
-        public void setsibbase(tassemblerbytes sib, int index, byte i)
+        public void setsibbase(AAssemblerBytes sib, int index, byte i)
         {
             var tmp = sib[index];
             setsibbase(ref tmp, i);
@@ -225,7 +228,7 @@ namespace Tack.LAutoAssembler
             setrm(ref tmp, i);
             sib[index] = tmp;
         }
-        public void setrm(tassemblerbytes sib, int index, byte i)
+        public void setrm(AAssemblerBytes sib, int index, byte i)
         {
             var tmp = sib[index];
             setrm(ref tmp, i);
@@ -239,17 +242,17 @@ namespace Tack.LAutoAssembler
         }
         #endregion
         #region createmodrm
-        public Boolean createmodrm(tassemblerbytes bytes, int reg, string param)
+        public Boolean createmodrm(AAssemblerBytes bytes, int reg, string param)
         {
             string address;
-            var modrm = new tassemblerbytes();
+            var modrm = new AAssemblerBytes();
             int i, j;
             modrm.EnsureCapacity(1);
             modrm[0] = 0;
-            var brackStart = TUtils.pos("[", param);
-            var brackEnd = TUtils.pos("]", param);
+            var brackStart = AStringUtils.Pos("[", param);
+            var brackEnd = AStringUtils.Pos("]", param);
             if (brackStart != -1 && brackEnd != -1)
-                address = TUtils.copy(param, brackStart + 1, brackEnd - brackStart - 1);
+                address = AStringUtils.Copy(param, brackStart + 1, brackEnd - brackStart - 1);
             else
                 address = "";
             if (address == "")
@@ -313,10 +316,10 @@ namespace Tack.LAutoAssembler
         }
         #endregion
         #region addopcode
-        public void addopcode(tassemblerbytes bytes, int i)
+        public void addopcode(AAssemblerBytes bytes, int i)
         {
             rexprefixlocation = bytes.Length;
-            if (TUtils.inarray(Assembler.opcodes[i].bt1, 0x66, 0xf2, 0xf3))
+            if (AArrayUtils.InArray(Assembler.opcodes[i].bt1, 0x66, 0xf2, 0xf3))
                 rexprefixlocation += 1; //mandatory prefixes come before the rex byte
             Assembler.add(bytes, Assembler.opcodes[i].bt1);
             if (Assembler.opcodes[i].bytes > 1)
@@ -326,10 +329,10 @@ namespace Tack.LAutoAssembler
         }
         #endregion
         #region setmodrm
-        public void setmodrm(tassemblerbytes modrm, string address, int offset)
+        public void setmodrm(AAssemblerBytes modrm, string address, int offset)
         {
             var reg = new UAv();
-            var splitup = new ttokens();
+            var splitup = new ATokens();
             var regs = "";
             var reg1 = "";
             var reg2 = "";
@@ -351,16 +354,16 @@ namespace Tack.LAutoAssembler
                 if (i == address.Length)
                 {
                     splitup.SetLength(splitup.Length + 1);
-                    splitup[splitup.Length - 1] = TUtils.copy(address, start, (i + 1) - start);
+                    splitup[splitup.Length - 1] = AStringUtils.Copy(address, start, (i + 1) - start);
                 }
-                else if (!TUtils.inarray(address[i], '+', '-'))
+                else if (!AArrayUtils.InArray(address[i], '+', '-'))
                     go = true;
-                else if (TUtils.inarray(address[i], '+', '-'))
+                else if (AArrayUtils.InArray(address[i], '+', '-'))
                 {
                     if (go)
                     {
                         splitup.SetLength(splitup.Length + 1);
-                        splitup[splitup.Length - 1] = TUtils.copy(address, start, i - start);
+                        splitup[splitup.Length - 1] = AStringUtils.Copy(address, start, i - start);
                         start = i; //copy the + or - sign
                         go = false;
                     }
@@ -373,7 +376,7 @@ namespace Tack.LAutoAssembler
                 increase = true;
                 for (j = 0; j <= splitup[i].Length; j++)
                 {
-                    if (j < splitup[i].Length && TUtils.inarray(splitup[i][j], '+', '-'))
+                    if (j < splitup[i].Length && AArrayUtils.InArray(splitup[i][j], '+', '-'))
                     {
                         if (splitup[i][j] == '-')
                             increase = !increase;
@@ -381,18 +384,18 @@ namespace Tack.LAutoAssembler
                     else
                     {
                         if (j == splitup[i].Length)
-                            temp = TUtils.copy(splitup[i], j, splitup[i].Length - j + 1);
+                            temp = AStringUtils.Copy(splitup[i], j, splitup[i].Length - j + 1);
                         else
-                            temp = TUtils.copy(splitup[i], j, splitup[i].Length - j + 1);
+                            temp = AStringUtils.Copy(splitup[i], j, splitup[i].Length - j + 1);
                         break;
                     }
                 }
                 if (temp.Length == 0)
                     throw new Exception("I don't understand what you mean with " + address);
                 if (temp[0] == '$')
-                    TUtils.val(temp, out test, out j);
+                    AStringUtils.Val(temp, out test, out j);
                 else
-                    TUtils.val("0x" + temp, out test, out j);
+                    AStringUtils.Val("0x" + temp, out test, out j);
                 if (j > 0)  //a register or a stupid user
                     regs = regs + temp + '+';
                 else
@@ -405,7 +408,7 @@ namespace Tack.LAutoAssembler
                 }
             }
             if (regs.Length > 0)
-                regs = TUtils.copy(regs, 0, regs.Length - 1);
+                regs = AStringUtils.Copy(regs, 0, regs.Length - 1);
             //regs and disp are now set
             //compare the regs with posibilities     (only 1 time +, and only 1 time *)
             j = 0; k = 0;
@@ -426,10 +429,10 @@ namespace Tack.LAutoAssembler
                 Assembler.setmod(modrm, 0, 2);
             reg1 = "";
             reg2 = "";
-            if (TUtils.pos("+", regs) != -1)
+            if (AStringUtils.Pos("+", regs) != -1)
             {
-                reg1 = TUtils.copy(regs, 1, TUtils.pos("+", regs) - 1);
-                reg2 = TUtils.copy(regs, TUtils.pos("+", regs) + 1, regs.Length);
+                reg1 = AStringUtils.Copy(regs, 1, AStringUtils.Pos("+", regs) - 1);
+                reg2 = AStringUtils.Copy(regs, AStringUtils.Pos("+", regs) + 1, regs.Length);
                 k = 2;
             }
             else
@@ -440,7 +443,7 @@ namespace Tack.LAutoAssembler
             reg[-1] = new USv(reg1);
             reg[1] = new USv(reg2);
             k = 1;
-            if ((reg1 != "") && (reg2 == "") && (TUtils.pos("*", reg1) != -1))
+            if ((reg1 != "") && (reg2 == "") && (AStringUtils.Pos("*", reg1) != -1))
             {
                 Assembler.setmod(modrm, 0, 0);
                 setrm(modrm, 0, 4);
@@ -768,9 +771,9 @@ namespace Tack.LAutoAssembler
         }
         #endregion
         #region assemble
-        public Boolean assemble(string opcode, UInt64 address, tassemblerbytes bytes, tassemblerpreference assemblerpreference = tassemblerpreference.apnone, Boolean skiprangecheck = false)
+        public Boolean assemble(string opcode, UInt64 address, AAssemblerBytes bytes, AAssemblerPreference assemblerpreference = AAssemblerPreference.apnone, Boolean skiprangecheck = false)
         {
-            ttokens tokens = new ttokens();
+            ATokens tokens = new ATokens();
             var i = 0;
             var j = 0;
             var k = 0;
@@ -779,9 +782,9 @@ namespace Tack.LAutoAssembler
             UInt64 v2 = 0;
             var mnemonic = 0;
             var nroftokens = 0;
-            ttokentype paramtype1 = ttokentype.ttinvalidtoken;
-            ttokentype paramtype2 = ttokentype.ttinvalidtoken;
-            ttokentype paramtype3 = ttokentype.ttinvalidtoken;
+            ATokenType paramtype1 = ATokenType.ttinvalidtoken;
+            ATokenType paramtype2 = ATokenType.ttinvalidtoken;
+            ATokenType paramtype3 = ATokenType.ttinvalidtoken;
             var parameter1 = "";
             var parameter2 = "";
             var parameter3 = "";
@@ -811,17 +814,17 @@ namespace Tack.LAutoAssembler
                     if (tokens[i][0] == '\'')  //string
                     {
                         //find the original non uppercase stringpos in the opcode
-                        j = TUtils.pos(tokens[i], opcode.ToUpper());
+                        j = AStringUtils.Pos(tokens[i], opcode.ToUpper());
                         if (j > 0)
                         {
-                            tempstring = TUtils.copy(opcode, j, tokens[i].Length);
+                            tempstring = AStringUtils.Copy(opcode, j, tokens[i].Length);
                             Assembler.addstring(bytes, tempstring);
                         }
                         else
                             Assembler.addstring(bytes, tokens[i]); //lets try to save face...
                     }
                     else
-                        Assembler.add(bytes, (Byte)TUtils.strtoint("$" + tokens[i]));
+                        Assembler.add(bytes, (Byte)AStringUtils.StrToInt("$" + tokens[i]));
                 }
                 result = true;
                 return result;
@@ -863,17 +866,17 @@ namespace Tack.LAutoAssembler
                 parameter3 = tokens[mnemonic + 3];
             else
                 parameter3 = "";
-            overrideshort = TUtils.pos("SHORT ", parameter1) > 0;
-            overridelong = (TUtils.pos("LONG ", parameter1) > 0);
+            overrideshort = AStringUtils.Pos("SHORT ", parameter1) > 0;
+            overridelong = (AStringUtils.Pos("LONG ", parameter1) > 0);
             if (Assembler.symhandler.process.is64bit)
-                overridefar = (TUtils.pos("FAR ", parameter1) > 0);
+                overridefar = (AStringUtils.Pos("FAR ", parameter1) > 0);
             else
-                overridelong = overridelong | (TUtils.pos("FAR ", parameter1) > 0);
-            if (!(overrideshort | overridelong) & (assemblerpreference != tassemblerpreference.apnone))  //no override chooce by the user and not a normal preference
+                overridelong = overridelong | (AStringUtils.Pos("FAR ", parameter1) > 0);
+            if (!(overrideshort | overridelong) & (assemblerpreference != AAssemblerPreference.apnone))  //no override chooce by the user and not a normal preference
             {
-                if (assemblerpreference == tassemblerpreference.aplong)
+                if (assemblerpreference == AAssemblerPreference.aplong)
                     overridelong = true;
-                else if (assemblerpreference == tassemblerpreference.apshort)
+                else if (assemblerpreference == AAssemblerPreference.apshort)
                     overrideshort = true;
             }
             paramtype1 = Assembler.gettokentype(ref parameter1, parameter2);
@@ -881,111 +884,111 @@ namespace Tack.LAutoAssembler
             paramtype3 = Assembler.gettokentype(ref parameter3, "");
             if (Assembler.symhandler.process.is64bit)
             {
-                if (paramtype1 == ttokentype.ttregister8bitwithprefix)
+                if (paramtype1 == ATokenType.ttregister8bitwithprefix)
                 {
                     rexprefix = (Byte)(rexprefix | 0x40); //it at least has a prefix now
-                    paramtype1 = ttokentype.ttregister8bit;
+                    paramtype1 = ATokenType.ttregister8bit;
                 }
-                if (paramtype2 == ttokentype.ttregister8bitwithprefix)
+                if (paramtype2 == ATokenType.ttregister8bitwithprefix)
                 {
                     rexprefix = (Byte)(rexprefix | 0x40); //it at least has a prefix now
-                    paramtype2 = ttokentype.ttregister8bit;
+                    paramtype2 = ATokenType.ttregister8bit;
                 }
-                if (paramtype1 == ttokentype.ttregister64bit)
+                if (paramtype1 == ATokenType.ttregister64bit)
                 {
                     rex_w = true;   //64-bit opperand
-                    paramtype1 = ttokentype.ttregister32bit; //we can use the normal 32-bit interpretation assembler code
+                    paramtype1 = ATokenType.ttregister32bit; //we can use the normal 32-bit interpretation assembler code
                 }
-                if (paramtype2 == ttokentype.ttregister64bit)
+                if (paramtype2 == ATokenType.ttregister64bit)
                 {
                     rex_w = true;
-                    paramtype2 = ttokentype.ttregister32bit;
-                    if (paramtype1 == ttokentype.ttmemorylocation64)
-                        paramtype1 = ttokentype.ttmemorylocation32;
+                    paramtype2 = ATokenType.ttregister32bit;
+                    if (paramtype1 == ATokenType.ttmemorylocation64)
+                        paramtype1 = ATokenType.ttmemorylocation32;
                 }
-                if (paramtype1 == ttokentype.ttmemorylocation64)
+                if (paramtype1 == ATokenType.ttmemorylocation64)
                 {
                     rex_w = true;
-                    paramtype1 = ttokentype.ttmemorylocation32;
+                    paramtype1 = ATokenType.ttmemorylocation32;
                 }
-                if (paramtype2 == ttokentype.ttmemorylocation64)
+                if (paramtype2 == ATokenType.ttmemorylocation64)
                 {
                     rex_w = true;
-                    paramtype2 = ttokentype.ttmemorylocation32;
+                    paramtype2 = ATokenType.ttmemorylocation32;
                 }
             }
             if (tokens[0] == "DW")
             {
                 for (i = 1; i <= nroftokens - 1; i++)
-                    Assembler.addword(bytes, (UInt16)TUtils.hexstrtoint(tokens[i]));
+                    Assembler.addword(bytes, (UInt16)AStringUtils.HexStrToInt(tokens[i]));
                 result = true;
                 return result;
             }
             if (tokens[0] == "DD")
             {
                 for (i = 1; i <= nroftokens - 1; i++)
-                    Assembler.adddword(bytes, (UInt16) TUtils.hexstrtoint(tokens[i]));
+                    Assembler.adddword(bytes, (UInt16) AStringUtils.HexStrToInt(tokens[i]));
                 result = true;
                 return result;
             }
             if (tokens[0] == "DQ")
             {
                 for (i = 1; i <= nroftokens - 1; i++)
-                    Assembler.addqword(bytes, (UInt16)TUtils.hexstrtoint64(tokens[i]));
+                    Assembler.addqword(bytes, (UInt16)AStringUtils.HexStrToInt64(tokens[i]));
                 result = true;
                 return result;
             }
-            if ((paramtype1 >= ttokentype.ttmemorylocation) && (paramtype1 <= ttokentype.ttmemorylocation128))
+            if ((paramtype1 >= ATokenType.ttmemorylocation) && (paramtype1 <= ATokenType.ttmemorylocation128))
             {
-                if (TUtils.pos("ES:", parameter1) > 0)
+                if (AStringUtils.Pos("ES:", parameter1) > 0)
                 {
                     bytes.SetLength(bytes.Length + 1);
                     bytes[bytes.Length - 1] = 0x26;
                 }
-                if (TUtils.pos("CS:", parameter1) > 0)
+                if (AStringUtils.Pos("CS:", parameter1) > 0)
                 {
                     bytes.SetLength(bytes.Length + 1);
                     bytes[bytes.Length - 1] = 0x2e;
                 }
-                if (TUtils.pos("SS:", parameter1) > 0)
+                if (AStringUtils.Pos("SS:", parameter1) > 0)
                 {
                     bytes.SetLength(bytes.Length + 1);
                     bytes[bytes.Length - 1] = 0x36;
                 }
-                if (TUtils.pos("FS:", parameter1) > 0)
+                if (AStringUtils.Pos("FS:", parameter1) > 0)
                 {
                     bytes.SetLength(bytes.Length + 1);
                     bytes[bytes.Length - 1] = 0x64;
                 }
-                if (TUtils.pos("GS:", parameter1) > 0)
+                if (AStringUtils.Pos("GS:", parameter1) > 0)
                 {
                     bytes.SetLength(bytes.Length + 1);
                     bytes[bytes.Length - 1] = 0x65;
                 }
             }
-            if ((paramtype2 >= ttokentype.ttmemorylocation) && (paramtype2 <= ttokentype.ttmemorylocation128))
+            if ((paramtype2 >= ATokenType.ttmemorylocation) && (paramtype2 <= ATokenType.ttmemorylocation128))
             {
-                if (TUtils.pos("ES:", parameter2) > 0)
+                if (AStringUtils.Pos("ES:", parameter2) > 0)
                 {
                     bytes.SetLength(bytes.Length + 1);
                     bytes[bytes.Length - 1] = 0x26;
                 }
-                if (TUtils.pos("CS:", parameter2) > 0)
+                if (AStringUtils.Pos("CS:", parameter2) > 0)
                 {
                     bytes.SetLength(bytes.Length + 1);
                     bytes[bytes.Length - 1] = 0x2e;
                 }
-                if (TUtils.pos("SS:", parameter2) > 0)
+                if (AStringUtils.Pos("SS:", parameter2) > 0)
                 {
                     bytes.SetLength(bytes.Length + 1);
                     bytes[bytes.Length - 1] = 0x36;
                 }
-                if (TUtils.pos("FS:", parameter2) > 0)
+                if (AStringUtils.Pos("FS:", parameter2) > 0)
                 {
                     bytes.SetLength(bytes.Length + 1);
                     bytes[bytes.Length - 1] = 0x64;
                 }
-                if (TUtils.pos("GS:", parameter2) > 0)
+                if (AStringUtils.Pos("GS:", parameter2) > 0)
                 {
                     bytes.SetLength(bytes.Length + 1);
                     bytes[bytes.Length - 1] = 0x65;
@@ -995,36 +998,36 @@ namespace Tack.LAutoAssembler
             v2 = 0;
             vtype = 0;
             v2type = 0;
-            if (paramtype1 == ttokentype.ttvalue)
+            if (paramtype1 == ATokenType.ttvalue)
             {
-                v = TUtils.strtoqwordex(parameter1);
+                v = AStringUtils.StrToQWordEx(parameter1);
                 vtype = Assembler.stringvaluetotype(parameter1);
             }
-            if (paramtype2 == ttokentype.ttvalue)
+            if (paramtype2 == ATokenType.ttvalue)
             {
-                if (paramtype1 != ttokentype.ttvalue)
+                if (paramtype1 != ATokenType.ttvalue)
                 {
-                    v = TUtils.strtoqwordex(parameter2);
+                    v = AStringUtils.StrToQWordEx(parameter2);
                     vtype = Assembler.stringvaluetotype(parameter2);
                 }
                 else
                 {
                     //first v field is already in use, use v2
-                    v2 = TUtils.strtoqwordex(parameter2);
+                    v2 = AStringUtils.StrToQWordEx(parameter2);
                     v2type = Assembler.stringvaluetotype(parameter2);
                 }
             }
-            if (paramtype3 == ttokentype.ttvalue)
+            if (paramtype3 == ATokenType.ttvalue)
             {
-                if (paramtype1 != ttokentype.ttvalue)
+                if (paramtype1 != ATokenType.ttvalue)
                 {
-                    v = TUtils.strtoqwordex(parameter3);
+                    v = AStringUtils.StrToQWordEx(parameter3);
                     vtype = Assembler.stringvaluetotype(parameter3);
                 }
                 else
                 {
                     //first v field is already in use, use v2
-                    v2 = TUtils.strtoqwordex(parameter3);
+                    v2 = AStringUtils.StrToQWordEx(parameter3);
                     v2type = Assembler.stringvaluetotype(parameter3);
                 }
             }
@@ -1037,7 +1040,7 @@ namespace Tack.LAutoAssembler
                 //check if this is a jmp or call with relative value
                 if ((tokens[mnemonic] == "JMP") || (tokens[mnemonic] == "CALL"))
                 {
-                    if (paramtype1 == ttokentype.ttvalue)
+                    if (paramtype1 == ATokenType.ttvalue)
                     {
                         //if the relative distance is too big, then replace with with jmp/call [2], jmp+8, DQ address
                         if (address > v)
@@ -1088,16 +1091,16 @@ namespace Tack.LAutoAssembler
                 }
                 switch (Assembler.opcodes[j].paramtype1)
                 {
-                    case tparam.par_noparam:
+                    case AParam.par_noparam:
                         if (parameter1 == "")      //no param
                         {
                             //no param
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_noparam) && (parameter2 == ""))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
                             {
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     //no_param,no_param,no_param
-                                    if ((Assembler.opcodes[j].opcode1 == textraopcode.eo_none) && (Assembler.opcodes[j].opcode1 == textraopcode.eo_none))
+                                    if ((Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_none) && (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_none))
                                     {
                                         //textraopcode.eo_none,textraopcode.eo_none--no_param,no_param,no_param
                                         addopcode(bytes, j);
@@ -1108,11 +1111,11 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_imm8:
-                        if (paramtype1 == ttokentype.ttvalue)
+                    case AParam.par_imm8:
+                        if (paramtype1 == ATokenType.ttvalue)
                         {
                             //imm8,
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_al) && (parameter2 == "AL"))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_al) && (parameter2 == "AL"))
                             {
                                 //imm8,al
                                 addopcode(bytes, j);
@@ -1120,7 +1123,7 @@ namespace Tack.LAutoAssembler
                                 result = true;
                                 return result;
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_ax) && (parameter2 == "AX"))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_ax) && (parameter2 == "AX"))
                             {
                                 //imm8,ax /?
                                 addopcode(bytes, j);
@@ -1129,7 +1132,7 @@ namespace Tack.LAutoAssembler
                                 return result;
                             }
 
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_eax) && ((parameter2 == "EAX") || (parameter2 == "RAX")))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_eax) && ((parameter2 == "EAX") || (parameter2 == "RAX")))
                             {
                                 //imm8,eax
                                 addopcode(bytes, j);
@@ -1137,7 +1140,7 @@ namespace Tack.LAutoAssembler
                                 result = true;
                                 return result;
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_noparam) && (parameter2 == ""))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
                             {
                                 if (vtype == 16)
                                 {
@@ -1145,7 +1148,7 @@ namespace Tack.LAutoAssembler
                                     k = startoflist;
                                     while ((k <= Assembler.opcodecount) && (Assembler.opcodes[k].mnemonic == tokens[mnemonic]))
                                     {
-                                        if (Assembler.opcodes[k].paramtype1 == tparam.par_imm16)
+                                        if (Assembler.opcodes[k].paramtype1 == AParam.par_imm16)
                                         {
                                             addopcode(bytes, k);
                                             Assembler.addword(bytes, (UInt16)v);
@@ -1161,7 +1164,7 @@ namespace Tack.LAutoAssembler
                                     k = startoflist;
                                     while ((k <= Assembler.opcodecount) && (Assembler.opcodes[k].mnemonic == tokens[mnemonic]))
                                     {
-                                        if (Assembler.opcodes[k].paramtype1 == tparam.par_imm32)
+                                        if (Assembler.opcodes[k].paramtype1 == AParam.par_imm32)
                                         {
                                             addopcode(bytes, k);
                                             Assembler.adddword(bytes, (UInt32)v);
@@ -1179,11 +1182,11 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_imm16:
-                        if (paramtype1 == ttokentype.ttvalue)
+                    case AParam.par_imm16:
+                        if (paramtype1 == ATokenType.ttvalue)
                         {
                             //imm16,
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_noparam) && (parameter2 == ""))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
                             {
                                 //imm16
                                 addopcode(bytes, j);
@@ -1191,10 +1194,10 @@ namespace Tack.LAutoAssembler
                                 result = true;
                                 return result;
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_imm8) && (paramtype2 == ttokentype.ttvalue))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm8) && (paramtype2 == ATokenType.ttvalue))
                             {
                                 //imm16,imm8,
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     addopcode(bytes, j);
                                     Assembler.addword(bytes, (UInt16)v);
@@ -1205,10 +1208,10 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_imm32:
-                        if (paramtype1 == ttokentype.ttvalue)
+                    case AParam.par_imm32:
+                        if (paramtype1 == ATokenType.ttvalue)
                         {
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_noparam) && (parameter2 == ""))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
                             {
                                 //imm32
                                 addopcode(bytes, j);
@@ -1218,16 +1221,16 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_moffs8:
-                        if ((paramtype1 == ttokentype.ttmemorylocation8) | (Assembler.ismemorylocationdefault(parameter1)))
+                    case AParam.par_moffs8:
+                        if ((paramtype1 == ATokenType.ttmemorylocation8) | (Assembler.ismemorylocationdefault(parameter1)))
                         {
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_al) && (parameter2 == "AL"))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_al) && (parameter2 == "AL"))
                             {
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
-                                    k = TUtils.pos("[", parameter1);
-                                    l = TUtils.pos("]", parameter1);
-                                    TUtils.val("$" + TUtils.copy(parameter1, k + 1, l - k - 1), out v, out k);
+                                    k = AStringUtils.Pos("[", parameter1);
+                                    l = AStringUtils.Pos("]", parameter1);
+                                    AStringUtils.Val("$" + AStringUtils.Copy(parameter1, k + 1, l - k - 1), out v, out k);
                                     if (k == 0)
                                     {
                                         //verified, it doesn't have a registerbase in it
@@ -1240,16 +1243,16 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_moffs16:
-                        if ((paramtype1 == ttokentype.ttmemorylocation16) | (Assembler.ismemorylocationdefault(parameter1)))
+                    case AParam.par_moffs16:
+                        if ((paramtype1 == ATokenType.ttmemorylocation16) | (Assembler.ismemorylocationdefault(parameter1)))
                         {
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_ax) && (parameter2 == "AX"))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_ax) && (parameter2 == "AX"))
                             {
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
-                                    k = TUtils.pos("[", parameter1);
-                                    l = TUtils.pos("]", parameter1);
-                                    TUtils.val("$" + TUtils.copy(parameter1, k + 1, l - k - 1), out v, out k);
+                                    k = AStringUtils.Pos("[", parameter1);
+                                    l = AStringUtils.Pos("]", parameter1);
+                                    AStringUtils.Val("$" + AStringUtils.Copy(parameter1, k + 1, l - k - 1), out v, out k);
                                     if (k == 0)
                                     {
                                         //verified, it doesn't have a registerbase in it
@@ -1262,16 +1265,16 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_moffs32:
-                        if (paramtype1 == ttokentype.ttmemorylocation32)
+                    case AParam.par_moffs32:
+                        if (paramtype1 == ATokenType.ttmemorylocation32)
                         {
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_eax) && ((parameter2 == "EAX") || (parameter2 == "RAX")))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_eax) && ((parameter2 == "EAX") || (parameter2 == "RAX")))
                             {
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
-                                    k = TUtils.pos("[", parameter1);
-                                    l = TUtils.pos("]", parameter1);
-                                    TUtils.val("$" + TUtils.copy(parameter1, k + l, l - k - 1), out v, out k);
+                                    k = AStringUtils.Pos("[", parameter1);
+                                    l = AStringUtils.Pos("]", parameter1);
+                                    AStringUtils.Val("$" + AStringUtils.Copy(parameter1, k + l, l - k - 1), out v, out k);
                                     if (k == 0)
                                     {
                                         //verified, it doesn't have a registerbase in it
@@ -1284,8 +1287,8 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_3:
-                        if ((paramtype1 == ttokentype.ttvalue) && (v == 3))
+                    case AParam.par_3:
+                        if ((paramtype1 == ATokenType.ttvalue) && (v == 3))
                         {
                             //int 3
                             addopcode(bytes, j);
@@ -1293,23 +1296,23 @@ namespace Tack.LAutoAssembler
                             return result;
                         }
                         break;
-                    case tparam.par_al:
+                    case AParam.par_al:
                         if (parameter1 == "AL")
                         {
                             //AL,
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_dx) && (parameter2 == "DX"))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_dx) && (parameter2 == "DX"))
                             {
                                 //opcode al,dx
                                 addopcode(bytes, j);
                                 result = true;
                                 return result;
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_imm8) && (paramtype2 == ttokentype.ttvalue))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm8) && (paramtype2 == ATokenType.ttvalue))
                             {
                                 //AL,imm8
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
-                                    if ((Assembler.opcodes[j].opcode1 == textraopcode.eo_ib) && (Assembler.opcodes[j].opcode2 == textraopcode.eo_none))
+                                    if ((Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_ib) && (Assembler.opcodes[j].opcode2 == AExtraOpCode.eo_none))
                                     {
                                         //verified: AL,imm8
                                         addopcode(bytes, j);
@@ -1319,13 +1322,13 @@ namespace Tack.LAutoAssembler
                                     }
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_moffs8) & ((paramtype2 == ttokentype.ttmemorylocation8) | (Assembler.ismemorylocationdefault(parameter2))))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_moffs8) & ((paramtype2 == ATokenType.ttmemorylocation8) | (Assembler.ismemorylocationdefault(parameter2))))
                             {
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
-                                    k = TUtils.pos("[", parameter2);
-                                    l = TUtils.pos("]", parameter2);
-                                    TUtils.val("$" + TUtils.copy(parameter2, k + l, l - k - 1), out v, out k);
+                                    k = AStringUtils.Pos("[", parameter2);
+                                    l = AStringUtils.Pos("]", parameter2);
+                                    AStringUtils.Val("$" + AStringUtils.Copy(parameter2, k + l, l - k - 1), out v, out k);
                                     if (k == 0)
                                     {
                                         //verified, it doesn't have a registerbase in it
@@ -1340,18 +1343,18 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_ax:
+                    case AParam.par_ax:
                         if (parameter1 == "AX")
                         {
                             //AX,
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_noparam) && (parameter2 == ""))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
                             {
                                 //opcode AX
                                 addopcode(bytes, j);
                                 result = true;
                                 return result;
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_dx) && (parameter2 == "DX"))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_dx) && (parameter2 == "DX"))
                             {
                                 //opcode ax,dx
                                 addopcode(bytes, j);
@@ -1359,13 +1362,13 @@ namespace Tack.LAutoAssembler
                                 return result;
                             }
                             //r16
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_r16) && (paramtype2 == ttokentype.ttregister16bit))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_r16) && (paramtype2 == ATokenType.ttregister16bit))
                             {
                                 //eax,r32
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     //r32,eax
-                                    if (Assembler.opcodes[j].opcode1 == textraopcode.eo_prw)
+                                    if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_prw)
                                     {
                                         //opcode+rd
                                         addopcode(bytes, j);
@@ -1375,13 +1378,13 @@ namespace Tack.LAutoAssembler
                                     }
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_imm16) && (paramtype2 == ttokentype.ttvalue))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm16) && (paramtype2 == ATokenType.ttvalue))
                             {
                                 //AX,imm16
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     //params confirmed it is a ax,imm16
-                                    if ((Assembler.opcodes[j].opcode1 == textraopcode.eo_iw) && (Assembler.opcodes[j].opcode2 == textraopcode.eo_none))
+                                    if ((Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_iw) && (Assembler.opcodes[j].opcode2 == AExtraOpCode.eo_none))
                                     {
                                         addopcode(bytes, j);
                                         Assembler.addword(bytes, (UInt16)(v));
@@ -1390,13 +1393,13 @@ namespace Tack.LAutoAssembler
                                     }
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_moffs16) & ((paramtype2 == ttokentype.ttmemorylocation16) | (Assembler.ismemorylocationdefault(parameter2))))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_moffs16) & ((paramtype2 == ATokenType.ttmemorylocation16) | (Assembler.ismemorylocationdefault(parameter2))))
                             {
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
-                                    k = TUtils.pos("[", parameter2);
-                                    l = TUtils.pos("]", parameter2);
-                                    TUtils.val("$" + TUtils.copy(parameter2, k + l, l - k - 1), out v, out k);
+                                    k = AStringUtils.Pos("[", parameter2);
+                                    l = AStringUtils.Pos("]", parameter2);
+                                    AStringUtils.Val("$" + AStringUtils.Copy(parameter2, k + l, l - k - 1), out v, out k);
                                     if (k == 0)
                                     {
                                         //verified, it doesn't have a registerbase in it
@@ -1409,11 +1412,11 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_eax:
+                    case AParam.par_eax:
                         if ((parameter1 == "EAX") || (parameter1 == "RAX"))
                         {
                             //eAX,
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_dx) && (parameter2 == "DX"))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_dx) && (parameter2 == "DX"))
                             {
                                 //opcode eax,dx
                                 addopcode(bytes, j);
@@ -1421,13 +1424,13 @@ namespace Tack.LAutoAssembler
                                 return result;
                             }
                             //r32
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_r32) && (paramtype2 == ttokentype.ttregister32bit))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_r32) && (paramtype2 == ATokenType.ttregister32bit))
                             {
                                 //eax,r32
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     //r32,eax
-                                    if (Assembler.opcodes[j].opcode1 == textraopcode.eo_prd)
+                                    if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_prd)
                                     {
                                         //opcode+rd
                                         addopcode(bytes, j);
@@ -1443,10 +1446,10 @@ namespace Tack.LAutoAssembler
                                     }
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_imm8) && (paramtype2 == ttokentype.ttvalue))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm8) && (paramtype2 == ATokenType.ttvalue))
                             {
                                 //eax,imm8
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     addopcode(bytes, j);
                                     Assembler.add(bytes, (Byte)v);
@@ -1454,10 +1457,10 @@ namespace Tack.LAutoAssembler
                                     return result;
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_imm32) && (paramtype2 == ttokentype.ttvalue))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm32) && (paramtype2 == ATokenType.ttvalue))
                             {
                                 //EAX,imm32,
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     //eax,imm32
                                     if (signedvtype == 8)
@@ -1466,8 +1469,8 @@ namespace Tack.LAutoAssembler
                                         k = startoflist;
                                         while ((k <= Assembler.opcodecount) && (Assembler.opcodes[k].mnemonic == tokens[mnemonic]))
                                         {
-                                            if ((Assembler.opcodes[k].paramtype1 == tparam.par_rm32) &&
-                                               (Assembler.opcodes[k].paramtype2 == tparam.par_imm8))
+                                            if ((Assembler.opcodes[k].paramtype1 == AParam.par_rm32) &&
+                                               (Assembler.opcodes[k].paramtype2 == AParam.par_imm8))
                                             {
                                                 //yes, there is
                                                 addopcode(bytes, k);
@@ -1478,7 +1481,7 @@ namespace Tack.LAutoAssembler
                                             k += 1;
                                         }
                                     }
-                                    if ((Assembler.opcodes[j].opcode1 == textraopcode.eo_id) && (Assembler.opcodes[j].opcode2 == textraopcode.eo_none))
+                                    if ((Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_id) && (Assembler.opcodes[j].opcode2 == AExtraOpCode.eo_none))
                                     {
                                         addopcode(bytes, j);
                                         Assembler.adddword(bytes, (UInt32)v);
@@ -1487,13 +1490,13 @@ namespace Tack.LAutoAssembler
                                     }
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_moffs32) & ((paramtype2 == ttokentype.ttmemorylocation32) | (Assembler.ismemorylocationdefault(parameter2))))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_moffs32) & ((paramtype2 == ATokenType.ttmemorylocation32) | (Assembler.ismemorylocationdefault(parameter2))))
                             {
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
-                                    k = TUtils.pos("[", parameter2);
-                                    l = TUtils.pos("]", parameter2);
-                                    TUtils.val("$" + TUtils.copy(parameter2, k + 1, l - k - 1), out v, out k);
+                                    k = AStringUtils.Pos("[", parameter2);
+                                    l = AStringUtils.Pos("]", parameter2);
+                                    AStringUtils.Val("$" + AStringUtils.Copy(parameter2, k + 1, l - k - 1), out v, out k);
                                     if (k == 0)
                                     {
                                         //verified, it doesn't have a registerbase in it
@@ -1506,22 +1509,22 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_dx:
+                    case AParam.par_dx:
                         if (parameter1 == "DX")
                         {
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_al) && (parameter2 == "AL"))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_al) && (parameter2 == "AL"))
                             {
                                 addopcode(bytes, j);
                                 result = true;
                                 return result;
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_ax) && (parameter2 == "AX"))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_ax) && (parameter2 == "AX"))
                             {
                                 addopcode(bytes, j);
                                 result = true;
                                 return result;
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_eax) && ((parameter2 == "EAX") || (parameter2 == "RAX")))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_eax) && ((parameter2 == "EAX") || (parameter2 == "RAX")))
                             {
                                 addopcode(bytes, j);
                                 result = true;
@@ -1529,10 +1532,10 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_cs:
+                    case AParam.par_cs:
                         if (parameter1 == "CS")
                         {
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_noparam) && (parameter2 == ""))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
                             {
                                 addopcode(bytes, j);
                                 result = true;
@@ -1540,10 +1543,10 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_ds:
+                    case AParam.par_ds:
                         if (parameter1 == "DS")
                         {
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_noparam) && (parameter2 == ""))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
                             {
                                 addopcode(bytes, j);
                                 result = true;
@@ -1551,10 +1554,10 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_es:
+                    case AParam.par_es:
                         if (parameter1 == "ES")
                         {
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_noparam) && (parameter2 == ""))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
                             {
                                 addopcode(bytes, j);
                                 result = true;
@@ -1562,10 +1565,10 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_ss:
+                    case AParam.par_ss:
                         if (parameter1 == "SS")
                         {
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_noparam) && (parameter2 == ""))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
                             {
                                 addopcode(bytes, j);
                                 result = true;
@@ -1573,10 +1576,10 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_fs:
+                    case AParam.par_fs:
                         if (parameter1 == "FS")
                         {
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_noparam) && (parameter2 == ""))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
                             {
                                 addopcode(bytes, j);
                                 result = true;
@@ -1585,10 +1588,10 @@ namespace Tack.LAutoAssembler
                         }
                         break;
 
-                    case tparam.par_gs:
+                    case AParam.par_gs:
                         if (parameter1 == "GS")
                         {
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_noparam) && (parameter2 == ""))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
                             {
                                 addopcode(bytes, j);
                                 result = true;
@@ -1596,13 +1599,13 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_r8:
-                        if (paramtype1 == ttokentype.ttregister8bit)
+                    case AParam.par_r8:
+                        if (paramtype1 == ATokenType.ttregister8bit)
                         {
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_noparam) && (parameter2 == ""))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
                             {
                                 //opcode r8
-                                if (Assembler.opcodes[j].opcode1 == textraopcode.eo_prb)
+                                if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_prb)
                                 {
                                     //opcode+rd
                                     addopcode(bytes, j);
@@ -1617,12 +1620,12 @@ namespace Tack.LAutoAssembler
                                     return result;
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_imm8) && (paramtype2 == ttokentype.ttvalue))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm8) && (paramtype2 == ATokenType.ttvalue))
                             {
                                 //r8, imm8
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
-                                    if (Assembler.opcodes[j].opcode1 == textraopcode.eo_prb)
+                                    if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_prb)
                                     {
                                         addopcode(bytes, j);
                                         k = getreg(parameter1);
@@ -1638,10 +1641,10 @@ namespace Tack.LAutoAssembler
                                     }
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_rm8) & (Assembler.isrm8(paramtype2)))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_rm8) & (Assembler.isrm8(paramtype2)))
                             {
                                 //r8,rm8
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, getreg(parameter1), parameter2);
@@ -1650,13 +1653,13 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_r16:
-                        if (paramtype1 == ttokentype.ttregister16bit)
+                    case AParam.par_r16:
+                        if (paramtype1 == ATokenType.ttregister16bit)
                         {
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_noparam) && (parameter2 == ""))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
                             {
                                 //opcode r16
-                                if (Assembler.opcodes[j].opcode1 == textraopcode.eo_prw)
+                                if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_prw)
                                 {
                                     //opcode+rw
                                     addopcode(bytes, j);
@@ -1671,13 +1674,13 @@ namespace Tack.LAutoAssembler
                                     return result;
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_ax) && (parameter2 == "AX"))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_ax) && (parameter2 == "AX"))
                             {
                                 //r16,ax,
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     //r16,ax
-                                    if (Assembler.opcodes[j].opcode1 == textraopcode.eo_prw)
+                                    if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_prw)
                                     {
                                         //opcode+rd
                                         addopcode(bytes, j);
@@ -1693,10 +1696,10 @@ namespace Tack.LAutoAssembler
                                     }
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_imm8) && (paramtype2 == ttokentype.ttvalue))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm8) && (paramtype2 == ATokenType.ttvalue))
                             {
                                 //r16, imm8
-                                if ((Assembler.opcodes[j].opcode1 == textraopcode.eo_reg) && (Assembler.opcodes[j].opcode2 == textraopcode.eo_ib))
+                                if ((Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_reg) && (Assembler.opcodes[j].opcode2 == AExtraOpCode.eo_ib))
                                 {
                                     if (vtype > 8)
                                     {
@@ -1704,10 +1707,10 @@ namespace Tack.LAutoAssembler
                                         k = startoflist;
                                         while ((k <= Assembler.opcodecount) && (Assembler.opcodes[k].mnemonic == tokens[mnemonic]))
                                         {
-                                            if ((Assembler.opcodes[k].paramtype1 == tparam.par_r16) &&
-                                               (Assembler.opcodes[k].paramtype2 == tparam.par_imm16))
+                                            if ((Assembler.opcodes[k].paramtype1 == AParam.par_r16) &&
+                                               (Assembler.opcodes[k].paramtype2 == AParam.par_imm16))
                                             {
-                                                if ((Assembler.opcodes[k].opcode1 == textraopcode.eo_reg) && (Assembler.opcodes[j].opcode2 == textraopcode.eo_ib))
+                                                if ((Assembler.opcodes[k].opcode1 == AExtraOpCode.eo_reg) && (Assembler.opcodes[j].opcode2 == AExtraOpCode.eo_ib))
                                                 {
                                                     addopcode(bytes, k);
                                                     result = createmodrm(bytes, getreg(parameter1), parameter1);
@@ -1723,11 +1726,11 @@ namespace Tack.LAutoAssembler
                                     Assembler.add(bytes, (Byte)v);
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_imm16) && (paramtype2 == ttokentype.ttvalue))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm16) && (paramtype2 == ATokenType.ttvalue))
                             {
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
-                                    if (Assembler.opcodes[j].opcode1 == textraopcode.eo_prw)
+                                    if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_prw)
                                     {
                                         addopcode(bytes, j);
                                         k = getreg(parameter1);
@@ -1743,28 +1746,28 @@ namespace Tack.LAutoAssembler
                                     }
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_rm8) & (Assembler.isrm8(paramtype2)))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_rm8) & (Assembler.isrm8(paramtype2)))
                             {
                                 //r16,r/m8 (eg: movzx)
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, getreg(parameter1), parameter2);
                                     return result;
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_rm16) & (Assembler.isrm16(paramtype2)))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_rm16) & (Assembler.isrm16(paramtype2)))
                             {
                                 //r16,r/m16
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, getreg(parameter1), parameter2);
                                     return result;
                                 }
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_imm8) && (paramtype3 == ttokentype.ttvalue))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_imm8) && (paramtype3 == ATokenType.ttvalue))
                                 {
-                                    if (Assembler.opcodes[j].opcode2 == textraopcode.eo_ib)
+                                    if (Assembler.opcodes[j].opcode2 == AExtraOpCode.eo_ib)
                                     {
                                         //r16,r/m16,imm8
                                         if (vtype > 8)
@@ -1773,9 +1776,9 @@ namespace Tack.LAutoAssembler
                                             k = startoflist;
                                             while ((k <= Assembler.opcodecount) && (Assembler.opcodes[k].mnemonic == tokens[mnemonic]))
                                             {
-                                                if ((Assembler.opcodes[k].paramtype1 == tparam.par_r16) &&
-                                                   (Assembler.opcodes[k].paramtype2 == tparam.par_rm16) &&
-                                                   (Assembler.opcodes[k].paramtype3 == tparam.par_imm16))
+                                                if ((Assembler.opcodes[k].paramtype1 == AParam.par_r16) &&
+                                                   (Assembler.opcodes[k].paramtype2 == AParam.par_rm16) &&
+                                                   (Assembler.opcodes[k].paramtype3 == AParam.par_imm16))
                                                 {
                                                     addopcode(bytes, k);
                                                     result = createmodrm(bytes, getreg(parameter1), parameter2);
@@ -1794,13 +1797,13 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_r32:
-                        if (paramtype1 == ttokentype.ttregister32bit)
+                    case AParam.par_r32:
+                        if (paramtype1 == ATokenType.ttregister32bit)
                         {
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_noparam) && (parameter2 == ""))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
                             {
                                 //opcode r32
-                                if (Assembler.opcodes[j].opcode1 == textraopcode.eo_prd)
+                                if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_prd)
                                 {
                                     //opcode+rd
                                     addopcode(bytes, j);
@@ -1823,13 +1826,13 @@ namespace Tack.LAutoAssembler
                                 }
                             }
                             //eax
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_eax) && ((parameter2 == "EAX") || (parameter2 == "RAX")))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_eax) && ((parameter2 == "EAX") || (parameter2 == "RAX")))
                             {
                                 //r32,eax,
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     //r32,eax
-                                    if (Assembler.opcodes[j].opcode1 == textraopcode.eo_prd)
+                                    if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_prd)
                                     {
                                         //opcode+rd
                                         addopcode(bytes, j);
@@ -1845,16 +1848,16 @@ namespace Tack.LAutoAssembler
                                     }
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_mm) && (paramtype2 == ttokentype.ttregistermm))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_mm) && (paramtype2 == ATokenType.ttregistermm))
                             {
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, getreg(parameter1), parameter2);
                                     return result;
                                 }
 
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_imm8) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_imm8) && (parameter3 == ""))
                                 {
                                     //32, mm,imm8
                                     addopcode(bytes, j);
@@ -1863,17 +1866,17 @@ namespace Tack.LAutoAssembler
                                     return result;
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_xmm) && (paramtype2 == ttokentype.ttregisterxmm))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm) && (paramtype2 == ATokenType.ttregisterxmm))
                             {
                                 //r32,xmm,
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, getreg(parameter2), parameter1);
                                     return result;
                                 }
 
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_imm8) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_imm8) && (parameter3 == ""))
                                 {
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, getreg(parameter2), parameter1);
@@ -1881,18 +1884,18 @@ namespace Tack.LAutoAssembler
                                     return result;
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_cr) && (paramtype2 == ttokentype.ttregistercr))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_cr) && (paramtype2 == ATokenType.ttregistercr))
                             {
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, getreg(parameter2), parameter1);
                                     return result;
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_dr) && (paramtype2 == ttokentype.ttregisterdr))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_dr) && (paramtype2 == ATokenType.ttregisterdr))
                             {
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, getreg(parameter2), parameter1);
@@ -1900,45 +1903,45 @@ namespace Tack.LAutoAssembler
                                 }
                             }
 
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_xmm_m32) & (Assembler.isxmm_m32(paramtype2)))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm_m32) & (Assembler.isxmm_m32(paramtype2)))
                             {
                                 //r32,xmm/m32
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, getreg(parameter1), parameter2);
                                     return result;
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_mm_m64) && (Assembler.ismm_m64(paramtype2) | ((paramtype2 == ttokentype.ttmemorylocation32) && (parameter2[1] == '['))))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_mm_m64) && (Assembler.ismm_m64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
                             {
                                 //r32,mm/m64
                                 addopcode(bytes, j);
                                 result = createmodrm(bytes, getreg(parameter1), parameter2);
                                 return result;
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_xmm_m64) && (Assembler.isxmm_m64(paramtype2) | ((paramtype2 == ttokentype.ttmemorylocation32) && (parameter2[1] == '['))))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm_m64) && (Assembler.isxmm_m64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
                             {
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, getreg(parameter1), parameter2);
                                     return result;
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_xmm_m128) && (Assembler.isxmm_m64(paramtype2) | ((paramtype2 == ttokentype.ttmemorylocation32) && (parameter2[1] == '['))))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm_m128) && (Assembler.isxmm_m64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
                             {
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, getreg(parameter1), parameter2);
                                     return result;
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_m32) && (paramtype2 == ttokentype.ttmemorylocation32))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_m32) && (paramtype2 == ATokenType.ttmemorylocation32))
                             {
                                 //r32,m32,
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     //r32,m32
                                     addopcode(bytes, j);
@@ -1946,47 +1949,47 @@ namespace Tack.LAutoAssembler
                                     return result;
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_rm8) & (Assembler.isrm8(paramtype2) | (Assembler.ismemorylocationdefault(parameter2))))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_rm8) & (Assembler.isrm8(paramtype2) | (Assembler.ismemorylocationdefault(parameter2))))
                             {
                                 //r32,rm8
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, getreg(parameter1), parameter2);
                                     return result;
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_rm16) & (Assembler.isrm16(paramtype2) | (Assembler.ismemorylocationdefault(parameter2))))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_rm16) & (Assembler.isrm16(paramtype2) | (Assembler.ismemorylocationdefault(parameter2))))
                             {
                                 //r32,rm16
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, getreg(parameter1), parameter2);
                                     return result;
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_rm32) & (Assembler.isrm32(paramtype2)))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_rm32) & (Assembler.isrm32(paramtype2)))
                             {
                                 //r32,r/m32
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, getreg(parameter1), parameter2);
                                     return result;
                                 }
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_imm8) && (paramtype3 == ttokentype.ttvalue))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_imm8) && (paramtype3 == ATokenType.ttvalue))
                                 {
-                                    if (Assembler.opcodes[j].opcode2 == textraopcode.eo_ib)
+                                    if (Assembler.opcodes[j].opcode2 == AExtraOpCode.eo_ib)
                                     {
                                         if (vtype > 8)
                                         {
                                             k = startoflist;
                                             while ((k <= endoflist) && (Assembler.opcodes[k].mnemonic == tokens[mnemonic]))
                                             {
-                                                if ((Assembler.opcodes[k].paramtype1 == tparam.par_r32) &&
-                                                   (Assembler.opcodes[k].paramtype2 == tparam.par_rm32) &&
-                                                   (Assembler.opcodes[k].paramtype3 == tparam.par_imm32))
+                                                if ((Assembler.opcodes[k].paramtype1 == AParam.par_r32) &&
+                                                   (Assembler.opcodes[k].paramtype2 == AParam.par_rm32) &&
+                                                   (Assembler.opcodes[k].paramtype3 == AParam.par_imm32))
                                                 {
                                                     addopcode(bytes, k);
                                                     result = createmodrm(bytes, getreg(parameter1), parameter2);
@@ -2004,10 +2007,10 @@ namespace Tack.LAutoAssembler
                                     }
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_imm32) && (paramtype2 == ttokentype.ttvalue))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm32) && (paramtype2 == ATokenType.ttvalue))
                             {
                                 //r32,imm32
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     if (signedvtype == 8)
                                     {
@@ -2015,8 +2018,8 @@ namespace Tack.LAutoAssembler
                                         k = startoflist;
                                         while ((k <= Assembler.opcodecount) && (Assembler.opcodes[k].mnemonic == tokens[mnemonic]))
                                         {
-                                            if ((Assembler.opcodes[k].paramtype1 == tparam.par_rm32) &&
-                                               (Assembler.opcodes[k].paramtype2 == tparam.par_imm8))
+                                            if ((Assembler.opcodes[k].paramtype1 == AParam.par_rm32) &&
+                                               (Assembler.opcodes[k].paramtype2 == AParam.par_imm8))
                                             {
                                                 //yes, there is
                                                 addopcode(bytes, k);
@@ -2027,7 +2030,7 @@ namespace Tack.LAutoAssembler
                                             k += 1;
                                         }
                                     }
-                                    if (Assembler.opcodes[j].opcode1 == textraopcode.eo_prd)
+                                    if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_prd)
                                     {
                                         addopcode(bytes, j);
                                         k = getreg(parameter1);
@@ -2046,7 +2049,7 @@ namespace Tack.LAutoAssembler
                                     }
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_imm8) && (paramtype2 == ttokentype.ttvalue))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm8) && (paramtype2 == ATokenType.ttvalue))
                             {
                                 //r32, imm8
                                 addopcode(bytes, j);
@@ -2057,10 +2060,10 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_sreg:
-                        if (paramtype1 == ttokentype.ttregistersreg)
+                    case AParam.par_sreg:
+                        if (paramtype1 == ATokenType.ttregistersreg)
                         {
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_rm16) & (Assembler.isrm16(paramtype2)))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_rm16) & (Assembler.isrm16(paramtype2)))
                             {
                                 //sreg,rm16
                                 addopcode(bytes, j);
@@ -2069,12 +2072,12 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_cr:
-                        if (paramtype1 == ttokentype.ttregistercr)
+                    case AParam.par_cr:
+                        if (paramtype1 == ATokenType.ttregistercr)
                         {
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_r32) && (paramtype2 == ttokentype.ttregister32bit))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_r32) && (paramtype2 == ATokenType.ttregister32bit))
                             {
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, getreg(parameter1), parameter2);
@@ -2083,12 +2086,12 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_dr:
-                        if (paramtype1 == ttokentype.ttregisterdr)
+                    case AParam.par_dr:
+                        if (paramtype1 == ATokenType.ttregisterdr)
                         {
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_r32) && (paramtype2 == ttokentype.ttregister32bit))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_r32) && (paramtype2 == ATokenType.ttregister32bit))
                             {
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, getreg(parameter1), parameter2);
@@ -2097,33 +2100,33 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_rm8:
+                    case AParam.par_rm8:
                         if (Assembler.isrm8(paramtype1))
                         {
                             //r/m8,
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_noparam) && (parameter2 == ""))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
                             {
                                 //opcode r/m8
                                 addopcode(bytes, j);
                                 result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
                                 return result;
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_1) && (paramtype2 == ttokentype.ttvalue) && (v == 1))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_1) && (paramtype2 == ATokenType.ttvalue) && (v == 1))
                             {
                                 addopcode(bytes, j);
                                 result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
                                 return result;
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_cl) && (parameter2 == "CL"))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_cl) && (parameter2 == "CL"))
                             {
                                 addopcode(bytes, j);
                                 result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
                                 return result;
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_imm8) && (paramtype2 == ttokentype.ttvalue))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm8) && (paramtype2 == ATokenType.ttvalue))
                             {
                                 //r/m8,imm8,
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     //verified it IS r/m8,imm8
                                     addopcode(bytes, j);
@@ -2133,10 +2136,10 @@ namespace Tack.LAutoAssembler
                                     return result;
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_r8) && (paramtype2 == ttokentype.ttregister8bit))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_r8) && (paramtype2 == ATokenType.ttregister8bit))
                             {
                                 // r/m8,r8
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, getreg(parameter2), parameter1);
@@ -2145,26 +2148,26 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_rm16:
+                    case AParam.par_rm16:
                         if (Assembler.isrm16(paramtype1))
                         {
                             //r/m16,
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_noparam) && (parameter2 == ""))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
                             {
                                 //opcode r/m16
                                 addopcode(bytes, j);
                                 result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
                                 return result;
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_1) && (paramtype2 == ttokentype.ttvalue) && (v == 1))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_1) && (paramtype2 == ATokenType.ttvalue) && (v == 1))
                             {
                                 addopcode(bytes, j);
                                 result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
                                 return result;
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_imm8) && (paramtype2 == ttokentype.ttvalue))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm8) && (paramtype2 == ATokenType.ttvalue))
                             {
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     if (vtype == 16)
                                     {
@@ -2175,7 +2178,7 @@ namespace Tack.LAutoAssembler
                                             if (Assembler.opcodes[k].mnemonic != tokens[mnemonic])
                                                 //nope, so continue with r/m,imm16
                                                 continue; // todo figure out if this is meant to be break/continue
-                                            if (((Assembler.opcodes[k].paramtype1 == tparam.par_rm16) && (Assembler.opcodes[k].paramtype2 == tparam.par_imm16)) && ((Assembler.opcodes[k].paramtype3 == tparam.par_noparam) && (parameter3 == "")))
+                                            if (((Assembler.opcodes[k].paramtype1 == AParam.par_rm16) && (Assembler.opcodes[k].paramtype2 == AParam.par_imm16)) && ((Assembler.opcodes[k].paramtype3 == AParam.par_noparam) && (parameter3 == "")))
                                             {
                                                 //yes, there is
                                                 //r/m16,imm16
@@ -2196,10 +2199,10 @@ namespace Tack.LAutoAssembler
                                     return result;
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_imm16) && (paramtype2 == ttokentype.ttvalue))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm16) && (paramtype2 == ATokenType.ttvalue))
                             {
                                 //r/m16,imm
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     if (vtype == 8)
                                     {
@@ -2210,7 +2213,7 @@ namespace Tack.LAutoAssembler
                                             if (Assembler.opcodes[k].mnemonic != tokens[mnemonic])
                                                 //nope, so continue with r/m,imm16
                                                 continue; // todo figure out if this is meant to be break/continue
-                                            if (((Assembler.opcodes[k].paramtype1 == tparam.par_rm16) && (Assembler.opcodes[k].paramtype2 == tparam.par_imm8)) && ((Assembler.opcodes[k].paramtype3 == tparam.par_noparam) && (parameter3 == "")))
+                                            if (((Assembler.opcodes[k].paramtype1 == AParam.par_rm16) && (Assembler.opcodes[k].paramtype2 == AParam.par_imm8)) && ((Assembler.opcodes[k].paramtype3 == AParam.par_noparam) && (parameter3 == "")))
                                             {
                                                 //yes, there is
                                                 //r/m16,imm8
@@ -2230,22 +2233,22 @@ namespace Tack.LAutoAssembler
                                     return result;
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_r16) && (paramtype2 == ttokentype.ttregister16bit))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_r16) && (paramtype2 == ATokenType.ttregister16bit))
                             {
                                 //r/m16,r16,
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_cl) && (parameter3 == "CL"))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_cl) && (parameter3 == "CL"))
                                 {
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, getreg(parameter2), parameter1);
                                     return result;
                                 }
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, getreg(parameter2), parameter1);
                                     return result;
                                 }
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_imm8) && (paramtype3 == ttokentype.ttvalue))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_imm8) && (paramtype3 == ATokenType.ttvalue))
                                 {
                                     //rm16, r16,imm8
                                     addopcode(bytes, j);
@@ -2254,9 +2257,9 @@ namespace Tack.LAutoAssembler
                                     return result;
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_sreg) && (paramtype2 == ttokentype.ttregistersreg))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_sreg) && (paramtype2 == ATokenType.ttregistersreg))
                             {
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     //r/m16,sreg
                                     addopcode(bytes, j);
@@ -2264,7 +2267,7 @@ namespace Tack.LAutoAssembler
                                     return result;
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_cl) && (parameter2 == "CL"))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_cl) && (parameter2 == "CL"))
                             {
                                 //rm16,cl
                                 addopcode(bytes, j);
@@ -2273,27 +2276,27 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_rm32:
+                    case AParam.par_rm32:
                         if (Assembler.isrm32(paramtype1))
                         {
                             //r/m32,
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_noparam) && (parameter2 == ""))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
                             {
                                 //no 2nd parameter so it is 'opcode r/m32'
                                 addopcode(bytes, j);
                                 result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
                                 return result;
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_1) && (paramtype2 == ttokentype.ttvalue) && (v == 1))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_1) && (paramtype2 == ATokenType.ttvalue) && (v == 1))
                             {
                                 addopcode(bytes, j);
                                 result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
                                 return result;
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_imm8) && (paramtype2 == ttokentype.ttvalue))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm8) && (paramtype2 == ATokenType.ttvalue))
                             {
                                 //rm32,imm8
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     if ((vtype > 8) || (Assembler.opcodes[j].signed & (signedvtype > 8)))
                                     {
@@ -2303,7 +2306,7 @@ namespace Tack.LAutoAssembler
                                         {
                                             if (Assembler.opcodes[k].mnemonic != tokens[mnemonic])
                                                 continue; // todo figure out if this is meant to be break/continue
-                                            if (((Assembler.opcodes[k].paramtype1 == tparam.par_rm32) && (Assembler.opcodes[k].paramtype2 == tparam.par_imm32)) && ((Assembler.opcodes[k].paramtype3 == tparam.par_noparam) && (parameter3 == "")))
+                                            if (((Assembler.opcodes[k].paramtype1 == AParam.par_rm32) && (Assembler.opcodes[k].paramtype2 == AParam.par_imm32)) && ((Assembler.opcodes[k].paramtype3 == AParam.par_noparam) && (parameter3 == "")))
                                             {
                                                 //yes, there is
                                                 addopcode(bytes, k);
@@ -2323,10 +2326,10 @@ namespace Tack.LAutoAssembler
                                     return result;
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_imm32) && (paramtype2 == ttokentype.ttvalue))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm32) && (paramtype2 == ATokenType.ttvalue))
                             {
                                 //r/m32,imm
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     if (signedvtype == 8)
                                     {
@@ -2337,7 +2340,7 @@ namespace Tack.LAutoAssembler
                                             if (Assembler.opcodes[k].mnemonic != tokens[mnemonic])
                                                 //nope, so continue with r/m,imm16
                                                 continue; // todo figure out if this is meant to be break/continue
-                                            if (((Assembler.opcodes[k].paramtype1 == tparam.par_rm32) && (Assembler.opcodes[k].paramtype2 == tparam.par_imm8)) && ((Assembler.opcodes[k].paramtype3 == tparam.par_noparam) && (parameter3 == "")) && ((!Assembler.opcodes[k].signed) | (signedvtype == 8)))
+                                            if (((Assembler.opcodes[k].paramtype1 == AParam.par_rm32) && (Assembler.opcodes[k].paramtype2 == AParam.par_imm8)) && ((Assembler.opcodes[k].paramtype3 == AParam.par_noparam) && (parameter3 == "")) && ((!Assembler.opcodes[k].signed) | (signedvtype == 8)))
                                             {
                                                 //yes, there is
                                                 addopcode(bytes, k);
@@ -2357,29 +2360,29 @@ namespace Tack.LAutoAssembler
                                     return result;
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_cl) && (parameter2 == "CL"))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_cl) && (parameter2 == "CL"))
                             {
                                 //rm32,cl
                                 addopcode(bytes, j);
                                 result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
                                 return result;
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_r32) && (paramtype2 == ttokentype.ttregister32bit))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_r32) && (paramtype2 == ATokenType.ttregister32bit))
                             {
                                 //r/m32,r32
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, getreg(parameter2), parameter1);
                                     return result;
                                 }
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_cl) && (parameter3 == "CL"))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_cl) && (parameter3 == "CL"))
                                 {
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, getreg(parameter2), parameter1);
                                     return result;
                                 }
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_imm8) && (paramtype3 == ttokentype.ttvalue))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_imm8) && (paramtype3 == ATokenType.ttvalue))
                                 {
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, getreg(parameter2), parameter1);
@@ -2387,20 +2390,20 @@ namespace Tack.LAutoAssembler
                                     return result;
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_mm) && (paramtype2 == ttokentype.ttregistermm))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_mm) && (paramtype2 == ATokenType.ttregistermm))
                             {
                                 //r32/m32,mm,
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     //r32/m32,mm
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, getreg(parameter2), parameter1);
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_xmm) && (paramtype2 == ttokentype.ttregisterxmm))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm) && (paramtype2 == ATokenType.ttregisterxmm))
                             {
                                 //r32/m32,xmm,  (movd for example)
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     //r32/m32,xmm
                                     addopcode(bytes, j);
@@ -2409,27 +2412,27 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_mm:
-                        if (paramtype1 == ttokentype.ttregistermm)
+                    case AParam.par_mm:
+                        if (paramtype1 == ATokenType.ttregistermm)
                         {
                             //mm,xxxxx
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_mm) && (paramtype2 == ttokentype.ttregistermm))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_mm) && (paramtype2 == ATokenType.ttregistermm))
                             {
                                 addopcode(bytes, j);
                                 result = createmodrm(bytes, getreg(parameter1), parameter2);
                                 return result;
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_xmm) && (paramtype2 == ttokentype.ttregisterxmm))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm) && (paramtype2 == ATokenType.ttregisterxmm))
                             {
                                 //mm,xmm
                                 addopcode(bytes, j);
                                 result = createmodrm(bytes, getreg(parameter1), parameter2);
                                 return result;
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_r32_m16) & ((paramtype1 == ttokentype.ttregister32bit) || (paramtype2 == ttokentype.ttmemorylocation16) | Assembler.ismemorylocationdefault(parameter2)))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_r32_m16) & ((paramtype1 == ATokenType.ttregister32bit) || (paramtype2 == ATokenType.ttmemorylocation16) | Assembler.ismemorylocationdefault(parameter2)))
                             {
                                 //mm,r32/m16,
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_imm8) && (paramtype3 == ttokentype.ttvalue))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_imm8) && (paramtype3 == ATokenType.ttvalue))
                                 {
                                     //imm8
                                     addopcode(bytes, j);
@@ -2437,10 +2440,10 @@ namespace Tack.LAutoAssembler
                                     return result;
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_rm32) & (Assembler.isrm32(paramtype2)))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_rm32) & (Assembler.isrm32(paramtype2)))
                             {
                                 //mm,rm32
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     //xmm,rm32
                                     addopcode(bytes, j);
@@ -2448,28 +2451,28 @@ namespace Tack.LAutoAssembler
                                     return result;
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_xmm_m32) & (Assembler.isxmm_m32(paramtype2)))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm_m32) & (Assembler.isxmm_m32(paramtype2)))
                             {
                                 //mm,xmm/m32
                                 addopcode(bytes, j);
                                 result = createmodrm(bytes, getreg(parameter1), parameter2);
                                 return result;
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_mm_m64) && (Assembler.ismm_m64(paramtype2) | ((paramtype2 == ttokentype.ttmemorylocation32) && (parameter2[1] == '['))))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_mm_m64) && (Assembler.ismm_m64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
                             {
                                 //mm,mm/m64
                                 addopcode(bytes, j);
                                 result = createmodrm(bytes, getreg(parameter1), parameter2);
                                 return result;
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_xmm_m64) && (Assembler.isxmm_m64(paramtype2) | ((paramtype2 == ttokentype.ttmemorylocation32) && (parameter2[1] == '['))))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm_m64) && (Assembler.isxmm_m64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
                             {
                                 //mm,xmm/m64
                                 addopcode(bytes, j);
                                 result = createmodrm(bytes, getreg(parameter1), parameter2);
                                 return result;
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_xmm_m128) && (Assembler.isxmm_m128(paramtype2) | ((paramtype2 == ttokentype.ttmemorylocation32) && (parameter2[1] == '['))))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm_m128) && (Assembler.isxmm_m128(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
                             {
                                 //mm,xmm/m128
                                 addopcode(bytes, j);
@@ -2478,10 +2481,10 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_mm_m64:
-                        if (Assembler.ismm_m64(paramtype1) | ((paramtype1 == ttokentype.ttmemorylocation32) && (parameter1[1] == '[')))
+                    case AParam.par_mm_m64:
+                        if (Assembler.ismm_m64(paramtype1) | ((paramtype1 == ATokenType.ttmemorylocation32) && (parameter1[1] == '[')))
                         {
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_mm) && (paramtype2 == ttokentype.ttregistermm))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_mm) && (paramtype2 == ATokenType.ttregistermm))
                             {
                                 //mm/m64, mm
                                 addopcode(bytes, j);
@@ -2490,11 +2493,11 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_xmm_m64:
-                        if (Assembler.isxmm_m64(paramtype1) | ((paramtype1 == ttokentype.ttmemorylocation32) && (parameter1[1] == '[')))
+                    case AParam.par_xmm_m64:
+                        if (Assembler.isxmm_m64(paramtype1) | ((paramtype1 == ATokenType.ttmemorylocation32) && (parameter1[1] == '[')))
                         {
                             //xmm/m64,
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_xmm) && (paramtype2 == ttokentype.ttregisterxmm))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm) && (paramtype2 == ATokenType.ttregisterxmm))
                             {
                                 //xmm/m64, xmm
                                 addopcode(bytes, j);
@@ -2503,11 +2506,11 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_xmm_m128:
-                        if (Assembler.isxmm_m128(paramtype1) | ((paramtype1 == ttokentype.ttmemorylocation32) && (parameter1[1] == '[')))
+                    case AParam.par_xmm_m128:
+                        if (Assembler.isxmm_m128(paramtype1) | ((paramtype1 == ATokenType.ttmemorylocation32) && (parameter1[1] == '[')))
                         {
                             //xmm/m128,
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_xmm) && (paramtype2 == ttokentype.ttregisterxmm))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm) && (paramtype2 == ATokenType.ttregisterxmm))
                             {
                                 //xmm/m128, xmm
                                 addopcode(bytes, j);
@@ -2516,12 +2519,12 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_xmm:
-                        if (paramtype1 == ttokentype.ttregisterxmm)
+                    case AParam.par_xmm:
+                        if (paramtype1 == ATokenType.ttregisterxmm)
                         {
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_imm8) && (paramtype2 == ttokentype.ttvalue))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_imm8) && (paramtype2 == ATokenType.ttvalue))
                             {
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
@@ -2529,30 +2532,30 @@ namespace Tack.LAutoAssembler
                                     return result;
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_mm) && (paramtype2 == ttokentype.ttregistermm))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_mm) && (paramtype2 == ATokenType.ttregistermm))
                             {
                                 //xmm,xmm
                                 addopcode(bytes, j);
                                 result = createmodrm(bytes, getreg(parameter1), parameter2);
                                 return result;
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_xmm) && (paramtype2 == ttokentype.ttregisterxmm))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm) && (paramtype2 == ATokenType.ttregisterxmm))
                             {
                                 //xmm,xmm
                                 addopcode(bytes, j);
                                 result = createmodrm(bytes, getreg(parameter1), parameter2);
                                 return result;
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_m64) & ((paramtype2 == ttokentype.ttmemorylocation64) | (Assembler.ismemorylocationdefault(parameter2))))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_m64) & ((paramtype2 == ATokenType.ttmemorylocation64) | (Assembler.ismemorylocationdefault(parameter2))))
                             {
                                 addopcode(bytes, j);
                                 result = createmodrm(bytes, getreg(parameter1), parameter2);
                                 return result;
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_rm32) & (Assembler.isrm32(paramtype2)))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_rm32) & (Assembler.isrm32(paramtype2)))
                             {
                                 //xmm,rm32,
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     //xmm,rm32
                                     addopcode(bytes, j);
@@ -2560,10 +2563,10 @@ namespace Tack.LAutoAssembler
                                     return result;
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_mm_m64) && (Assembler.ismm_m64(paramtype2) | ((paramtype2 == ttokentype.ttmemorylocation32) && (parameter2[1] == '['))))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_mm_m64) && (Assembler.ismm_m64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
                             {
                                 //xmm,mm/m64
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     //xmm,mm/m64
                                     addopcode(bytes, j);
@@ -2571,17 +2574,17 @@ namespace Tack.LAutoAssembler
                                     return result;
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_xmm_m32) & Assembler.isxmm_m32(paramtype2))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm_m32) & Assembler.isxmm_m32(paramtype2))
                             {
                                 //even if the user didn't intend for it to be xmm,m64 it will be, that'll teach the lazy user to forget opperand size
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     //xmm,xmm/m32
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, getreg(parameter1), parameter2);
                                     return result;
                                 }
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_imm8) && (paramtype3 == ttokentype.ttvalue))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_imm8) && (paramtype3 == ATokenType.ttvalue))
                                 {
                                     addopcode(bytes, j);
                                     createmodrm(bytes, getreg(parameter1), parameter2);
@@ -2590,17 +2593,17 @@ namespace Tack.LAutoAssembler
                                     return result;
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_xmm_m64) && (Assembler.isxmm_m64(paramtype2) | ((paramtype2 == ttokentype.ttmemorylocation32) && (parameter2[1] == '['))))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm_m64) && (Assembler.isxmm_m64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
                             {
                                 //even if the user didn't intend for it to be xmm,m64 it will be, that'll teach the lazy user to forget opperand size
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     //xmm,xmm/m64
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, getreg(parameter1), parameter2);
                                     return result;
                                 }
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_imm8) && (paramtype3 == ttokentype.ttvalue))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_imm8) && (paramtype3 == ATokenType.ttvalue))
                                 {
                                     addopcode(bytes, j);
                                     createmodrm(bytes, getreg(parameter1), parameter2);
@@ -2609,16 +2612,16 @@ namespace Tack.LAutoAssembler
                                     return result;
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_xmm_m128) && (Assembler.isxmm_m128(paramtype2) | ((paramtype2 == ttokentype.ttmemorylocation32) && (parameter2[1] == '['))))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm_m128) && (Assembler.isxmm_m128(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
                             {
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     //xmm,xmm/m128
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, getreg(parameter1), parameter2);
                                     return result;
                                 }
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_imm8) && (paramtype3 == ttokentype.ttvalue))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_imm8) && (paramtype3 == ATokenType.ttvalue))
                                 {
                                     addopcode(bytes, j);
                                     createmodrm(bytes, getreg(parameter1), parameter2);
@@ -2629,11 +2632,11 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_m8:
-                        if ((paramtype1 == ttokentype.ttmemorylocation8) | Assembler.ismemorylocationdefault(parameter1))
+                    case AParam.par_m8:
+                        if ((paramtype1 == ATokenType.ttmemorylocation8) | Assembler.ismemorylocationdefault(parameter1))
                         {
                             //m8,xxx
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_noparam) && (parameter2 == ""))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
                             {
                                 //m8
                                 //                                 //check if it is especially designed to be 32 bit, or if it is a default anser
@@ -2644,9 +2647,9 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_m16:
-                        if ((paramtype1 == ttokentype.ttmemorylocation16) | Assembler.ismemorylocationdefault(parameter1))
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_noparam) && (parameter2 == ""))
+                    case AParam.par_m16:
+                        if ((paramtype1 == ATokenType.ttmemorylocation16) | Assembler.ismemorylocationdefault(parameter1))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
                             {
                                 //opcode+rd
                                 addopcode(bytes, j);
@@ -2654,27 +2657,27 @@ namespace Tack.LAutoAssembler
                                 return result;
                             }
                         break;
-                    case tparam.par_m32:
-                        if (paramtype1 == ttokentype.ttmemorylocation32)
+                    case AParam.par_m32:
+                        if (paramtype1 == ATokenType.ttmemorylocation32)
                         {
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_noparam) && (parameter2 == ""))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
                             {
                                 addopcode(bytes, j);
                                 result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
                                 return result;
                             }
-                            if (Assembler.opcodes[j].paramtype2 == tparam.par_r32)
+                            if (Assembler.opcodes[j].paramtype2 == AParam.par_r32)
                             {
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
                                     return result;
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_xmm) & ((paramtype2 == ttokentype.ttregisterxmm) | Assembler.ismemorylocationdefault(parameter2)))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm) & ((paramtype2 == ATokenType.ttregisterxmm) | Assembler.ismemorylocationdefault(parameter2)))
                             {
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) || (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) || (parameter3 == ""))
                                 {
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, getreg(parameter2), parameter1);
@@ -2683,14 +2686,14 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_m64:
-                        if ((paramtype1 == ttokentype.ttmemorylocation64) || (paramtype1 == ttokentype.ttmemorylocation32))
+                    case AParam.par_m64:
+                        if ((paramtype1 == ATokenType.ttmemorylocation64) || (paramtype1 == ATokenType.ttmemorylocation32))
                         {
                             //m64,
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_noparam) && (parameter2 == ""))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
                             {
                                 //m64
-                                if (Assembler.gettokentype(ref parameter1, parameter2) == ttokentype.ttmemorylocation64)
+                                if (Assembler.gettokentype(ref parameter1, parameter2) == ATokenType.ttmemorylocation64)
                                 {
                                     //verified, it is a 64 bit location, and if it was detected as 32 it was due to defaulting to 32
                                     addopcode(bytes, j);
@@ -2698,18 +2701,18 @@ namespace Tack.LAutoAssembler
                                     return result;
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_xmm) & ((paramtype2 == ttokentype.ttregisterxmm) | Assembler.ismemorylocationdefault(parameter2)))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm) & ((paramtype2 == ATokenType.ttregisterxmm) | Assembler.ismemorylocationdefault(parameter2)))
                             {
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) || (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) || (parameter3 == ""))
                                 {
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, getreg(parameter2), parameter1);
                                     return result;
                                 }
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_xmm) & ((paramtype2 == ttokentype.ttregisterxmm) | Assembler.ismemorylocationdefault(parameter2)))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm) & ((paramtype2 == ATokenType.ttregisterxmm) | Assembler.ismemorylocationdefault(parameter2)))
                             {
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) || (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) || (parameter3 == ""))
                                 {
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, getreg(parameter2), parameter1);
@@ -2718,10 +2721,10 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_m80:
-                        if ((paramtype1 == ttokentype.ttmemorylocation80) || ((paramtype1 == ttokentype.ttmemorylocation32) && (parameter1[1] == '[')))
+                    case AParam.par_m80:
+                        if ((paramtype1 == ATokenType.ttmemorylocation80) || ((paramtype1 == ATokenType.ttmemorylocation32) && (parameter1[1] == '[')))
                         {
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_noparam) && (parameter2 == ""))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
                             {
                                 addopcode(bytes, j);
                                 result = createmodrm(bytes, Assembler.eotoreg(Assembler.opcodes[j].opcode1), parameter1);
@@ -2729,12 +2732,12 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_m128:
-                        if ((paramtype1 == ttokentype.ttmemorylocation128) | (Assembler.ismemorylocationdefault(parameter1)))
+                    case AParam.par_m128:
+                        if ((paramtype1 == ATokenType.ttmemorylocation128) | (Assembler.ismemorylocationdefault(parameter1)))
                         {
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_xmm) && (paramtype2 == ttokentype.ttregisterxmm))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_xmm) && (paramtype2 == ATokenType.ttregisterxmm))
                             {
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
                                     addopcode(bytes, j);
                                     result = createmodrm(bytes, getreg(parameter2), parameter1);
@@ -2743,13 +2746,13 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_rel8:
-                        if (paramtype1 == ttokentype.ttvalue)
+                    case AParam.par_rel8:
+                        if (paramtype1 == ATokenType.ttvalue)
                         {
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_noparam) && (parameter2 == ""))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
                             {
                                 //rel8
-                                if (TUtils.inarray(parameter1[1], '-', '+'))
+                                if (AArrayUtils.InArray(parameter1[1], '-', '+'))
                                 {
                                     if (((!overrideshort) & (vtype > 8)) | (overridelong))
                                     {
@@ -2757,7 +2760,7 @@ namespace Tack.LAutoAssembler
                                         k = startoflist;
                                         while ((k <= Assembler.opcodecount) && (Assembler.opcodes[k].mnemonic == tokens[mnemonic]))
                                         {
-                                            if ((Assembler.opcodes[k].paramtype1 == tparam.par_rel32) && (Assembler.opcodes[k].paramtype2 == tparam.par_noparam))
+                                            if ((Assembler.opcodes[k].paramtype1 == AParam.par_rel32) && (Assembler.opcodes[k].paramtype2 == AParam.par_noparam))
                                             {
                                                 //yes, there is a 32 bit version
                                                 addopcode(bytes, k);
@@ -2784,7 +2787,7 @@ namespace Tack.LAutoAssembler
                                         k = startoflist;
                                         while ((k <= Assembler.opcodecount) && (Assembler.opcodes[k].mnemonic == tokens[mnemonic]))
                                         {
-                                            if ((Assembler.opcodes[k].paramtype1 == tparam.par_rel32) && (Assembler.opcodes[k].paramtype2 == tparam.par_noparam))
+                                            if ((Assembler.opcodes[k].paramtype1 == AParam.par_rel32) && (Assembler.opcodes[k].paramtype2 == AParam.par_noparam))
                                             {
                                                 //yes, there is a 32 bit version
                                                 addopcode(bytes, k);
@@ -2807,12 +2810,12 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_rel32:
-                        if (paramtype1 == ttokentype.ttvalue)
+                    case AParam.par_rel32:
+                        if (paramtype1 == ATokenType.ttvalue)
                         {
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_noparam) && (parameter2 == ""))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
                             {
-                                if (TUtils.inarray(parameter1[1], '-', '+'))
+                                if (AArrayUtils.InArray(parameter1[1], '-', '+'))
                                 {
                                     //opcode rel32
                                     addopcode(bytes, j);
@@ -2831,16 +2834,16 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_st0:
+                    case AParam.par_st0:
                         if ((parameter1 == "ST(0)") || (parameter1 == "ST"))
                         {
                             //st(0),
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_st) && (paramtype2 == ttokentype.ttregisterst))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_st) && (paramtype2 == ATokenType.ttregisterst))
                             {
                                 //st(0),st(x),
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
-                                    if (Assembler.opcodes[j].opcode1 == textraopcode.eo_pi)
+                                    if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_pi)
                                     {
                                         //opcode+i
                                         addopcode(bytes, j);
@@ -2858,11 +2861,11 @@ namespace Tack.LAutoAssembler
                             }
                         }
                         break;
-                    case tparam.par_st:
-                        if (paramtype1 == ttokentype.ttregisterst)
+                    case AParam.par_st:
+                        if (paramtype1 == ATokenType.ttregisterst)
                         {
                             //st(x),
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_noparam) && (parameter2 == ""))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_noparam) && (parameter2 == ""))
                             {
                                 //st(x)
                                 addopcode(bytes, j);
@@ -2876,12 +2879,12 @@ namespace Tack.LAutoAssembler
                                 result = true;
                                 return result;
                             }
-                            if ((Assembler.opcodes[j].paramtype2 == tparam.par_st0) && ((parameter2 == "ST(0)") || (parameter2 == "ST")))
+                            if ((Assembler.opcodes[j].paramtype2 == AParam.par_st0) && ((parameter2 == "ST(0)") || (parameter2 == "ST")))
                             {
                                 //st(x),st(0)
-                                if ((Assembler.opcodes[j].paramtype3 == tparam.par_noparam) && (parameter3 == ""))
+                                if ((Assembler.opcodes[j].paramtype3 == AParam.par_noparam) && (parameter3 == ""))
                                 {
-                                    if (Assembler.opcodes[j].opcode1 == textraopcode.eo_pi)
+                                    if (Assembler.opcodes[j].opcode1 == AExtraOpCode.eo_pi)
                                     {
                                         //opcode+i
                                         addopcode(bytes, j);

@@ -1,17 +1,17 @@
 ﻿using System;
 using Sputnik.LUtils;
-using Tack.LGenerics;
+using SputnikAsm.LGenerics;
 
-namespace Tack.LAutoAssembler
+namespace SputnikAsm.LAssembler.LCollections
 {
-    public class ttokens : TArrayManager<String>
+    public class ATokens : AArrayManager<String>
     {
         #region Constructor
-        public ttokens()
+        public ATokens()
             : base()
         {
         }
-        public ttokens(params String[] tokens)
+        public ATokens(params String[] tokens)
             : base(tokens)
         {
         }

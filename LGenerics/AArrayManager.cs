@@ -1,15 +1,12 @@
 ﻿using System;
 
-namespace Tack.LGenerics
+namespace SputnikAsm.LGenerics
 {
-    public class TArrayManager<T>
+    public class AArrayManager<T>
     {
-        #region Variables
-        private T[] _buffer;
-        #endregion
         #region Properties
-        public int Length => _buffer.Length;
-        public T[] Raw => _buffer;
+        public int Length => Raw.Length;
+        public T[] Raw { get; private set; }
         public T First
         {
             get => Get(0);
@@ -17,8 +14,8 @@ namespace Tack.LGenerics
         }
         public T Last
         {
-            get => Get(_buffer.Length - 1);
-            set => Set(_buffer.Length - 1, value);
+            get => Get(Raw.Length - 1);
+            set => Set(Raw.Length - 1, value);
         }
         #endregion
         #region Override []
@@ -29,25 +26,25 @@ namespace Tack.LGenerics
         }
         #endregion
         #region Constructor
-        public TArrayManager(params T[] tokens)
+        public AArrayManager(params T[] tokens)
         {
-            _buffer = tokens;
+            Raw = tokens;
         }
         #endregion
         #region SetLength
         public void SetLength(int size)
         {
-            if (size < _buffer.Length)
+            if (size < Raw.Length)
             {
                 var newBuffer = new T[size];
                 for (var i = 0; i < newBuffer.Length; i++)
                 {
-                    if (i < _buffer.Length)
-                        newBuffer[i] = _buffer[i];
+                    if (i < Raw.Length)
+                        newBuffer[i] = Raw[i];
                     else
                         newBuffer[i] = NextElement(i);
                 }
-                _buffer = newBuffer;
+                Raw = newBuffer;
                 return;
             }
             EnsureCapacity(size);
@@ -56,17 +53,17 @@ namespace Tack.LGenerics
         #region EnsureCapacity
         public void EnsureCapacity(int capacity)
         {
-            if (capacity <= _buffer.Length)
+            if (capacity <= Raw.Length)
                 return;
             var newBuffer = new T[capacity];
             for (var i = 0; i < newBuffer.Length; i++)
             {
-                if (i < _buffer.Length)
-                    newBuffer[i] = _buffer[i];
+                if (i < Raw.Length)
+                    newBuffer[i] = Raw[i];
                 else
                     newBuffer[i] = NextElement(i);
             }
-            _buffer = newBuffer;
+            Raw = newBuffer;
         }
         #endregion
         #region NextElement
@@ -78,17 +75,17 @@ namespace Tack.LGenerics
         #region Get
         public T Get(int index)
         {
-            if (index < 0 || index >= _buffer.Length)
+            if (index < 0 || index >= Raw.Length)
                 return default;
-            return _buffer[index];
+            return Raw[index];
         }
         #endregion
         #region Set
         public void Set(int index, T value)
         {
-            if (index < 0 || index >= _buffer.Length)
+            if (index < 0 || index >= Raw.Length)
                 throw new Exception("outside bounds of array");
-            _buffer[index] = value;
+            Raw[index] = value;
         }
         #endregion
         #region Remove
@@ -100,25 +97,25 @@ namespace Tack.LGenerics
         {
             if (length <= 0)
                 return;
-            if (startIndex >= _buffer.Length)
+            if (startIndex >= Raw.Length)
                 return;
             var removed = 0;
-            for (var i = startIndex; i < _buffer.Length; i++)
+            for (var i = startIndex; i < Raw.Length; i++)
             {
                 if (i < startIndex)
                     continue;
                 if (i >= startIndex && i < startIndex + length)
                     removed++;
                 var iOffset = i + length;
-                if (iOffset < 0 || iOffset >= _buffer.Length)
+                if (iOffset < 0 || iOffset >= Raw.Length)
                     continue;
-                _buffer[i] = _buffer[iOffset];
+                Raw[i] = Raw[iOffset];
             }
             if (removed <= 0)
                 return;
-            var newBuffer = new T[_buffer.Length - removed];
-            Array.Copy(_buffer, newBuffer, _buffer.Length - removed);
-            _buffer = newBuffer;
+            var newBuffer = new T[Raw.Length - removed];
+            Array.Copy(Raw, newBuffer, Raw.Length - removed);
+            Raw = newBuffer;
         }
         #endregion
     }

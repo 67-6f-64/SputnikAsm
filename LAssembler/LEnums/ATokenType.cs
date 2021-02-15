@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Tack.LAutoAssembler
+﻿namespace SputnikAsm.LAssembler.LEnums
 {
-    public enum ttokentype
+    public enum ATokenType
     {
         ttinvalidtoken, ttregister8bit, ttregister16bit, ttregister32bit, ttregister64bit, ttregister8bitwithprefix,
         ttregistermm, ttregisterxmm, ttregisterst, ttregistersreg,
