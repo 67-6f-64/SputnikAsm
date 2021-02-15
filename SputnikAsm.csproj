@@ -71,6 +71,8 @@
     <Compile Include="LAutoAssembler\AExceptionInfo.cs" />
     <Compile Include="LAutoAssembler\AAlloc.cs" />
     <Compile Include="LAutoAssembler\ADisableInfo.cs" />
+    <Compile Include="LAutoAssembler\AScriptBytes.cs" />
+    <Compile Include="LAutoAssembler\LCollections\AScriptBytesArray.cs" />
     <Compile Include="LAutoAssembler\LCollections\AExceptionInfoArray.cs" />
     <Compile Include="LAutoAssembler\LCollections\AAllocArray.cs" />
     <Compile Include="LCollections\ACharArray.cs" />

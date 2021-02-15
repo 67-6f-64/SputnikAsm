@@ -874,7 +874,7 @@ namespace SputnikAsm.LAutoAssembler
         }
         #endregion
         #region AutoAssemble
-        public Boolean AutoAssemble(AProcess process, ARefStringArray code, Boolean popUpMessages, Boolean enable, Boolean syntaxCheckOnly, Boolean targetSelf, ADisableInfo disableInfo, Boolean createScript, ARefStringArray newScript)
+        public Boolean AutoAssemble(AProcess process, ARefStringArray code, Boolean popUpMessages, Boolean enable, Boolean syntaxCheckOnly, Boolean targetSelf, ADisableInfo disableInfo, Boolean createScript, AScriptBytesArray scriptBytes)
         {
             //add line numbers to the code
             for (var i = 0; i < code.Length; i++)
@@ -924,12 +924,12 @@ namespace SputnikAsm.LAutoAssembler
                 strip32BitCode = Assembler.Is64Bit;
             if (strip32BitCode)
                 StripCpuSpecificCode(tempStrings, strip32BitCode);
-            var result = AutoAssemble2(process, tempStrings, popUpMessages, syntaxCheckOnly, targetSelf, disableInfo, createScript, newScript);
+            var result = AutoAssemble2(process, tempStrings, popUpMessages, syntaxCheckOnly, targetSelf, disableInfo, createScript, scriptBytes);
             return result;
         }
         #endregion
         #region AutoAssemble2
-        public Boolean AutoAssemble2(AProcess process, ARefStringArray code, Boolean popUpMessages, Boolean syntaxCheckOnly, Boolean targetSelf, ADisableInfo disableInfo, Boolean createScript, ARefStringArray newScript)
+        public Boolean AutoAssemble2(AProcess process, ARefStringArray code, Boolean popUpMessages, Boolean syntaxCheckOnly, Boolean targetSelf, ADisableInfo disableInfo, Boolean createScript, AScriptBytesArray scriptBytes)
         {
             var i = 0;
             var j = 0;
@@ -2592,7 +2592,7 @@ namespace SputnikAsm.LAutoAssembler
                 //unprotectmemory
                 for (i = 0; i < fullaccess.Length; i++)
                     if (createScript)
-                        newScript.Add("FullAccess " + AStringUtils.IntToHex(fullaccess[i].Address, 8) + " " + fullaccess[i].Size);
+                        scriptBytes.Add("FullAccess", fullaccess[i].Address, new AByteArray());
                     else
                         process.FullAccess((IntPtr)fullaccess[i].Address.ToUInt64(), (int)fullaccess[i].Size);
                 #region Load Binaries -- todo
@@ -2740,12 +2740,13 @@ namespace SputnikAsm.LAutoAssembler
                     testPtr = assembled[i].Address;
                     if (createScript)
                     {
-                        newScript.Add("Poke " + AStringUtils.IntToHex(testPtr, 8) + " " + AStringUtils.BinToHexStr(assembled[i].Bytes.Raw));
+                        scriptBytes.Add("Poke", testPtr, new AByteArray(UBinaryUtils.Copy(assembled[i].Bytes.Raw)));
                         ok1 = true;
                         ok2 = true;
                     }
                     else
                     {
+                        Console.WriteLine("ALine: Poke " + testPtr.ToUInt64().ToString("X") + " " + AStringUtils.BinToHexStr(assembled[i].Bytes.Raw));
                         ok1 = process.FullAccess((IntPtr)testPtr.ToUInt64(), assembled[i].Bytes.Length);
                         ok2 = process.WriteMem((IntPtr)testPtr.ToUInt64(), assembled[i].Bytes.Raw) == assembled[i].Bytes.Length;
                     }
@@ -3047,6 +3048,20 @@ namespace SputnikAsm.LAutoAssembler
                 }
             }
             return result;
+        }
+        #endregion
+        #region Assemble
+        public AByteArray Assemble(AProcess process, String asm)
+        {
+            var code = new ARefStringArray();
+            code.Assign(UStringUtils.GetLines(asm).ToArray());
+            RemoveComments(code);
+            var scr = new AScriptBytesArray();
+            var info = new ADisableInfo();
+            var ret = AutoAssemble2(process, code, false, false, false, info, true, scr);
+            if (!ret || scr.Length < 1)
+                return new AByteArray();
+            return scr[0].Bytes;
         }
         #endregion
         #region OutputDebugString
