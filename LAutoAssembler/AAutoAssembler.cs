@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Windows.Forms;
 using Sputnik.LFileSystem;
 using Sputnik.LString;
@@ -382,7 +381,7 @@ namespace SputnikAsm.LAutoAssembler
             var insideDisable = false;
             for (var i = 0; i < code.Length; i++)
             {
-                switch (code[i].Value.ToUpper())
+                switch (code[i].Value.Trim().ToUpper())
                 {
                     case "[ENABLE]":
                         insideEnable = true;
@@ -451,7 +450,9 @@ namespace SputnikAsm.LAutoAssembler
             var tokens = new ARefStringArray();
             Tokenize(input, tokens);
             var result = input;
-            for (var i = 0; i < tokens.Length; i++)
+            // todo figure out which one we should be using!
+            for (var i = tokens.Length - 1; i >= 0; i--)
+            //for (var i = 0; i < tokens.Length; i++)
             {
                 if (tokens[i].Value != token)
                     continue;

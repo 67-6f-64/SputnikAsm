@@ -14,6 +14,8 @@ namespace SputnikAsm.LAssembler
         public int RexPrefixLocation;
         public int RelativeAddressLocation;
         public UInt64 ActualDisplacement;
+        public Boolean NeedsAddressSwitchPrefix;
+        public UInt64 FAddress;
         #endregion
         #region Properties
         public Boolean RexW
@@ -75,6 +77,8 @@ namespace SputnikAsm.LAssembler
             RexPrefixLocation = 0;
             RelativeAddressLocation = 0;
             ActualDisplacement = 0;
+            NeedsAddressSwitchPrefix = false;
+            FAddress = 0;
         }
         #endregion
         #region GetReg
@@ -93,6 +97,7 @@ namespace SputnikAsm.LAssembler
                 case "AL":
                 case "MM0":
                 case "XMM0":
+                case "YMM0":
                 case "ST(0)":
                 case "ST":
                 case "ES":
@@ -106,6 +111,7 @@ namespace SputnikAsm.LAssembler
                 case "CL":
                 case "MM1":
                 case "XMM1":
+                case "YMM1":
                 case "ST(1)":
                 case "CS":
                 case "CR1":
@@ -118,6 +124,7 @@ namespace SputnikAsm.LAssembler
                 case "DL":
                 case "MM2":
                 case "XMM2":
+                case "YMM2":
                 case "ST(2)":
                 case "SS":
                 case "CR2":
@@ -130,6 +137,7 @@ namespace SputnikAsm.LAssembler
                 case "BL":
                 case "MM3":
                 case "XMM3":
+                case "YMM3":
                 case "ST(3)":
                 case "DS":
                 case "CR3":
@@ -142,6 +150,7 @@ namespace SputnikAsm.LAssembler
                 case "AH":
                 case "MM4":
                 case "XMM4":
+                case "YMM4":
                 case "ST(4)":
                 case "FS":
                 case "CR4":
@@ -154,6 +163,7 @@ namespace SputnikAsm.LAssembler
                 case "CH":
                 case "MM5":
                 case "XMM5":
+                case "YMM5":
                 case "ST(5)":
                 case "GS":
                 case "CR5":
@@ -166,6 +176,7 @@ namespace SputnikAsm.LAssembler
                 case "DH":
                 case "MM6":
                 case "XMM6":
+                case "YMM6":
                 case "ST(6)":
                 case "HS":
                 case "CR6":
@@ -178,6 +189,7 @@ namespace SputnikAsm.LAssembler
                 case "BH":
                 case "MM7":
                 case "XMM7":
+                case "YMM7":
                 case "ST(7)":
                 case "IS":
                 case "CR7":
@@ -207,6 +219,7 @@ namespace SputnikAsm.LAssembler
                     case "R8L":
                     case "MM8":
                     case "XMM8":
+                    case "YMM8":
                     case "ST(8)":
                     case "JS":
                     case "CR8":
@@ -219,6 +232,7 @@ namespace SputnikAsm.LAssembler
                     case "R9L":
                     case "MM9":
                     case "XMM9":
+                    case "YMM9":
                     case "ST(9)":
                     case "KS":
                     case "CR9":
@@ -234,6 +248,7 @@ namespace SputnikAsm.LAssembler
                     case "R10L":
                     case "MM10":
                     case "XMM10":
+                    case "YMM10":
                     case "ST(10)":
                     case "KS":
                     case "CR10":
@@ -246,6 +261,7 @@ namespace SputnikAsm.LAssembler
                     case "R11L":
                     case "MM11":
                     case "XMM11":
+                    case "YMM11":
                     case "ST(11)":
                     case "LS":
                     case "CR11":
@@ -258,6 +274,7 @@ namespace SputnikAsm.LAssembler
                     case "R12L":
                     case "MM12":
                     case "XMM12":
+                    case "YMM12":
                     case "ST(12)":
                     case "MS":
                     case "CR12":
@@ -270,6 +287,7 @@ namespace SputnikAsm.LAssembler
                     case "R13L":
                     case "MM13":
                     case "XMM13":
+                    case "YMM13":
                     case "ST(13)":
                     case "NS":
                     case "CR13":
@@ -282,6 +300,7 @@ namespace SputnikAsm.LAssembler
                     case "R14L":
                     case "MM14":
                     case "XMM14":
+                    case "YMM14":
                     case "ST(14)":
                     case "OS":
                     case "CR14":
@@ -294,6 +313,7 @@ namespace SputnikAsm.LAssembler
                     case "R15L":
                     case "MM15":
                     case "XMM15":
+                    case "YMM15":
                     case "ST(15)":
                     case "PS":
                     case "CR15":
@@ -316,13 +336,35 @@ namespace SputnikAsm.LAssembler
         }
         public void CreateSibScaleIndex(ref Byte sib, String reg)
         {
-            if (AStringUtils.Pos("*2", reg) != -1)
-                Assembler.SetSibScale(ref sib, 1);
-            else if (AStringUtils.Pos("*4", reg) != -1)
-                Assembler.SetSibScale(ref sib, 2);
-            else if (AStringUtils.Pos("*8", reg) != -1)
-                Assembler.SetSibScale(ref sib, 3);
-            else
+            var hasMultiply = false;
+            for (var i = 0; i < reg.Length; i++)
+            {
+                if (reg[i] == '*')
+                {
+                    hasMultiply = true;
+                    switch (reg[i + 1])
+                    {
+                        case '1':
+                            Assembler.SetSibScale(ref sib, 0);
+                            break;
+                        case '2':
+                            Assembler.SetSibScale(ref sib, 1);
+                            break; //*2
+                        case '4':
+                            Assembler.SetSibScale(ref sib, 2);
+                            break; //*4
+                        case '8':
+                            Assembler.SetSibScale(ref sib, 3);
+                            break; //*8
+                        default:
+                            throw new Exception("Invalid multiplier");
+                    }
+                    if (reg.Length > i + 1)
+                        throw new Exception("Invalid multiplier");
+                    break;
+                }
+            }
+            if (!hasMultiply)
                 Assembler.SetSibScale(ref sib, 0);
             if (Assembler.SymHandler.Process.IsX64)
             {
@@ -359,7 +401,29 @@ namespace SputnikAsm.LAssembler
                 else if (AStringUtils.Pos("R15", reg) != -1)
                     SetSibIndex(ref sib, 15);
                 else
-                    throw new Exception("WTF is a " + reg);
+                {
+                    //in case addressswitch is needed
+                    if (AStringUtils.Pos("EAX", reg) != -1)
+                        SetSibIndex(ref sib, 0);
+                    else if (AStringUtils.Pos("ECX", reg) != -1)
+                        SetSibIndex(ref sib, 1);
+                    else if (AStringUtils.Pos("EDX", reg) != -1)
+                        SetSibIndex(ref sib, 2);
+                    else if (AStringUtils.Pos("EBX", reg) != -1)
+                        SetSibIndex(ref sib, 3);
+                    else if (AStringUtils.Pos("ESP", reg) != -1)
+                        SetSibIndex(ref sib, 4);
+                    else if (AStringUtils.Pos("EBP", reg) != -1)
+                        SetSibIndex(ref sib, 5);
+                    else if (AStringUtils.Pos("ESI", reg) != -1)
+                        SetSibIndex(ref sib, 6);
+                    else if (AStringUtils.Pos("EDI", reg) != -1)
+                        SetSibIndex(ref sib, 7);
+                    else
+                        throw new Exception("WTF is a " + reg);
+                    //still here, so I guess so
+                    NeedsAddressSwitchPrefix = true;
+                }
             }
             else
             {
@@ -444,37 +508,37 @@ namespace SputnikAsm.LAssembler
             {
                 //register //modrm c0 to ff
                 Assembler.SetMod(modrm, 0, 3);
-                if ((param == "RAX") || (param == "EAX") || (param == "AX") || (param == "AL") || (param == "MM0") || (param == "XMM0"))
+                if (param == "RAX" || param == "EAX" || param == "AX" || param == "AL" || param == "MM0" || param == "XMM0" || param == "YMM0")
                     SetRm(modrm, 0, 0);
-                else if ((param == "RCX") || (param == "ECX") || (param == "CX") || (param == "CL") || (param == "MM1") || (param == "XMM1"))
+                else if (param == "RCX" || param == "ECX" || param == "CX" || param == "CL" || param == "MM1" || param == "XMM1" || param == "YMM1")
                     SetRm(modrm, 0, 1);
-                else if ((param == "RDX") || (param == "EDX") || (param == "DX") || (param == "DL") || (param == "MM2") || (param == "XMM2"))
+                else if (param == "RDX" || param == "EDX" || param == "DX" || param == "DL" || param == "MM2" || param == "XMM2" || param == "YMM2")
                     SetRm(modrm, 0, 2);
-                else if ((param == "RBX") || (param == "EBX") || (param == "BX") || (param == "BL") || (param == "MM3") || (param == "XMM3"))
+                else if (param == "RBX" || param == "EBX" || param == "BX" || param == "BL" || param == "MM3" || param == "XMM3" || param == "YMM3")
                     SetRm(modrm, 0, 3);
-                else if ((param == "SPL") || (param == "RSP") || (param == "ESP") || (param == "SP") || (param == "AH") || (param == "MM4") || (param == "XMM4"))
+                else if (param == "SPL" || param == "RSP" || param == "ESP" || param == "SP" || param == "AH" || param == "MM4" || param == "XMM4" || param == "YMM4")
                     SetRm(modrm, 0, 4);
-                else if ((param == "BPL") || (param == "RBP") || (param == "EBP") || (param == "BP") || (param == "CH") || (param == "MM5") || (param == "XMM5"))
+                else if (param == "BPL" || param == "RBP" || param == "EBP" || param == "BP" || param == "CH" || param == "MM5" || param == "XMM5" || param == "YMM5")
                     SetRm(modrm, 0, 5);
-                else if ((param == "SIL") || (param == "RSI") || (param == "ESI") || (param == "SI") || (param == "DH") || (param == "MM6") || (param == "XMM6"))
+                else if (param == "SIL" || param == "RSI" || param == "ESI" || param == "SI" || param == "DH" || param == "MM6" || param == "XMM6" || param == "YMM6")
                     SetRm(modrm, 0, 6);
-                else if ((param == "DIL") || (param == "RDI") || (param == "EDI") || (param == "DI") || (param == "BH") || (param == "MM7") || (param == "XMM7"))
+                else if (param == "DIL" || param == "RDI" || param == "EDI" || param == "DI" || param == "BH" || param == "MM7" || param == "XMM7" || param == "YMM7")
                     SetRm(modrm, 0, 7);
-                else if ((param == "R8") || (param == "R8D") || (param == "R8W") || (param == "R8L") || (param == "MM8") || (param == "XMM8"))
+                else if (param == "R8" || param == "R8D" || param == "R8W" || param == "R8L" || param == "MM8" || param == "XMM8" || param == "YMM8")
                     SetRm(modrm, 0, 8);
-                else if ((param == "R9") || (param == "R9D") || (param == "R9W") || (param == "R9L") || (param == "MM9") || (param == "XMM9"))
+                else if (param == "R9" || param == "R9D" || param == "R9W" || param == "R9L" || param == "MM9" || param == "XMM9" || param == "YMM9")
                     SetRm(modrm, 0, 9);
-                else if ((param == "R10") || (param == "R10D") || (param == "R10W") || (param == "R10L") || (param == "MM10") || (param == "XMM10"))
+                else if (param == "R10" || param == "R10D" || param == "R10W" || param == "R10L" || param == "MM10" || param == "XMM10" || param == "YMM10")
                     SetRm(modrm, 0, 10);
-                else if ((param == "R11") || (param == "R11D") || (param == "R11W") || (param == "R11L") || (param == "MM11") || (param == "XMM11"))
+                else if (param == "R11" || param == "R11D" || param == "R11W" || param == "R11L" || param == "MM11" || param == "XMM11" || param == "YMM11")
                     SetRm(modrm, 0, 11);
-                else if ((param == "R12") || (param == "R12D") || (param == "R12W") || (param == "R12L") || (param == "MM12") || (param == "XMM12"))
+                else if (param == "R12" || param == "R12D" || param == "R12W" || param == "R12L" || param == "MM12" || param == "XMM12" || param == "YMM12")
                     SetRm(modrm, 0, 12);
-                else if ((param == "R13") || (param == "R13D") || (param == "R13W") || (param == "R13L") || (param == "MM13") || (param == "XMM13"))
+                else if (param == "R13" || param == "R13D" || param == "R13W" || param == "R13L" || param == "MM13" || param == "XMM13" || param == "YMM13")
                     SetRm(modrm, 0, 13);
-                else if ((param == "R14") || (param == "R14D") || (param == "R14W") || (param == "R14L") || (param == "MM14") || (param == "XMM14"))
+                else if (param == "R14" || param == "R14D" || param == "R14W" || param == "R14L" || param == "MM14" || param == "XMM14" || param == "YMM14")
                     SetRm(modrm, 0, 14);
-                else if ((param == "R15") || (param == "R15D") || (param == "R15W") || (param == "R15L") || (param == "MM15") || (param == "XMM15"))
+                else if (param == "R15" || param == "R15D" || param == "R15W" || param == "R15L" || param == "MM15" || param == "XMM15" || param == "YMM15")
                     SetRm(modrm, 0, 15);
                 else
                     throw new Exception("I don't understand what you mean with " + param);
@@ -511,6 +575,8 @@ namespace SputnikAsm.LAssembler
                 Assembler.Add(bytes, Assembler.OpCodes[i].Bt2);
             if (Assembler.OpCodes[i].Bytes > 2)
                 Assembler.Add(bytes, Assembler.OpCodes[i].Bt3);
+            if (Assembler.OpCodes[i].Bytes > 3)
+                Assembler.Add(bytes, Assembler.OpCodes[i].Bt4);
         }
         #endregion
         #region SetModRm
@@ -581,8 +647,12 @@ namespace SputnikAsm.LAssembler
                     AStringUtils.Val(temp, out test, out j);
                 else
                     AStringUtils.Val("0x" + temp, out test, out j);
-                if (j > 0)  //a register or a stupid user
+                if (j > 0) //a register or a stupid user
+                {
+                    if (!increase)
+                        throw new Exception("Negative registers can not be encoded");
                     regs = regs + temp + '+';
+                }
                 else
                 {  
                     //a value
@@ -645,7 +715,7 @@ namespace SputnikAsm.LAssembler
                 Assembler.SetMod(modrm, 0, 0);
                 if (Assembler.SymHandler.Process.IsX64)
                 {
-                    if (disp <= 0xffffffff)
+                    if ((disp <= 0x7fffffff) && Math.Abs((Int64)(FAddress - disp)) > 0x7ffffff0)  //rough estimate
                     {
                         //this can be solved with an 0x25 SIB byte
                         modrm.SetLength(2);
@@ -986,6 +1056,7 @@ namespace SputnikAsm.LAssembler
             var overridelong = false;
             var overridefar = false;
             var is64bit = Assembler.SymHandler.Process.IsX64;
+            Byte b = 0;
             RelativeAddressLocation = -1;
             RexPrefix = 0;
             var result = false;
@@ -1217,8 +1288,8 @@ namespace SputnikAsm.LAssembler
                     v2type = Assembler.StringValueToType(parameter3);
                 }
             }
-            signedvtype = Assembler.SignedValueToType((int)v);
-            signedv2type = Assembler.SignedValueToType((int)v2);
+            signedvtype = Assembler.SignedValueToType((IntPtr)v);
+            signedv2type = Assembler.SignedValueToType((IntPtr)v2);
             result = false;
             //to make it easier for people that don't like the relative addressing limit
             if ((!overrideshort) & (!overridelong) & (Assembler.SymHandler.Process.IsX64))    //if 64-bit and no override is given
@@ -2964,7 +3035,7 @@ namespace SputnikAsm.LAssembler
                                     {
                                         //user typed in a direct address
                                         //        if (not overrideShort) and ((OverrideLong) or (valueTotype(      v-address-       (Assembler.opcodes[j].bytes+1) )>8) ) then
-                                        if ((!overrideshort) & ((overridelong) | (Assembler.ValueToType((UInt32)(v - address - (UInt32)(Assembler.OpCodes[j].Bytes + 1))) > 8)))
+                                        if ((!overrideshort) & ((overridelong) | (Assembler.ValueToType((IntPtr)(v - address - (UInt64)(Assembler.OpCodes[j].Bytes + 1))) > 8)))
                                         {
                                             //the user tried to find a relative address out of it's reach
                                             //see if there is a 32 bit version of the opcode
@@ -3097,7 +3168,7 @@ namespace SputnikAsm.LAssembler
                     //insert rex prefix if needed
                     if (Assembler.SymHandler.Process.IsX64)
                     {
-                        if (Assembler.OpCodes[j].NorExw)
+                        if (Assembler.OpCodes[j].W0)
                             RexW = false;
                         if (RexPrefix != 0)
                         {
@@ -3128,10 +3199,10 @@ namespace SputnikAsm.LAssembler
                             {
                                 unsafe
                                 {
-                                    fixed (byte* b = bytes.Raw)
+                                    fixed (byte* bt = bytes.Raw)
                                     {
                                         var vp = (UInt32)(ActualDisplacement - (address + (UInt32)bytes.Length));
-                                        *(UInt32*)b[RelativeAddressLocation] = vp;
+                                        *(UInt32*)bt[RelativeAddressLocation] = vp;
                                     }
                                 }
                             }

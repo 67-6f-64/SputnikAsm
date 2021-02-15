@@ -21,8 +21,8 @@ namespace SputnikAsm
             //var result = a.Assemble("mov eax, edx", 0x400300, b); // 
             //B8 05 03 40 00
             //8B 05 05 03 40 00
-            var result = a.Assemble("mov eax, [400305]", 0x400300, b); // A1 09 00 00 00
-            //var result = a.Assemble("jmp 400500", 0x400300, b); // E9 FB 01 00 00
+            //var result = a.Assemble("mov eax, [400305]", 0x400300, b); // A1 09 00 00 00
+            var result = a.Assemble("jmp 400500", 0x400300, b); // E9 FB 01 00 00
             //var result = a.Assemble("mov eax, [eax+esi+7]", 0x400300, b); // 8B 44 30 07
             Console.WriteLine("Result: " + result);
             Console.WriteLine("Bytes:");

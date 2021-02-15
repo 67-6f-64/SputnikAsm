@@ -66,6 +66,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="LAssembler\AAssembler.cs" />
+    <Compile Include="LAssembler\LEnums\AVexLeadingOpCode.cs" />
+    <Compile Include="LAssembler\LEnums\AVexOpCodeExtension.cs" />
     <Compile Include="LAutoAssembler\AAlloc.cs" />
     <Compile Include="LAutoAssembler\LCollections\AAllocArray.cs" />
     <Compile Include="LCollections\ACharArray.cs" />

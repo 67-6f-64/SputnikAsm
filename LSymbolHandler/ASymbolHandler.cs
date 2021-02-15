@@ -1,5 +1,6 @@
 ﻿using System;
 using Sputnik.LUtils;
+using SputnikAsm.LAssembler;
 using SputnikAsm.LCollections;
 using SputnikAsm.LGenerics;
 using SputnikAsm.LUtils;
@@ -174,7 +175,8 @@ namespace SputnikAsm.LSymbolHandler
             if (AStringUtils.Copy(name, 1, 2).ToLower() == "0x")
             {
                 AStringUtils.Val(name, out result, out i);
-                if (i == 0) return result;
+                if (i == 0)
+                    return result;
             }
             //not a hexadecimal string
             Tokenize(name, tokens);

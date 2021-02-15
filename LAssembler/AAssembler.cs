@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using Sputnik.LUtils;
+using Sputnik.UParser.LSpk;
 using SputnikAsm.LAssembler.LEnums;
 using SputnikAsm.LCollections;
 using SputnikAsm.LSymbolHandler;
@@ -113,14 +114,15 @@ namespace SputnikAsm.LAssembler
             bestindex = AssemblerIndex[index1];
             if (bestindex.StartEntry == -1)
                 return result;
-            if ((AssemblerIndex[index1].SubIndex != null) && (opCode.Length > 1))
+            if (AssemblerIndex[index1].SubIndex != null && opCode.Length > 1)
             {
                 index2 = opCode[1] - 'A';
-                if ((index2 < 0) || (index2 >= LetterCount))
-                    return result; //not alphabetical
-                bestindex = AssemblerIndex[index1].SubIndex[index2];
-                if (bestindex.StartEntry == -1)
-                    return result; //no subitem2
+                if (index2 >= 0 && index2 < LetterCount)
+                {
+                    bestindex = AssemblerIndex[index1].SubIndex[index2];
+                    if (bestindex.StartEntry == -1)
+                        return result; //no subitem2
+                }  //else not alphabetical
             }
             minindex = bestindex.StartEntry;
             maxindex = bestindex.NextEntry;
@@ -203,43 +205,64 @@ namespace SputnikAsm.LAssembler
                 bytes[j] = (Byte)s[i];
         }
         #endregion
-        #region ValueToType
-        public int ValueToType(UInt32 value)
+        #region AddUnicodeString
+        public void AddUnicodeString(AByteArray bytes, String s)
         {
+            Add(bytes, USpk.SpkEncoding.GetBytes(s));
+        }
+        #endregion
+        #region ValueToType
+        public int ValueToType(IntPtr value)
+        {
+            var v = value.ToInt64();
             var result = 32;
-            if (value <= 0xffff) 
+            if (v <= 0xffff) 
             {
                 result = 16;
-                if (value >= 0x8000)
+                if (v >= 0x8000)
                     result = 32;
             }
-            if (value <= 0xff) 
+            if (v <= 0xff) 
             {
                 result = 8;
-                if (value >= 0x80)
+                if (v >= 0x80)
                     result = 16;
             }
             if (result == 32)
             {
-                if ((int)(value) < 0)
+                if (v < 0)
                 {
-                    if ((int)(value) >= -128)
+                    if (v >= -128)
                         result = 8;
-                    else if ((int)(value) >= -32768)
+                    else if (v >= -32768)
                         result = 16;
                 }
+            }
+            if (result == 32)
+            {
+                //still
+                var vup = v >> 32;
+                var msb = (v >> 31) & 1;
+
+                if (((msb == 1) && (vup != 0xffffffff)) || ((msb == 0) && (vup != 0)))
+                    result = 64; //can not be encoded using a 32 bit value
             }
             return result;
         }
         #endregion
         #region SignedValueToType
-        public int SignedValueToType(int value)
+        public int SignedValueToType(IntPtr value)
         {
+            var v = value.ToInt64();
             var result = 8;
-            if ((value < -128) || (value > 127))
+            if ((v < -128) || (v > 127))
                 result = 16;
-            if ((value < -32768) || (value > 32767))
+            if ((v < -32768) || (v > 32767))
                 result = 32;
+            var vup = v >> 32;
+            var msb = (v >> 31) & 1;
+            if (((msb == 1) && (vup != 0xffffffff)) || ((msb == 0) && (vup != 0)))
+                result = 64; //can not be encoded using a 32 bit value
             return result;
         }
         #endregion
@@ -248,7 +271,7 @@ namespace SputnikAsm.LAssembler
         {
             //this function converts a string to a value type depending on how it is written
             var result = 0;
-            AStringUtils.Val(value, out UInt32 x, out var err);
+            AStringUtils.Val(value, out UInt64 x, out var err);
             if (err > 0)
                 return 0;
             if (value.Length == 17)
@@ -268,7 +291,7 @@ namespace SputnikAsm.LAssembler
                     result = 16;
             }
             if (result == 0)
-                result = ValueToType(x); //not a specific ammount of characters given
+                result = ValueToType((IntPtr)x); //not a specific ammount of characters given
             return result;
         }
         #endregion
@@ -417,6 +440,71 @@ namespace SputnikAsm.LAssembler
         public ATokenType TokenToRegisterBit(String token)
         {
             var result = ATokenType.ttregister32bit;
+            if (token.Length < 2)
+                return result;
+            switch (token[1])
+            {
+                case 'X':
+                {
+                    switch (token)
+                    {
+                        case "XMM0":
+                        case "XMM1":
+                        case "XMM2":
+                        case "XMM3":
+                        case "XMM4":
+                        case "XMM5":
+                        case "XMM6":
+                        case "XMM7":
+                            return ATokenType.ttregisterxmm;
+                        default:
+                        {
+                            if (SymHandler.Process.IsX64)
+                            {
+                                switch (token)
+                                {
+                                    case "XMM8":
+                                    case "XMM9":
+                                    case "XMM10":
+                                    case "XMM11":
+                                    case "XMM12":
+                                    case "XMM13":
+                                    case "XMM14":
+                                    case "XMM15":
+                                        return ATokenType.ttregisterxmm;
+                                }
+                            }
+                            break;
+                        }
+                    }
+                    return ATokenType.ttinvalidtoken; //no other registers start with X
+                }
+                case 'Y':
+                {
+                    switch (token)
+                    {
+                        case "YMM0":
+                        case "YMM1":
+                        case "YMM2":
+                        case "YMM3":
+                        case "YMM4":
+                        case "YMM5":
+                        case "YMM6":
+                        case "YMM7":
+                        case "YMM8":
+                        case "YMM9":
+                        case "YMM10":
+                        case "YMM11":
+                        case "YMM12":
+                        case "YMM13":
+                        case "YMM14":
+                        case "YMM15":
+                            return ATokenType.ttregisterymm;
+                        default:
+                            return ATokenType.ttinvalidtoken;
+                    }
+                }
+            }
             switch (token)
             {
                 case "AL":
@@ -628,6 +716,18 @@ namespace SputnikAsm.LAssembler
             return p == ATokenType.ttregistermm || p == ATokenType.ttmemorylocation64;
         }
         #endregion
+        #region IsXmm8
+        public Boolean IsXmm8(ATokenType p, String pars)
+        {
+            return (p == ATokenType.ttregisterxmm) || (p == ATokenType.ttmemorylocation8) | ((p == ATokenType.ttmemorylocation32) & IsMemoryLocationDefault(pars));
+        }
+        #endregion
+        #region IsXmm16
+        public Boolean IsXmm16(ATokenType p, String pars)
+        {
+            return (p == ATokenType.ttregisterxmm) || (p == ATokenType.ttmemorylocation16) | ((p == ATokenType.ttmemorylocation32) & IsMemoryLocationDefault(pars));
+        }
+        #endregion
         #region IsXmm32
         public Boolean IsXmm32(ATokenType p)
         {
@@ -644,6 +744,12 @@ namespace SputnikAsm.LAssembler
         public Boolean IsXmm128(ATokenType p)
         {
             return p == ATokenType.ttregisterxmm || p == ATokenType.ttmemorylocation128;
+        }
+        #endregion
+        #region IsYmm256
+        public Boolean IsYmm256(ATokenType p)
+        {
+            return (p == ATokenType.ttregisterymm) || (p == ATokenType.ttmemorylocation256);
         }
         #endregion
         #region EoToReg
@@ -728,21 +834,26 @@ namespace SputnikAsm.LAssembler
                 result = ATokenType.ttvalue;
                 token = temp;
             }
-            if (AStringUtils.Pos("[", token) != -1)
+            var brp = AStringUtils.Pos("[", token);
+            if (brp != -1)
             {
-                if (AStringUtils.Pos("DQWORD ", token) != -1)
+                if (UStringUtils.IndexOf(token, "YMMWORD", 0, brp) != -1)
+                    result = ATokenType.ttmemorylocation256;
+                else if (UStringUtils.IndexOf(token, "XMMWORD", 0, brp) != -1)
                     result = ATokenType.ttmemorylocation128;
-                else if (AStringUtils.Pos("TBYTE ", token) != -1)
+                else if (UStringUtils.IndexOf(token, "DQWORD", 0, brp) != -1)
+                    result = ATokenType.ttmemorylocation128;
+                else if (UStringUtils.IndexOf(token, "TBYTE", 0, brp) != -1)
                     result = ATokenType.ttmemorylocation80;
-                else if (AStringUtils.Pos("TWORD ", token) != -1)
+                else if (UStringUtils.IndexOf(token, "TWORD", 0, brp) != -1)
                     result = ATokenType.ttmemorylocation80;
-                else if (AStringUtils.Pos("QWORD ", token) != -1)
+                else if (UStringUtils.IndexOf(token, "QWORD", 0, brp) != -1)
                     result = ATokenType.ttmemorylocation64;
-                else if (AStringUtils.Pos("DWORD ", token) != -1)
+                else if (UStringUtils.IndexOf(token, "DWORD", 0, brp) != -1)
                     result = ATokenType.ttmemorylocation32;
-                else if (AStringUtils.Pos("WORD ", token) != -1)
+                else if (UStringUtils.IndexOf(token, "WORD", 0, brp) != -1)
                     result = ATokenType.ttmemorylocation16;
-                else if (AStringUtils.Pos("BYTE ", token) != -1)
+                else if (UStringUtils.IndexOf(token, "BYTE", 0, brp) != -1)
                     result = ATokenType.ttmemorylocation8;
                 else
                     result = ATokenType.ttmemorylocation;
@@ -830,7 +941,7 @@ namespace SputnikAsm.LAssembler
                     //6.1: Optimized this lookup. Instead of a 18 compares a full string lookup on each token it now only compares up to 4 times
                     t = tokens.Last;
                     ispartial = false;
-                    if (t.Length >= 3)  //3 characters is good enough to get the general idea, then do a string compare to verify
+                    if (t.Length >= 3)  //3 characters are good enough to get the general idea, then do a string compare to verify
                     {
                         switch (t[0])
                         {
@@ -926,6 +1037,7 @@ namespace SputnikAsm.LAssembler
                     }
                 }
             }
+            //remove useless tokens
             i = 0;
             while (i < tokens.Length)
             {
@@ -954,7 +1066,7 @@ namespace SputnikAsm.LAssembler
             if (token.Length > 4 && token.StartsWith("[[") && token.EndsWith("]]"))
             {
                 //looks like a pointer in a address specifier (idiot user detected...)
-                temp = "[" + AStringUtils.IntToHex(SymHandler.GetAddressFromName(AStringUtils.Copy(token, 2, token.Length - 4), false, out var haserror), 8) + ']';
+                temp = "[" + AStringUtils.IntToHex(SymHandler.GetAddressFromName(AStringUtils.Copy(token, 2, token.Length - 4), true, out var haserror), 8) + ']';
                 if (!haserror)
                     token = temp;
                 else
@@ -982,13 +1094,20 @@ namespace SputnikAsm.LAssembler
                 }
                 if (!inquote)
                 {
-                    if (AArrayUtils.InArray(token[i], '[', ']', '+', '-', '*'))
+                    // todo * is not there in CE so why do we need it?
+                    if (AArrayUtils.InArray(token[i], '[', ']', '+', '-', ' ', '*')) //6.8.4 (added ' ' for FAR, LONG, SHORT)
                     {
                         if (temp != "")
                         {
                             tokens.SetLength(tokens.Length + 1);
                             tokens.Last = temp;
                             temp = "";
+                        }
+                        if (tokens.Length > 0 && AArrayUtils.InArray(token[i], '+', '-') && (tokens[tokens.Length - 1] == " ")) //relative offset ' +xxx'
+                        {
+                            temp += token[i];
+                            i++;
+                            continue;
                         }
                         tokens.SetLength(tokens.Length + 1);
                         tokens[tokens.Length - 1] = token[i].ToString();
@@ -1007,20 +1126,26 @@ namespace SputnikAsm.LAssembler
             }
             for (i = 0; i < tokens.Length; i++)
             {
-                if (tokens[i].Length > 1 && !AArrayUtils.InArray(tokens[i][0], '[', ']', '+', '-', '*'))  //3/16/2011: 11:15 (replaced or with and)
+                if (tokens[i].Length >= 1 && !AArrayUtils.InArray(tokens[i][0], '[', ']', '+', '-', '*', ' '))  //3/16/2011: 11:15 (replaced or with and)
                 {
                     AStringUtils.Val("0x" + tokens[i], out Int64 _, out var err);
-                    if ((err != 0) && (GetReg(tokens[i], false) == -1))     //not a hexadecimal value and not a register
+                    if (err != 0 && GetReg(tokens[i], false) == -1)     //not a hexadecimal value and not a register
                     {
-                        temp = AStringUtils.IntToHex(SymHandler.GetAddressFromName(tokens[i], false, out var hasError), 8);
+                        temp = AStringUtils.IntToHex(SymHandler.GetAddressFromName(tokens[i], true, out var hasError), 8);
                         if (!hasError)
                             tokens[i] = temp; //can be rewritten as a hexadecimal
                         else
                         {
+                            if (tokens.Length > 0 && AArrayUtils.InArray(token[i], '+', '-') && tokens[tokens.Length - 1] == " ")  //relative offset ' +xxx'
+                            {
+                                temp += token[i];
+                                i++;
+                                continue;
+                            }
                             if (i < tokens.Length - 1)
                             {
                                 //perhaps it can be concatenated with the next one
-                                if ((tokens[i + 1].Length > 0) && (!(AArrayUtils.InArray(tokens[i + 1][0], '\'', '"', '[', ']', '(', ')'))))  //not an invalid token char
+                                if (tokens[i + 1].Length > 0 && !AArrayUtils.InArray(tokens[i + 1][0], '\'', '"', '[', ']', '(', ')', ' '))  //not an invalid token char
                                 {
                                     tokens[i + 1] = tokens[i] + tokens[i + 1];
                                     tokens[i] = "";
@@ -1038,7 +1163,7 @@ namespace SputnikAsm.LAssembler
                 {
                     AStringUtils.Val("0x" + tokens[i - 1], out Int64 a, out var err);
                     AStringUtils.Val("0x" + tokens[i + 1], out Int64 b, out var err2);
-                    if ((err == 0) && (err2 == 0))
+                    if (err == 0 && err2 == 0)
                     {
                         a *= b;
                         tokens[i - 1] = AStringUtils.IntToHex(a, 8);
@@ -1053,7 +1178,7 @@ namespace SputnikAsm.LAssembler
                 AStringUtils.Val("0x" + tokens[i - 1], out Int64 a, out var err);
                 AStringUtils.Val("0x" + tokens[i + 1], out Int64 b, out var err2);
                 //if no error, check if this token is a mathemetical value
-                if ((err == 0) && (err2 == 0))
+                if (err == 0 && err2 == 0)
                 {
                     switch (tokens[i][0])
                     {
