@@ -521,5 +521,21 @@ namespace SputnikAsm.LUtils
             return result;
         }
         #endregion
+        #region IsWordPresent
+        public static Boolean IsWordPresent(String w, String s)
+        {
+            return IsWordPresent(w, s, StdWordDelims);
+        }
+        public static Boolean IsWordPresent(String w, String s, ACharArray wordDelims)
+        {
+            var count = WordCount(s, wordDelims);
+            for (var i = 1; i <= count; i++)
+            {
+                if (ExtractWord(i, s, wordDelims) == w)
+                    return true;
+            }
+            return false;
+        }
+        #endregion
     }
 }

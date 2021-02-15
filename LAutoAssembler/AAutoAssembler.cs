@@ -1,5 +1,6 @@
 ﻿using System;
 using Sputnik.LString;
+using SputnikAsm.LAssembler;
 using SputnikAsm.LCollections;
 using SputnikAsm.LUtils;
 
@@ -62,14 +63,19 @@ namespace SputnikAsm.LAutoAssembler
         public String rsWrongSyntaxSHAREDALLOCNameSize = "Wrong syntax. SHAREDALLOC(name,size)";
         public String rsInvalidInteger = "Invalid integer";
         #endregion
+        public AAssembler Assembler;
+        public AAutoAssembler()
+        {
+            Assembler = new AAssembler();
+        }
         #region RemoveComments
-        public void RemoveComments(AStringArray code)
+        public void RemoveComments(ARefStringArray code)
         {
             var inString = false;
             var inComment = false;
             for (var i = 0; i < code.Length; i++)
             {
-                var currentLine = code[i];
+                var currentLine = code[i].Value;
                 using (var p = new UCharPtr(currentLine))
                 {
                     for (var j = 0; j < currentLine.Length; j++)
@@ -91,37 +97,36 @@ namespace SputnikAsm.LAutoAssembler
                                 inString = !inString;
                             if (p[j] == '\t')
                                 p[j] = ' '; //tabs are basicly comments
-                            if (!inString)
+                            if (inString)
+                                continue;
+                            //not inside a string, so comment markers need to be dealt with
+                            if ((p[j] == '/') && (j < p.Size) && (p[j + 1] == '/'))  //- comment (only the rest of the line)
                             {
-                                //not inside a string, so comment markers need to be dealt with
-                                if ((p[j] == '/') && (j < p.Size) && (p[j + 1] == '/'))  //- comment (only the rest of the line)
-                                {
-                                    //cut off till the end of the line (and might as well jump out now)
-                                    currentLine = AStringUtils.Copy(currentLine, 0, j);
-                                    break;
-                                }
-                                if ((p[j] == '{') || ((p[j] == '/') && (j < p.Size) && (p[j + 1] == '*')))
-                                {
-                                    inComment = true;
-                                    p[j] = ' '; //replace from here till the first } with spaces, this goes on for multiple lines
-                                }
+                                //cut off till the end of the line (and might as well jump out now)
+                                currentLine = AStringUtils.Copy(currentLine, 0, j);
+                                break;
+                            }
+                            if ((p[j] == '{') || ((p[j] == '/') && (j < p.Size) && (p[j + 1] == '*')))
+                            {
+                                inComment = true;
+                                p[j] = ' '; //replace from here till the first } with spaces, this goes on for multiple lines
                             }
                         }
                     }
                 }
-                code[i] = currentLine.Trim();
+                code[i].Value = currentLine.Trim();
             }
         }
         #endregion
         #region GetEnableAndDisablePos
-        public Boolean GetEnableAndDisablePos(AStringArray code, out int enablePos, out int disablePos)
+        public Boolean GetEnableAndDisablePos(ARefStringArray code, out int enablePos, out int disablePos)
         {
             var result = false;
             enablePos = -1;
             disablePos = -1;
             for (var i = 0; i < code.Length; i++)
             {
-                var currentLine = code[i];
+                var currentLine = code[i].Value;
                 var j = AStringUtils.Pos("//", currentLine);
                 if (j > 0)
                     currentLine = AStringUtils.Copy(currentLine, 1, j - 1);
@@ -133,27 +138,285 @@ namespace SputnikAsm.LAutoAssembler
                     continue;
                 if (AStringUtils.Copy(currentLine, 1, 2) == "//")
                     continue; //skip
-                if (currentLine.ToUpper() == "[ENABLE]")
+                switch (currentLine.ToUpper())
                 {
-                    result = true; //there's at least a enable section, so it's ok
-                    if (enablePos != -1)
+                    case "[ENABLE]":
                     {
-                        enablePos = -2;
-                        return true;
+                        result = true; //there's at least a enable section, so it's ok
+                        if (enablePos != -1)
+                        {
+                            enablePos = -2;
+                            return true;
+                        }
+                        enablePos = i;
+                        break;
                     }
-                    enablePos = i;
-                }
-                if (currentLine.ToUpper() == "[DISABLE]")
-                {
-                    if (disablePos != -1)
-                    {
+                    case "[DISABLE]" when disablePos != -1:
                         disablePos = -2;
                         return result;
-                    }
-                    disablePos = i;
+                    case "[DISABLE]":
+                        disablePos = i;
+                        break;
                 }
             }
             return result;
+        }
+        #endregion
+        #region GetScript
+        public ARefStringArray GetScript(ARefStringArray code, Boolean enableScript)
+        {
+            var ret = new ARefStringArray();
+            GetScript(code, ret, enableScript);
+            return ret;
+        }
+        public void GetScript(ARefStringArray code, ARefStringArray newScript, Boolean enableScript)
+        {
+            var insideEnable = false;
+            var insideDisable = false;
+            for (var i = 0; i < code.Length; i++)
+            {
+                switch (code[i].Value.ToUpper())
+                {
+                    case "[ENABLE]":
+                        insideEnable = true;
+                        insideDisable = false;
+                        continue;
+                    case "[DISABLE]":
+                        insideEnable = false;
+                        insideDisable = true;
+                        continue;
+                }
+                if (!insideEnable && !insideDisable || insideEnable && enableScript || insideDisable && !enableScript)
+                {
+                    if (String.IsNullOrEmpty(code[i].Value))
+                        continue;
+                    newScript.Add(code[i]);
+                }
+            }
+        }
+        #endregion
+        #region Tokenize
+        public void Tokenize(String input, ARefStringArray tokens)
+        {
+            tokens.Clear();
+            var a = -1;
+            for (var i = 0; i < input.Length; i++)
+            {
+                if (ACharUtils.InRange(input[i], 'a', 'z') ||
+                    ACharUtils.InRange(input[i], 'A', 'Z') ||
+                    ACharUtils.InRange(input[i], '0', '9') ||
+                    input[i] == '.' ||
+                    input[i] == '_' ||
+                    input[i] == '#' ||
+                    input[i] == '@'
+                    )
+                {
+                    if (a == -1)
+                        a = i;
+                }
+                else
+                {
+                    if (a != -1)
+                        tokens.Add(AStringUtils.Copy(input, a, i - a), a);
+                    a = -1;
+                }
+            }
+            if (a != -1)
+                tokens.Add(AStringUtils.Copy(input, a, input.Length), a);
+        }
+        #endregion
+        #region TokenCheck
+        public Boolean TokenCheck(String input, String token)
+        {
+            var tokens = new ARefStringArray();
+            Tokenize(input, tokens);
+            for (var i = 0; i < tokens.Length; i++)
+            {
+                if (tokens[i].Value == token)
+                    return true;
+            }
+            return false;
+        }
+        #endregion
+        #region ReplaceToken
+        public String ReplaceToken(String input, String token, String replaceWith)
+        {
+            var tokens = new ARefStringArray();
+            Tokenize(input, tokens);
+            var result = "";
+            for (var i = 0; i < tokens.Length; i++)
+            {
+                if (tokens[i].Value != token)
+                    continue;
+                var j = tokens[i].Position;
+                result = AStringUtils.Copy(input, 0, j) + replaceWith + AStringUtils.Copy(input, j + token.Length, input.Length);
+            }
+            return result;
+        }
+        #endregion
+        #region TokenizeStruct
+        public void TokenizeStruct(String input, ARefStringArray tokens)
+        {
+            var delims = new ACharArray(' ');
+            tokens.Clear();
+            var count = AStringUtils.WordCount(input, delims);
+            for (var i = 1; i <= count; i++)
+                tokens.Add(AStringUtils.ExtractWord(i, input, delims));
+        }
+        #endregion
+        #region ReplaceStructWithDefines
+        public void structError()
+        {
+            Console.WriteLine("err");
+        }
+        public void structError(string a)
+        {
+            Console.WriteLine("err");
+        }
+        public void ReplaceStructWithDefines(ARefStringArray code, int linenr)
+        {
+            int currentOffset;
+            string structname;
+            string elementname;
+            int i, j, k;
+            ARefStringArray tokens;
+            ARefStringArray elements;
+            int starttoken;
+            var bytesize = 0;
+            Boolean endfound;
+            int lastlinenr;
+            lastlinenr = linenr;
+            endfound = false;
+            structname = AStringUtils.Copy(code[linenr].Value, 7, code[linenr].Length).Trim();
+            currentOffset = 0;
+            tokens = new ARefStringArray();
+            elements = new ARefStringArray();
+            for (i = linenr + 1; i <= code.Length - 1; i++)
+            {
+                lastlinenr = i;
+                TokenizeStruct(code[i].Value, tokens);
+                j = 0;
+                if (tokens.Length > 0)
+                {
+                    //first check if it's a label definition
+                    if (tokens[0].Value[tokens[0].Length] == ':')
+                    {
+                        elementname = AStringUtils.Copy(tokens[0].Value, 1, tokens[0].Length - 1);
+                        if (Assembler.GetOpCodesIndex(elementname) != -1)
+                            structError(elementname + " is a reserved word");
+                        elements.Add(elementname, currentOffset);
+                        j = 1;
+                    }
+                    //then check if it's the end of the struct
+                    if (tokens[0].Value.ToUpper() == "ENDSTRUCT" || tokens[0].Value.ToUpper() == "ENDS")
+                    {
+                        endfound = true;
+                        break; //all done // todo this is meant to be continue?
+                    }
+                }
+                //if it's neither a label or structure end then it's a size defining token
+                while (j < tokens.Length)
+                {
+                    tokens[j] = tokens[j];
+                    switch (tokens[j].Value[0])
+                    {
+                        case 'R':
+                            {
+                                //could be res*
+                                if ((tokens[j].Length == 4) && (AStringUtils.Copy(tokens[j].Value, 1, 3) == "RES"))
+                                {
+                                    switch (tokens[j].Value[4])
+                                    {
+                                        case 'B':
+                                            bytesize = 1;
+                                            break;
+                                        case 'W':
+                                            bytesize = 2;
+                                            break;
+                                        case 'D':
+                                            bytesize = 4;
+                                            break;
+                                        case 'Q':
+                                            bytesize = 8;
+                                            break;
+                                        default:
+                                            structError();
+                                            break;
+                                    }
+                                    //now get the count
+                                    j += 1;
+                                    if (j >= tokens.Length)
+                                        structError();
+                                    currentOffset += bytesize * AStringUtils.StrToInt(tokens[j].Value);
+                                }
+                                else
+                                    structError();
+                            }
+                            break;
+                        case 'D':
+                            {
+                                //could be d* ?
+                                if (tokens[j].Length == 2)
+                                {
+                                    switch (tokens[j].Value[2])
+                                    {
+                                        case 'B':
+                                            bytesize = 1;
+                                            break;
+                                        case 'W':
+                                            bytesize = 2;
+                                            break;
+                                        case 'D':
+                                            bytesize = 4;
+                                            break;
+                                        case 'Q':
+                                            bytesize = 8;
+                                            break;
+                                        default:
+                                            structError();
+                                            break;
+                                    }
+                                    j += 1;
+                                    if (j >= tokens.Length)
+                                        structError();
+                                    currentOffset += bytesize;
+                                    //check if there are more ?'s after this (in case of dw ? ? ?)
+                                    while (j < tokens.Length - 1)
+                                    {
+                                        if (tokens[j + 1].Value == "?")   //check from the spot in front
+                                        {
+                                            currentOffset += bytesize;
+                                            j += 1;
+                                        }
+                                        else
+                                            break; //nope // todo should this be continue
+                                    }
+
+                                }
+                                else
+                                    structError();
+                            }
+                            break;
+
+                        default:
+                            structError("No idea what " + tokens[j].Value + " is"); //we already dealth with labels, so this is wrong
+                            break;
+                    }
+                    j += 1; //next token
+                }
+            }
+            if (endfound == false)
+                structError("No end found");
+
+            //the elements have been filled in, delete the structure (between linenr and lastlinenr) and inject define(element,offset) and define(structname.element,offset)
+            for (i = lastlinenr; i >= linenr; i--)
+                code.RemoveAt(i);
+            for (i = 0; i <= elements.Length - 1; i++)
+            {
+                code.Insert(linenr, "define(" + elements[i].Value + ',' + AStringUtils.IntToHex(elements[i].Length, 1) + ')');
+                code.Insert(linenr, "define(" + structname + '.' + elements[i].Value + ',' + AStringUtils.IntToHex(elements[i].Position, 1) + ')');
+            }
+            code.Insert(linenr, "define(" + structname + "_size," + AStringUtils.IntToHex(currentOffset, 1) + ')');
         }
         #endregion
     }

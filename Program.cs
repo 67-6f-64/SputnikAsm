@@ -43,18 +43,21 @@ push 7
             Console.WriteLine("Found " + ret + " Enable " + epos + " Disable " + dpos);
 
             var tt = new ARefStringArray();
-            aa.Tokenize("cat dog f:ox@ mitt:ens", tt);
+            var st1 = @"
+
+STRUCT stackview
+returnaddress: DD ?
+param1: 
+  DD ?
+param2: DB ? ? ? ?
+ENDSTRUCT
+";
+            aa.TokenizeStruct(st1, tt);
+            aa.ReplaceStructWithDefines(tt, 0);
             foreach (var tok in tt.Raw)
             {
-                Console.WriteLine("Token: " + tok);
+                Console.WriteLine("Token: " + tok.Value);
             }
-            Console.WriteLine(aa.TokenCheck("mittens cat fox", "cat"));
-            Console.WriteLine(aa.ReplaceToken("mov edx:ds, eax", "ds", "777"));
-
-            Console.WriteLine(AStringUtils.WordCount("a"));
-            Console.WriteLine(AStringUtils.ExtractWord(1, "cat dog meow"));
-            Console.WriteLine(AStringUtils.ExtractWord(2, "cat dog meow"));
-            Console.WriteLine(AStringUtils.ExtractWord(3, "cat dog meow"));
 
             Console.ReadKey();
         }

@@ -39,6 +39,20 @@ namespace SputnikAsm.LCollections
             Add(new ARefString(value, index));
         }
         #endregion
+        #region Insert
+        public void Insert(int index, String data)
+        {
+            Insert(index, new ARefString(data));
+        }
+        public void Insert(int index, String[] data)
+        {
+            Insert(index, data.Select(c => new ARefString(c)).ToArray());
+        }
+        public void Insert(int index, String[] data, int length)
+        {
+            Insert(index, data.Select(c => new ARefString(c)).ToArray(), length);
+        }
+        #endregion
         #region ToString
         public override String ToString()
         {

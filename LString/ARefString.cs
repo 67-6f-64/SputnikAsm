@@ -17,6 +17,12 @@ namespace SputnikAsm.LString
             Position = 0;
             Length = 0;
         }
+        public ARefString(String value)
+        {
+            Value = value;
+            Position = -1;
+            Length = Value.Length;
+        }
         public ARefString(String value, int position)
         {
             Value = value;

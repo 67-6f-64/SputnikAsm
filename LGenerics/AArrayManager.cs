@@ -177,6 +177,27 @@ namespace SputnikAsm.LGenerics
             Remove(index, 1);
         }
         #endregion
+        #region Insert
+        public void Insert(int index, T data)
+        {
+            Insert(index, new[] { data }, 1);
+        }
+        public void Insert(int index, T[] data)
+        {
+            Insert(index, data, data.Length);
+        }
+        public void Insert(int index, T[] data, int length)
+        {
+            if (index < 0)
+                return;
+            EnsureCapacity(index + length + 1);
+            var saved = Raw;
+            for (var i = 0; i < data.Length; i++)
+                Raw[index + i] = data[i];
+            for (var i = 0; i < saved.Length; i++)
+                Raw[index + i + data.Length] = saved[i];
+        }
+        #endregion
         #region Sort
         public void Sort()
         {
