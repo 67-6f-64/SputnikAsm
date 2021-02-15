@@ -18,7 +18,7 @@ using SputnikAsm.LUtils;
 
 namespace SputnikAsm.LDisassembler
 {
-    public unsafe class Disassembler
+    public class Disassembler
     {
         #region Constants
         const int bit_rex_w = 8;
@@ -50,7 +50,6 @@ namespace SputnikAsm.LDisassembler
         private Byte rexprefix;
         public tlastdisassembledata lastdisassembledata;
         public Boolean Debug;
-        public Boolean isdefault;
         public Boolean showsymbols;
         public Boolean showmodules;
         public Boolean showsections;
@@ -61,16 +60,13 @@ namespace SputnikAsm.LDisassembler
         public Boolean markiprelativeinstructions;
         public Boolean syntaxhighlighting;
         public ASymbolHandler SymbolHandler;
-        public ASymbolHandler SelfSymbolHandler;
         public Boolean SupportCloak;
         #endregion
         #region Constructor
         public Disassembler()
         {
-            SelfSymbolHandler = new ASymbolHandler();
-            SelfSymbolHandler.Process = new AProcessSharp(System.Diagnostics.Process.GetCurrentProcess().Id, AMemoryType.Remote);
             SymbolHandler = new ASymbolHandler();
-            SymbolHandler.Process = SelfSymbolHandler.Process;
+            SymbolHandler.Process = new AProcessSharp(System.Diagnostics.Process.GetCurrentProcess().Id, AMemoryType.Remote);
             rexprefix = 0;
             colorhex = "";
             colorreg = "";
@@ -87,7 +83,6 @@ namespace SputnikAsm.LDisassembler
             riprelative = false;
             prefix = new tprefix();
             prefix2 = new tprefix();
-            isdefault = false;
             showsymbols = false;
             showmodules = false;
             showsections = false;
@@ -615,7 +610,6 @@ namespace SputnikAsm.LDisassembler
         #region modrm2
         public String modrm2(UBytePtr memory, tprefix prefix, int modrmbyte, int inst, ref UInt32 last, int opperandsize = 0, int addresssize = 0, tmrpos position = tmrpos.mleft)
         {
-            string modrm2_result;
             modrmposition = position;
             var result = "";
             var showextrareg = hasvex & (opcodeflags.skipextrareg == false);
@@ -662,8 +656,7 @@ namespace SputnikAsm.LDisassembler
             }
             lastdisassembledata.seperators[lastdisassembledata.seperatorcount] = modrmbyte;
             lastdisassembledata.seperatorcount += 1;
-            var intptr = memory.ToIntPtr(modrmbyte + 1);
-            var dwordptr = intptr.ToUIntPtr();
+            var dwordptr = (UIntPtr)memory.ReadUInt32(modrmbyte + 1);
             last = (UInt32)(modrmbyte + 1);
             lastdisassembledata.seperators[lastdisassembledata.seperatorcount] = (int)last;
             lastdisassembledata.seperatorcount += 1;
@@ -710,7 +703,7 @@ namespace SputnikAsm.LDisassembler
                                         }
                                         else
                                         {
-                                            result = getsegmentoverride(prefix) + '[' + inttohexs((UIntPtr)dwordptr, 8) + ']';
+                                            result = getsegmentoverride(prefix) + '[' + inttohexs(dwordptr, 8) + ']';
                                             lastdisassembledata.modrmvaluetype = tdisassemblervaluetype.dvtaddress;
                                             lastdisassembledata.modrmvalue = dwordptr;
                                         }
@@ -740,7 +733,7 @@ namespace SputnikAsm.LDisassembler
                             if (getrm(memory[modrmbyte]) != 4)
                             {
                                 lastdisassembledata.modrmvaluetype = tdisassemblervaluetype.dvtvalue;
-                                lastdisassembledata.modrmvalue = (UIntPtr)(SByte)(memory[modrmbyte + 1]);
+                                lastdisassembledata.modrmvalue = (UIntPtr)(SByte)memory[modrmbyte + 1];
                             }
                             switch (getrm(memory[modrmbyte]))
                             {
@@ -874,40 +867,38 @@ namespace SputnikAsm.LDisassembler
                             if (getrm(memory[modrmbyte]) != 4)
                             {
                                 lastdisassembledata.modrmvaluetype = tdisassemblervaluetype.dvtvalue;
-                                //lastdisassembledata.modrmvalue = (UIntPtr)(pinteger)(dwordptr); // todo figure out if this is right????
-                                //lastdisassembledata.modrmvalue = (UIntPtr)(*(int*)(dwordptr));
-                                lastdisassembledata.modrmvalue = (UIntPtr)intptr.ReadInt32();
+                                lastdisassembledata.modrmvalue = (UIntPtr)(int)dwordptr;
                             }
 
                             switch (getrm(memory[modrmbyte]))
                             {
                                 case 0:
-                                    if (intptr.ToInt32() >= 0)
+                                    if ((int)dwordptr >= 0)
                                         result = getsegmentoverride(prefix) + '[' + colorreg + regprefix + "ax" + endcolor + '+' + inttohexs((UIntPtr)dwordptr, 8) + ']';
                                     else
-                                        result = getsegmentoverride(prefix) + '[' + colorreg + regprefix + "ax" + endcolor + '-' + inttohexs((UIntPtr)(-intptr.ToInt32()), 8) + ']';
+                                        result = getsegmentoverride(prefix) + '[' + colorreg + regprefix + "ax" + endcolor + '-' + inttohexs((UIntPtr)(-(int)dwordptr), 8) + ']';
                                     break;
 
                                 case 1:
-                                    if (intptr.ToInt32() >= 0)
+                                    if ((int)dwordptr >= 0)
                                         result = getsegmentoverride(prefix) + '[' + colorreg + regprefix + "cx" + endcolor + '+' + inttohexs((UIntPtr)dwordptr, 8) + ']';
                                     else
-                                        result = getsegmentoverride(prefix) + '[' + colorreg + regprefix + "cx" + endcolor + '-' + inttohexs((UIntPtr)(-intptr.ToInt32()), 8) + ']';
+                                        result = getsegmentoverride(prefix) + '[' + colorreg + regprefix + "cx" + endcolor + '-' + inttohexs((UIntPtr)(-(int)dwordptr), 8) + ']';
                                     break;
 
                                 case 2:
-                                    if (intptr.ToInt32() >= 0)
+                                    if ((int)dwordptr >= 0)
                                         result = getsegmentoverride(prefix) + '[' + colorreg + regprefix + "dx" + endcolor + '+' + inttohexs((UIntPtr)dwordptr, 8) + ']';
                                     else
-                                        result = getsegmentoverride(prefix) + '[' + colorreg + regprefix + "dx" + endcolor + '-' + inttohexs((UIntPtr)(-intptr.ToInt32()), 8) + ']';
+                                        result = getsegmentoverride(prefix) + '[' + colorreg + regprefix + "dx" + endcolor + '-' + inttohexs((UIntPtr)(-(int)dwordptr), 8) + ']';
                                     break;
 
 
                                 case 3:
-                                    if (intptr.ToInt32() >= 0)
+                                    if ((int)dwordptr >= 0)
                                         result = getsegmentoverride(prefix) + '[' + colorreg + regprefix + "bx" + endcolor + '+' + inttohexs((UIntPtr)dwordptr, 8) + ']';
                                     else
-                                        result = getsegmentoverride(prefix) + '[' + colorreg + regprefix + "bx" + endcolor + '-' + inttohexs((UIntPtr)(-intptr.ToInt32()), 8) + ']';
+                                        result = getsegmentoverride(prefix) + '[' + colorreg + regprefix + "bx" + endcolor + '-' + inttohexs((UIntPtr)(-(int)dwordptr), 8) + ']';
                                     break;
 
 
@@ -919,83 +910,83 @@ namespace SputnikAsm.LDisassembler
                                     break;
 
                                 case 5:
-                                    if (intptr.ToInt32() >= 0)
+                                    if ((int)dwordptr >= 0)
                                         result = getsegmentoverride(prefix) + '[' + colorreg + regprefix + "bp" + endcolor + '+' + inttohexs((UIntPtr)dwordptr, 8) + ']';
                                     else
-                                        result = getsegmentoverride(prefix) + '[' + colorreg + regprefix + "bp" + endcolor + '-' + inttohexs((UIntPtr)(-intptr.ToInt32()), 8) + ']';
+                                        result = getsegmentoverride(prefix) + '[' + colorreg + regprefix + "bp" + endcolor + '-' + inttohexs((UIntPtr)(-(int)dwordptr), 8) + ']';
                                     break;
 
 
                                 case 6:
-                                    if (intptr.ToInt32() >= 0)
+                                    if ((int)dwordptr >= 0)
                                         result = getsegmentoverride(prefix) + '[' + colorreg + regprefix + "si" + endcolor + '+' + inttohexs((UIntPtr)dwordptr, 8) + ']';
                                     else
-                                        result = getsegmentoverride(prefix) + '[' + colorreg + regprefix + "si" + endcolor + '-' + inttohexs((UIntPtr)(-intptr.ToInt32()), 8) + ']';
+                                        result = getsegmentoverride(prefix) + '[' + colorreg + regprefix + "si" + endcolor + '-' + inttohexs((UIntPtr)(-(int)dwordptr), 8) + ']';
                                     break;
 
 
                                 case 7:
-                                    if (intptr.ToInt32() >= 0)
+                                    if ((int)dwordptr >= 0)
                                         result = getsegmentoverride(prefix) + '[' + colorreg + regprefix + "di" + endcolor + '+' + inttohexs((UIntPtr)dwordptr, 8) + ']';
                                     else
-                                        result = getsegmentoverride(prefix) + '[' + colorreg + regprefix + "di" + endcolor + '-' + inttohexs((UIntPtr)(-intptr.ToInt32()), 8) + ']';
+                                        result = getsegmentoverride(prefix) + '[' + colorreg + regprefix + "di" + endcolor + '-' + inttohexs((UIntPtr)(-(int)dwordptr), 8) + ']';
                                     break;
 
 
                                 case 8:
-                                    if (intptr.ToInt32() >= 0)
+                                    if ((int)dwordptr >= 0)
                                         result = getsegmentoverride(prefix) + '[' + colorreg + "r8" + endcolor + '+' + inttohexs((UIntPtr)dwordptr, 8) + ']';
                                     else
-                                        result = getsegmentoverride(prefix) + '[' + colorreg + "r8" + endcolor + '-' + inttohexs((UIntPtr)(-intptr.ToInt32()), 8) + ']';
+                                        result = getsegmentoverride(prefix) + '[' + colorreg + "r8" + endcolor + '-' + inttohexs((UIntPtr)(-(int)dwordptr), 8) + ']';
                                     break;
 
                                 case 9:
-                                    if (intptr.ToInt32() >= 0)
+                                    if ((int)dwordptr >= 0)
                                         result = getsegmentoverride(prefix) + '[' + colorreg + "r9" + endcolor + '+' + inttohexs((UIntPtr)dwordptr, 8) + ']';
                                     else
-                                        result = getsegmentoverride(prefix) + '[' + colorreg + "r9" + endcolor + '-' + inttohexs((UIntPtr)(-intptr.ToInt32()), 8) + ']';
+                                        result = getsegmentoverride(prefix) + '[' + colorreg + "r9" + endcolor + '-' + inttohexs((UIntPtr)(-(int)dwordptr), 8) + ']';
                                     break;
 
                                 case 10:
-                                    if (intptr.ToInt32() >= 0)
+                                    if ((int)dwordptr >= 0)
                                         result = getsegmentoverride(prefix) + '[' + colorreg + "r10" + endcolor + '+' + inttohexs((UIntPtr)dwordptr, 8) + ']';
                                     else
-                                        result = getsegmentoverride(prefix) + '[' + colorreg + "r10" + endcolor + '-' + inttohexs((UIntPtr)(-intptr.ToInt32()), 8) + ']';
+                                        result = getsegmentoverride(prefix) + '[' + colorreg + "r10" + endcolor + '-' + inttohexs((UIntPtr)(-(int)dwordptr), 8) + ']';
                                     break;
 
                                 case 11:
-                                    if (intptr.ToInt32() >= 0)
+                                    if ((int)dwordptr >= 0)
                                         result = getsegmentoverride(prefix) + '[' + colorreg + "r11" + endcolor + '+' + inttohexs((UIntPtr)dwordptr, 8) + ']';
                                     else
-                                        result = getsegmentoverride(prefix) + '[' + colorreg + "r11" + endcolor + '-' + inttohexs((UIntPtr)(-intptr.ToInt32()), 8) + ']';
+                                        result = getsegmentoverride(prefix) + '[' + colorreg + "r11" + endcolor + '-' + inttohexs((UIntPtr)(-(int)dwordptr), 8) + ']';
                                     break;
 
                                 case 12:
-                                    if (intptr.ToInt32() >= 0)
+                                    if ((int)dwordptr >= 0)
                                         result = getsegmentoverride(prefix) + '[' + colorreg + "r12" + endcolor + '+' + inttohexs((UIntPtr)dwordptr, 8) + ']';
                                     else
-                                        result = getsegmentoverride(prefix) + '[' + colorreg + "r12" + endcolor + '-' + inttohexs((UIntPtr)(-intptr.ToInt32()), 8) + ']';
+                                        result = getsegmentoverride(prefix) + '[' + colorreg + "r12" + endcolor + '-' + inttohexs((UIntPtr)(-(int)dwordptr), 8) + ']';
                                     break;
 
                                 case 13:
-                                    if (intptr.ToInt32() >= 0)
+                                    if ((int)dwordptr >= 0)
                                         result = getsegmentoverride(prefix) + '[' + colorreg + "r13" + endcolor + '+' + inttohexs((UIntPtr)dwordptr, 8) + ']';
                                     else
-                                        result = getsegmentoverride(prefix) + '[' + colorreg + "r13" + endcolor + '-' + inttohexs((UIntPtr)(-intptr.ToInt32()), 8) + ']';
+                                        result = getsegmentoverride(prefix) + '[' + colorreg + "r13" + endcolor + '-' + inttohexs((UIntPtr)(-(int)dwordptr), 8) + ']';
                                     break;
 
                                 case 14:
-                                    if (intptr.ToInt32() >= 0)
+                                    if ((int)dwordptr >= 0)
                                         result = getsegmentoverride(prefix) + '[' + colorreg + "r14" + endcolor + '+' + inttohexs((UIntPtr)dwordptr, 8) + ']';
                                     else
-                                        result = getsegmentoverride(prefix) + '[' + colorreg + "r14" + endcolor + '-' + inttohexs((UIntPtr)(-intptr.ToInt32()), 8) + ']';
+                                        result = getsegmentoverride(prefix) + '[' + colorreg + "r14" + endcolor + '-' + inttohexs((UIntPtr)(-(int)dwordptr), 8) + ']';
                                     break;
 
                                 case 15:
-                                    if (intptr.ToInt32() >= 0)
+                                    if ((int)dwordptr >= 0)
                                         result = getsegmentoverride(prefix) + '[' + colorreg + "r15" + endcolor + '+' + inttohexs((UIntPtr)dwordptr, 8) + ']';
                                     else
-                                        result = getsegmentoverride(prefix) + '[' + colorreg + "r15" + endcolor + '-' + inttohexs((UIntPtr)(-intptr.ToInt32()), 8) + ']';
+                                        result = getsegmentoverride(prefix) + '[' + colorreg + "r15" + endcolor + '-' + inttohexs((UIntPtr)(-(int)dwordptr), 8) + ']';
                                     break;
 
                             }
@@ -1236,9 +1227,9 @@ namespace SputnikAsm.LDisassembler
             var result = "";
             if (is64bit)
                 pref = 'r';
-            else pref = 'e';
-            var intptr = memory.ToIntPtr(sibbyte - 1);
-            var dwordptr = intptr.ToUIntPtr();
+            else
+                pref = 'e';
+            var dwordptr = (UIntPtr)memory.ReadUInt32(sibbyte - 1);
             last += 1;  //sib byte
             lastdisassembledata.seperators[lastdisassembledata.seperatorcount] = (int)last;
             lastdisassembledata.seperatorcount += 1;
@@ -1319,7 +1310,7 @@ namespace SputnikAsm.LDisassembler
                 //sib has a 32-bit displacement value (starting at 0000000000000000)
                 lastdisassembledata.modrmvaluetype = tdisassemblervaluetype.dvtaddress;
                 lastdisassembledata.modrmvalue = dwordptr;
-                result = inttohexs((UIntPtr)dwordptr, 8);
+                result = inttohexs(dwordptr, 8);
                 last += 4;
                 return result;
             }
@@ -1327,10 +1318,18 @@ namespace SputnikAsm.LDisassembler
             {
                 switch (ss)
                 {
-                    case 0: lastdisassembledata.sibscaler = 1; break;
-                    case 1: lastdisassembledata.sibscaler = 2; break;
-                    case 2: lastdisassembledata.sibscaler = 4; break;
-                    case 3: lastdisassembledata.sibscaler = 8; break;
+                    case 0:
+                        lastdisassembledata.sibscaler = 1;
+                        break;
+                    case 1:
+                        lastdisassembledata.sibscaler = 2;
+                        break;
+                    case 2:
+                        lastdisassembledata.sibscaler = 4;
+                        break;
+                    case 3:
+                        lastdisassembledata.sibscaler = 8;
+                        break;
                 }
                 if ((ss > 0) && (index != 4))
                     indexstring = indexstring + '*' + colorhex + lastdisassembledata.sibscaler + endcolor;
@@ -1356,11 +1355,11 @@ namespace SputnikAsm.LDisassembler
                             if (@base == 5)
                             {
                                 lastdisassembledata.modrmvaluetype = tdisassemblervaluetype.dvtvalue;
-                                lastdisassembledata.modrmvalue = (UIntPtr)intptr.ReadInt32();
-                                if (intptr.ReadInt32() < 0)
-                                    displacementstring = "-" + inttohexs((UIntPtr)(-intptr.ReadInt32()), 8);
+                                lastdisassembledata.modrmvalue = (UIntPtr)(Int32)dwordptr;
+                                if ((Int32)dwordptr < 0)
+                                    displacementstring = "-" + inttohexs((UIntPtr)(-(Int32)dwordptr), 8);
                                 else
-                                    displacementstring = inttohexs((UIntPtr)intptr.ReadInt32(), 8);
+                                    displacementstring = inttohexs((UIntPtr)(Int32)dwordptr, 8);
                                 last += 4;
                             }
                         }
@@ -1369,11 +1368,11 @@ namespace SputnikAsm.LDisassembler
                         {
                             //displacementstring:=colorreg+'EBP'+endcolor;
                             lastdisassembledata.modrmvaluetype = tdisassemblervaluetype.dvtvalue;
-                            lastdisassembledata.modrmvalue = (UIntPtr)intptr.ReadSByte();
-                            if (intptr.ReadSByte() < 0)
-                                displacementstring = "-" + inttohexs((UIntPtr)(-intptr.ReadSByte()), 2);
+                            lastdisassembledata.modrmvalue = (UIntPtr)(SByte)dwordptr;
+                            if ((SByte)dwordptr < 0)
+                                displacementstring = "-" + inttohexs((UIntPtr)(-(SByte)dwordptr), 2);
                             else
-                                displacementstring = inttohexs((UIntPtr)intptr.ReadSByte(), 2);
+                                displacementstring = inttohexs((UIntPtr)(SByte)dwordptr, 2);
                             last += 1;
                         }
                         break;
@@ -1382,11 +1381,11 @@ namespace SputnikAsm.LDisassembler
                         {
                             //displacementstring:=colorreg+'EBP'+endcolor;
                             lastdisassembledata.modrmvaluetype = tdisassemblervaluetype.dvtvalue;
-                            lastdisassembledata.modrmvalue = (UIntPtr)intptr.ReadInt32();
-                            if (intptr.ReadInt32() < 0)
-                                displacementstring = "-" + inttohexs((UIntPtr)(-intptr.ReadInt32()), 8);
+                            lastdisassembledata.modrmvalue = (UIntPtr)(Int32)dwordptr;
+                            if ((Int32)dwordptr < 0)
+                                displacementstring = "-" + inttohexs((UIntPtr)(-(Int32)dwordptr), 8);
                             else
-                                displacementstring = inttohexs((UIntPtr)intptr.ReadInt32(), 8);
+                                displacementstring = inttohexs((UIntPtr)(Int32)dwordptr, 8);
                             last += 4;
                         }
                         break;
@@ -1627,7 +1626,7 @@ namespace SputnikAsm.LDisassembler
             // Allocate the structure to store information of memory
             MemoryBasicInformation memoryInfo;
             // Get the next memory page
-            var ret = Kernel32.VirtualQueryEx(SelfSymbolHandler.Process.Handle, address.ToIntPtr(), out memoryInfo, MarshalType<MemoryBasicInformation>.Size);
+            var ret = Kernel32.VirtualQueryEx(SymbolHandler.Process.Handle, address.ToIntPtr(), out memoryInfo, MarshalType<MemoryBasicInformation>.Size);
             return ret != 0 && memoryInfo.State == MemoryStateFlags.Commit;
         }
         #region hasaddress
@@ -1694,7 +1693,8 @@ namespace SputnikAsm.LDisassembler
         #region inttohexs_withoutsymbols
         public String inttohexs(UIntPtr value, int chars, Boolean signed_ = false, int signedsize = 0)
         {
-            //if (howsymbols or showmodules) // todo make this work
+            if (showsymbols || showmodules)
+                return inttohexs_withsymbols(value, chars, signed_, signedsize);
             return inttohexs_withoutsymbols(value, chars, signed_, signedsize);
         }
         #endregion
@@ -2181,7 +2181,7 @@ namespace SputnikAsm.LDisassembler
         //            //            break;
         //            //        case vtpointer:
         //            //            {
-        //            //                if (SelfSymbolHandler.Process.IsX64)
+        //            //                if (SymbolHandler.Process.IsX64)
         //            //                    values[i].s = AStringUtils.IntToHex(pqword(&buffer[0]), 8);
         //            //                else
         //            //                    values[i].s = AStringUtils.IntToHex(pdword(&buffer[0]), 8);
@@ -2228,7 +2228,7 @@ namespace SputnikAsm.LDisassembler
         {
             // todo handle cloak support
             //readprocessmemorywithcloaksupport(processhandle, (pointer)(address), destination, size, actualread);
-            Kernel32.ReadProcessMemory(SelfSymbolHandler.Process.Handle, address.ToIntPtr(), destination.ToIntPtr(), size, out var actualread);
+            Kernel32.ReadProcessMemory(SymbolHandler.Process.Handle, address.ToIntPtr(), destination.ToIntPtr(), size, out var actualread);
             if (actualread == 0 && ((address.ToUInt64() + ((UInt64) size & 0xfffff000UL)) > (address.ToUInt64() & 0xfffff000UL))) //did not read a single byte and overlaps a pageboundary
             {
                 var p1 = 0;
@@ -2237,7 +2237,7 @@ namespace SputnikAsm.LDisassembler
                     var i = Math.Min(size, (int) (4096 - (address.ToUInt64() & 0xfff)));
                     // todo handle cloak support
                     //readprocessmemorywithcloaksupport(processhandle, (pointer)(address), destination, i, actualread);
-                    Kernel32.ReadProcessMemory(SelfSymbolHandler.Process.Handle, address.ToIntPtr(), destination.ToIntPtr(), i, out actualread);
+                    Kernel32.ReadProcessMemory(SymbolHandler.Process.Handle, address.ToIntPtr(), destination.ToIntPtr(), i, out actualread);
                     p1 += actualread;
                     address += actualread;
                     size -= actualread;
@@ -2321,10 +2321,10 @@ namespace SputnikAsm.LDisassembler
                 else
                 {
                     // todo uncomment
-                    //is64bit = SelfSymbolHandler.Process.IsX64;
+                    //is64bit = SymbolHandler.Process.IsX64;
                     //if (cpu64)
                     //{
-                    //    if (offset >= qword(0))
+                    //    if (offset >= qword(0x100000000))
                     //        is64bit = true;
                     //}
                     //
@@ -2385,16 +2385,6 @@ namespace SputnikAsm.LDisassembler
                 //         }
                 //     }
                 // }
-                if (isdefault)
-                {
-                    // todo uncomment
-                    showsymbols = false;//symhandler.showsymbols;
-                    showmodules = false;//symhandler.showmodules;
-                }
-                //if (showsymbols | showmodules)
-                //    inttohexs = inttohexs_withsymbols;
-                //else
-                //    inttohexs = inttohexs_withoutsymbols;
                 riprelative = false;
                 if (dataonly)
                     result = "";
@@ -2797,7 +2787,7 @@ namespace SputnikAsm.LDisassembler
 
                                 if (prefix2.Contains(0x66))
                                 {
-                                    var wordptr = memory.ToIntPtr(1).ReadUInt16();;
+                                    var wordptr = memory.ToIntPtr(1).ReadUInt16();
 
                                     lastdisassembledata.parametervalue = (UIntPtr)wordptr;
                                     lastdisassembledata.parameters = colorreg + "ax" + endcolor + ',' + inttohexs(lastdisassembledata.parametervalue, 4);
@@ -2806,7 +2796,7 @@ namespace SputnikAsm.LDisassembler
                                 }
                                 else
                                 {
-                                    var dwordptr = memory.ToIntPtr(1).ReadUInt32();;
+                                    var dwordptr = memory.ToIntPtr(1).ReadUInt32();
                                     lastdisassembledata.parametervalue = (UIntPtr)dwordptr;
 
                                     if (rex_w)
@@ -5220,7 +5210,7 @@ namespace SputnikAsm.LDisassembler
                                                     {
                                                         description = "Invalidate process-context-identifier";
                                                         lastdisassembledata.opcode = "invpcid";
-                                                        if (SelfSymbolHandler.Process.IsX64)
+                                                        if (SymbolHandler.Process.IsX64)
                                                             lastdisassembledata.parameters = r64(memory[3]) + modrm(memory, prefix2, 3, 0, ref last, 128, 0, tmrpos.mright);
                                                         else
                                                             lastdisassembledata.parameters = r32(memory[3]) + modrm(memory, prefix2, 3, 0, ref last, 128, 0, tmrpos.mright);
@@ -11883,7 +11873,7 @@ namespace SputnikAsm.LDisassembler
                                 lastdisassembledata.opcode = "adc";
                                 if (prefix2.Contains(0x66))
                                 {
-                                    var wordptr = memory.ToIntPtr(1).ReadUInt16();;
+                                    var wordptr = memory.ToIntPtr(1).ReadUInt16();
                                     lastdisassembledata.parametervaluetype = tdisassemblervaluetype.dvtvalue;
                                     lastdisassembledata.parametervalue = (UIntPtr)wordptr;
 
@@ -11892,7 +11882,7 @@ namespace SputnikAsm.LDisassembler
                                 }
                                 else
                                 {
-                                    var dwordptr = memory.ToIntPtr(1).ReadUInt32();;
+                                    var dwordptr = memory.ToIntPtr(1).ReadUInt32();
                                     lastdisassembledata.parametervaluetype = tdisassemblervaluetype.dvtvalue;
                                     lastdisassembledata.parametervalue = (UIntPtr)dwordptr;
 
@@ -11992,7 +11982,7 @@ namespace SputnikAsm.LDisassembler
                                 description = "integer subtraction with borrow";
                                 if (prefix2.Contains(0x66))
                                 {
-                                    var wordptr = memory.ToIntPtr(1).ReadUInt16();;
+                                    var wordptr = memory.ToIntPtr(1).ReadUInt16();
 
                                     lastdisassembledata.parametervaluetype = tdisassemblervaluetype.dvtvalue;
                                     lastdisassembledata.parametervalue = (UIntPtr)wordptr;
@@ -12002,7 +11992,7 @@ namespace SputnikAsm.LDisassembler
                                 }
                                 else
                                 {
-                                    var dwordptr = memory.ToIntPtr(1).ReadUInt32();;
+                                    var dwordptr = memory.ToIntPtr(1).ReadUInt32();
                                     lastdisassembledata.parametervaluetype = tdisassemblervaluetype.dvtvalue;
                                     lastdisassembledata.parametervalue = (UIntPtr)dwordptr;
 
@@ -12107,7 +12097,7 @@ namespace SputnikAsm.LDisassembler
 
                                 if (prefix2.Contains(0x66))
                                 {
-                                    var wordptr = memory.ToIntPtr(1).ReadUInt16();;
+                                    var wordptr = memory.ToIntPtr(1).ReadUInt16();
                                     lastdisassembledata.parametervaluetype = tdisassemblervaluetype.dvtvalue;
                                     lastdisassembledata.parametervalue = (UIntPtr)wordptr;
                                     lastdisassembledata.parameters = colorreg + "ax" + endcolor + ',' + inttohexs(lastdisassembledata.parametervalue, 4);
@@ -12115,7 +12105,7 @@ namespace SputnikAsm.LDisassembler
                                 }
                                 else
                                 {
-                                    var dwordptr = memory.ToIntPtr(1).ReadUInt32();;
+                                    var dwordptr = memory.ToIntPtr(1).ReadUInt32();
                                     lastdisassembledata.parametervaluetype = tdisassemblervaluetype.dvtvalue;
                                     lastdisassembledata.parametervalue = (UIntPtr)dwordptr;
 
@@ -12209,7 +12199,7 @@ namespace SputnikAsm.LDisassembler
 
                                 if (prefix2.Contains(0x66))
                                 {
-                                    var wordptr = memory.ToIntPtr(1).ReadUInt16();;
+                                    var wordptr = memory.ToIntPtr(1).ReadUInt16();
                                     lastdisassembledata.parametervaluetype = tdisassemblervaluetype.dvtvalue;
                                     lastdisassembledata.parametervalue = (UIntPtr)wordptr;
 
@@ -12218,7 +12208,7 @@ namespace SputnikAsm.LDisassembler
                                 }
                                 else
                                 {
-                                    var dwordptr = memory.ToIntPtr(1).ReadUInt32();;
+                                    var dwordptr = memory.ToIntPtr(1).ReadUInt32();
                                     lastdisassembledata.parametervaluetype = tdisassemblervaluetype.dvtvalue;
                                     lastdisassembledata.parametervalue = (UIntPtr)dwordptr;
 
@@ -12310,7 +12300,7 @@ namespace SputnikAsm.LDisassembler
 
                                 if (prefix2.Contains(0x66))
                                 {
-                                    var wordptr = memory.ToIntPtr(1).ReadUInt16();;
+                                    var wordptr = memory.ToIntPtr(1).ReadUInt16();
                                     lastdisassembledata.parametervaluetype = tdisassemblervaluetype.dvtvalue;
                                     lastdisassembledata.parametervalue = (UIntPtr)wordptr;
 
@@ -12319,7 +12309,7 @@ namespace SputnikAsm.LDisassembler
                                 }
                                 else
                                 {
-                                    var dwordptr = memory.ToIntPtr(1).ReadUInt32();;
+                                    var dwordptr = memory.ToIntPtr(1).ReadUInt32();
                                     lastdisassembledata.parametervaluetype = tdisassemblervaluetype.dvtvalue;
                                     lastdisassembledata.parametervalue = (UIntPtr)dwordptr;
 
@@ -12414,7 +12404,7 @@ namespace SputnikAsm.LDisassembler
 
                                 if (prefix2.Contains(0x66))
                                 {
-                                    var wordptr = memory.ToIntPtr(1).ReadUInt16();;
+                                    var wordptr = memory.ToIntPtr(1).ReadUInt16();
                                     lastdisassembledata.parametervaluetype = tdisassemblervaluetype.dvtvalue;
                                     lastdisassembledata.parametervalue = (UIntPtr)wordptr;
 
@@ -12423,7 +12413,7 @@ namespace SputnikAsm.LDisassembler
                                 }
                                 else
                                 {
-                                    var dwordptr = memory.ToIntPtr(1).ReadUInt32();;
+                                    var dwordptr = memory.ToIntPtr(1).ReadUInt32();
                                     lastdisassembledata.parametervaluetype = tdisassemblervaluetype.dvtvalue;
                                     lastdisassembledata.parametervalue = (UIntPtr)dwordptr;
 
@@ -12440,7 +12430,7 @@ namespace SputnikAsm.LDisassembler
                         //prefix bytes need fixing
                         case 0x3f:
                             {  //aas
-                                if (SelfSymbolHandler.Process.IsX86)
+                                if (SymbolHandler.Process.IsX86)
                                 {
                                     lastdisassembledata.opcode = "db";
                                     lastdisassembledata.parameters = inttohexs((UIntPtr)0x3f, 1);
@@ -12604,7 +12594,7 @@ namespace SputnikAsm.LDisassembler
 
                                 if (prefix2.Contains(0x66))
                                 {
-                                    var wordptr = memory.ToIntPtr(1).ReadUInt16();;
+                                    var wordptr = memory.ToIntPtr(1).ReadUInt16();
                                     lastdisassembledata.parametervaluetype = tdisassemblervaluetype.dvtvalue;
                                     lastdisassembledata.parametervalue = (UIntPtr)wordptr;
 
@@ -12614,13 +12604,17 @@ namespace SputnikAsm.LDisassembler
                                 }
                                 else
                                 {
-                                    var dwordptr = memory.ToIntPtr(1).ReadUInt32();;
+                                    var dwordptr = memory.ToIntPtr(1).ReadUInt32();
                                     lastdisassembledata.parametervaluetype = tdisassemblervaluetype.dvtvalue;
                                     lastdisassembledata.parametervalue = (UIntPtr)dwordptr;
 
                                     lastdisassembledata.opcode = "push";
-                                    if (SelfSymbolHandler.Process.IsX64)
-                                        lastdisassembledata.parameters = inttohexs((UIntPtr)(Int32)dwordptr, 8);
+                                    if (SymbolHandler.Process.IsX64)
+                                    {
+                                        var intptr = memory.ToIntPtr(1).ReadInt32();
+                                        lastdisassembledata.parametervalue = (UIntPtr)intptr;
+                                        lastdisassembledata.parameters = inttohexs((UIntPtr)intptr, 8);
+                                    }
                                     else
                                         lastdisassembledata.parameters = inttohexs((UIntPtr)dwordptr, 8);
                                     offset += 4;
@@ -13957,14 +13951,14 @@ namespace SputnikAsm.LDisassembler
                                 lastdisassembledata.opcode = "lea";
                                 if (prefix2.Contains(0x66))
                                 {
-                                    if (SelfSymbolHandler.Process.IsX64 & (prefix2.Contains(0x67)))
+                                    if (SymbolHandler.Process.IsX64 & (prefix2.Contains(0x67)))
                                         lastdisassembledata.parameters = r16(memory[1]) + modrm(memory, prefix2, 1, 1, ref last, 0, 32, tmrpos.mright);
                                     else
                                         lastdisassembledata.parameters = r16(memory[1]) + modrm(memory, prefix2, 1, 1, ref last, 0, 0, tmrpos.mright);
                                 }
                                 else
                                 {
-                                    if (SelfSymbolHandler.Process.IsX64 & (prefix2.Contains(0x67)))
+                                    if (SymbolHandler.Process.IsX64 & (prefix2.Contains(0x67)))
                                         lastdisassembledata.parameters = r32(memory[1]) + modrm(memory, prefix2, 1, 0, ref last, 0, 32, tmrpos.mright);
                                     else
                                         lastdisassembledata.parameters = r32(memory[1]) + modrm(memory, prefix2, 1, 0, ref last, 0, 0, tmrpos.mright);
@@ -14114,7 +14108,7 @@ namespace SputnikAsm.LDisassembler
 
 
                                 lastdisassembledata.parameters = inttohexs((UIntPtr)wordptr, 4) + ':';
-                                var dwordptr = memory.ToIntPtr(1).ReadUInt32();;
+                                var dwordptr = memory.ToIntPtr(1).ReadUInt32();
 
                                 lastdisassembledata.parametervaluetype = tdisassemblervaluetype.dvtaddress;
                                 lastdisassembledata.parametervalue = (UIntPtr)dwordptr;
@@ -14302,7 +14296,7 @@ namespace SputnikAsm.LDisassembler
                         case 0xa0:
                             {
                                 description = "copy memory";
-                                var dwordptr = memory.ToIntPtr(1).ReadUInt32();;
+                                var dwordptr = memory.ToIntPtr(1).ReadUInt32();
                                 lastdisassembledata.opcode = "mov";
                                 lastdisassembledata.parametervaluetype = tdisassemblervaluetype.dvtaddress;
                                 lastdisassembledata.parametervalue = (UIntPtr)dwordptr;
@@ -14310,9 +14304,11 @@ namespace SputnikAsm.LDisassembler
                                 lastdisassembledata.seperatorcount += 1;
 
 
-                                if (SelfSymbolHandler.Process.IsX64)
+                                if (SymbolHandler.Process.IsX64)
                                 {
-                                    lastdisassembledata.parameters = colorreg + "al" + endcolor + ',' + getsegmentoverride(prefix2) + '[' + inttohexs((UIntPtr)dwordptr, 8) + ']';
+                                    var qwordptr = memory.ToIntPtr(1).ReadUInt64();
+                                    lastdisassembledata.parametervalue = (UIntPtr)qwordptr;
+                                    lastdisassembledata.parameters = colorreg + "al" + endcolor + ',' + getsegmentoverride(prefix2) + '[' + inttohexs((UIntPtr)qwordptr, 8) + ']';
                                     offset += 8;
                                 }
                                 else
@@ -14329,7 +14325,7 @@ namespace SputnikAsm.LDisassembler
                             {
                                 description = "copy memory";
                                 lastdisassembledata.opcode = "mov";
-                                var dwordptr = memory.ToIntPtr(1).ReadUInt32();;
+                                var dwordptr = memory.ToIntPtr(1).ReadUInt32();
 
 
                                 lastdisassembledata.parametervaluetype = tdisassemblervaluetype.dvtaddress;
@@ -14349,14 +14345,18 @@ namespace SputnikAsm.LDisassembler
                                         lastdisassembledata.parameters = colorreg + "eax" + endcolor + ',';
 
 
-                                    if (SelfSymbolHandler.Process.IsX64)
-                                        lastdisassembledata.parameters = lastdisassembledata.parameters + getsegmentoverride(prefix2) + '[' + inttohexs((UIntPtr)dwordptr, 8) + ']';
+                                    if (SymbolHandler.Process.IsX64)
+                                    {
+                                        var qwordptr = memory.ToIntPtr(1).ReadUInt64();
+                                        lastdisassembledata.parametervalue = (UIntPtr)qwordptr;
+                                        lastdisassembledata.parameters = lastdisassembledata.parameters + getsegmentoverride(prefix2) + '[' + inttohexs((UIntPtr)qwordptr, 8) + ']';
+                                    }
                                     else
                                         lastdisassembledata.parameters = lastdisassembledata.parameters + getsegmentoverride(prefix2) + '[' + inttohexs((UIntPtr)dwordptr, 8) + ']';
 
                                 }
 
-                                if (SelfSymbolHandler.Process.IsX64)
+                                if (SymbolHandler.Process.IsX64)
                                     offset += 8;
                                 else
                                     offset += 4;
@@ -14367,7 +14367,7 @@ namespace SputnikAsm.LDisassembler
                         case 0xa2:
                             {
                                 description = "copy memory";
-                                var dwordptr = memory.ToIntPtr(1).ReadUInt32();;
+                                var dwordptr = memory.ToIntPtr(1).ReadUInt32();
                                 lastdisassembledata.opcode = "mov";
 
                                 lastdisassembledata.parametervaluetype = tdisassemblervaluetype.dvtaddress;
@@ -14375,12 +14375,16 @@ namespace SputnikAsm.LDisassembler
                                 lastdisassembledata.seperators[lastdisassembledata.seperatorcount] = 1;
                                 lastdisassembledata.seperatorcount += 1;
 
-                                if (SelfSymbolHandler.Process.IsX64)
-                                    lastdisassembledata.parameters = getsegmentoverride(prefix2) + '[' + inttohexs((UIntPtr)dwordptr, 8) + "]," + colorreg + "al" + endcolor;
+                                if (SymbolHandler.Process.IsX64)
+                                {
+                                    var qwordptr = memory.ToIntPtr(1).ReadUInt64();
+                                    lastdisassembledata.parametervalue = (UIntPtr)qwordptr;
+                                    lastdisassembledata.parameters = getsegmentoverride(prefix2) + '[' + inttohexs((UIntPtr)qwordptr, 8) + "]," + colorreg + "al" + endcolor;
+                                }
                                 else
                                     lastdisassembledata.parameters = getsegmentoverride(prefix2) + '[' + inttohexs((UIntPtr)dwordptr, 8) + "]," + colorreg + "al" + endcolor;
 
-                                if (SelfSymbolHandler.Process.IsX64)
+                                if (SymbolHandler.Process.IsX64)
                                     offset += 8;
                                 else
                                     offset += 4;
@@ -14391,15 +14395,19 @@ namespace SputnikAsm.LDisassembler
                             {
                                 description = "copy memory";
                                 lastdisassembledata.opcode = "mov";
-                                var dwordptr = memory.ToIntPtr(1).ReadUInt32();;
+                                var dwordptr = memory.ToIntPtr(1).ReadUInt32();
 
                                 lastdisassembledata.parametervaluetype = tdisassemblervaluetype.dvtaddress;
                                 lastdisassembledata.parametervalue = (UIntPtr)dwordptr;
                                 lastdisassembledata.seperators[lastdisassembledata.seperatorcount] = 1;
                                 lastdisassembledata.seperatorcount += 1;
 
-                                if (SelfSymbolHandler.Process.IsX64)
-                                    lastdisassembledata.parameters = getsegmentoverride(prefix2) + '[' + inttohexs((UIntPtr)dwordptr, 8) + "],";
+                                if (SymbolHandler.Process.IsX64)
+                                {
+                                    var qwordptr = memory.ToIntPtr(1).ReadUInt64();
+                                    lastdisassembledata.parametervalue = (UIntPtr)qwordptr;
+                                    lastdisassembledata.parameters = getsegmentoverride(prefix2) + '[' + inttohexs((UIntPtr)qwordptr, 8) + "],";
+                                }
                                 else
                                     lastdisassembledata.parameters = getsegmentoverride(prefix2) + '[' + inttohexs((UIntPtr)dwordptr, 8) + "],";
 
@@ -14413,7 +14421,7 @@ namespace SputnikAsm.LDisassembler
                                         lastdisassembledata.parameters = lastdisassembledata.parameters + colorreg + "eax" + endcolor;
                                 }
 
-                                if (SelfSymbolHandler.Process.IsX64)
+                                if (SymbolHandler.Process.IsX64)
                                     offset += 8;
                                 else
                                     offset += 4;
@@ -14489,7 +14497,7 @@ namespace SputnikAsm.LDisassembler
 
                                 if (prefix2.Contains(0x66))
                                 {
-                                    var wordptr = memory.ToIntPtr(1).ReadUInt16();;
+                                    var wordptr = memory.ToIntPtr(1).ReadUInt16();
                                     lastdisassembledata.parametervaluetype = tdisassemblervaluetype.dvtvalue;
                                     lastdisassembledata.parametervalue = (UIntPtr)wordptr;
 
@@ -14498,7 +14506,7 @@ namespace SputnikAsm.LDisassembler
                                 }
                                 else
                                 {
-                                    var dwordptr = memory.ToIntPtr(1).ReadUInt32();;
+                                    var dwordptr = memory.ToIntPtr(1).ReadUInt32();
                                     lastdisassembledata.parametervaluetype = tdisassemblervaluetype.dvtvalue;
                                     lastdisassembledata.parametervalue = (UIntPtr)dwordptr;
 
@@ -14614,7 +14622,7 @@ namespace SputnikAsm.LDisassembler
 
                                 if (prefix2.Contains(0x66))
                                 {
-                                    var wordptr = memory.ToIntPtr(1).ReadUInt16();;
+                                    var wordptr = memory.ToIntPtr(1).ReadUInt16();
                                     lastdisassembledata.parametervaluetype = tdisassemblervaluetype.dvtvalue;
                                     lastdisassembledata.parametervalue = (UIntPtr)wordptr;
 
@@ -14624,7 +14632,7 @@ namespace SputnikAsm.LDisassembler
                                 }
                                 else
                                 {
-                                    var dwordptr = memory.ToIntPtr(1).ReadUInt32();;
+                                    var dwordptr = memory.ToIntPtr(1).ReadUInt32();
                                     lastdisassembledata.parametervaluetype = tdisassemblervaluetype.dvtvalue;
 
 
@@ -14942,7 +14950,7 @@ namespace SputnikAsm.LDisassembler
                         case 0xc2:
                             {
 
-                                var wordptr = memory.ToIntPtr(1).ReadUInt16();;
+                                var wordptr = memory.ToIntPtr(1).ReadUInt16();
                                 lastdisassembledata.parametervaluetype = tdisassemblervaluetype.dvtvalue;
                                 lastdisassembledata.parametervalue = (UIntPtr)wordptr;
                                 lastdisassembledata.seperators[lastdisassembledata.seperatorcount] = 1;
@@ -14969,7 +14977,7 @@ namespace SputnikAsm.LDisassembler
 
                         case 0xc4:
                             {
-                                if (SelfSymbolHandler.Process.IsX64 == false)
+                                if (SymbolHandler.Process.IsX64 == false)
                                 {
                                     description = "load far pointer";
                                     lastdisassembledata.opcode = "les";
@@ -14985,7 +14993,7 @@ namespace SputnikAsm.LDisassembler
 
                         case 0xc5:
                             {
-                                if (SelfSymbolHandler.Process.IsX64 == false)
+                                if (SymbolHandler.Process.IsX64 == false)
                                 {
                                     description = "load far pointer";
                                     lastdisassembledata.opcode = "lds";
@@ -15126,7 +15134,7 @@ namespace SputnikAsm.LDisassembler
                         case 0xc8:
                             {
                                 description = "make stack frame for procedure parameters";
-                                var wordptr = memory.ToIntPtr(1).ReadUInt16();;
+                                var wordptr = memory.ToIntPtr(1).ReadUInt16();
                                 lastdisassembledata.parametervaluetype = tdisassemblervaluetype.dvtvalue;
                                 lastdisassembledata.parametervalue = (UIntPtr)wordptr;
                                 lastdisassembledata.seperators[lastdisassembledata.seperatorcount] = 1;
@@ -15151,7 +15159,7 @@ namespace SputnikAsm.LDisassembler
                         case 0xca:
                             {
                                 description = "far return to calling procedure and pop 2 bytes from stack";
-                                var wordptr = memory.ToIntPtr(1).ReadUInt16();;
+                                var wordptr = memory.ToIntPtr(1).ReadUInt16();
                                 lastdisassembledata.opcode = "ret";
                                 lastdisassembledata.isret = true;
 
@@ -18386,11 +18394,13 @@ namespace SputnikAsm.LDisassembler
                         breaknow = false;
                         try
                         {
-                            fixed (Byte* p1 = lastdisassembledata.bytes.Buffer)
-                            {
-                                var p2 = (Byte*)_memory.ToIntPtr();
-                                AArrayUtils.CopyMemory(p1, k, p2, k, (int)td);
-                            }
+                            //fixed (Byte* p1 = lastdisassembledata.bytes.Buffer)
+                            //{
+                            //    var p2 = (Byte*)_memory.ToIntPtr();
+                            //    AArrayUtils.CopyMemory(p1, k, p2, k, (int)td);
+                            //}
+                            using (var p1 = new UBytePtr(lastdisassembledata.bytes.Buffer))
+                                AArrayUtils.CopyMemory(p1, k, _memory.ToIntPtr(), k, (int) td);
                         }
                         catch
                         {

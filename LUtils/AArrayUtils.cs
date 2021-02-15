@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using Sputnik.LBinary;
+using Sputnik.LMarshal;
 using SputnikAsm.LCollections;
 
 namespace SputnikAsm.LUtils
@@ -58,6 +59,20 @@ namespace SputnikAsm.LUtils
             while (size-- > 0)
             {
                 d[dS + i] = s[sS + i];
+                i++;
+            }
+            return i;
+        }
+        public static int CopyMemory(IntPtr dest, int destStart, IntPtr src, int srcStart, int size)
+        {
+            var d = dest;
+            var dS = destStart;
+            var s = src;
+            var sS = srcStart;
+            var i = 0;
+            while (size-- > 0)
+            {
+                d.WriteByte(s.ReadByte(sS + i), dS + i);
                 i++;
             }
             return i;

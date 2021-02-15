@@ -51,7 +51,7 @@ namespace SputnikAsm
             //aa.Assembler.Assemble("mov eax, edx", 0x400300, b);
 
             var cd = @"
-call MessageBoxA
+mov rax, [FFFFFFFFFFFFFFFF]
             ".Trim();
             var codex = new ARefStringArray();
             codex.Assign(UStringUtils.GetLines(cd).ToArray());
@@ -59,15 +59,29 @@ call MessageBoxA
 
             var b = aa.Assemble(aa.SelfSymbolHandler.Process, codex);
             var d = new Disassembler();
-            var s1 = "";
-            var bytes = new UBytePtr(b[0].Bytes.TakeAll());
-            var ptr = bytes.ToIntPtr().ToUIntPtr();
             d.dataonly = true;
-            d.disassemble(ref ptr, ref s1);
-            var currentline = d.lastdisassembledata.prefix + ' ' + d.lastdisassembledata.opcode + ' ' +
-                              d.lastdisassembledata.parameters;
-            Console.WriteLine(currentline);
+            //d.is64bit = true;
+            d.SymbolHandler.Process = m;
+            var s1 = "";
+            //var bytes = new UBytePtr(b[0].Bytes.TakeAll());
+            //var ptr = bytes.ToIntPtr().ToUIntPtr();
 
+            var ptr = (UIntPtr)0x40230F;
+            var i = 30;
+            while (i-- > 0)
+            {
+                try
+                {
+                    d.disassemble(ref ptr, ref s1);
+                    var currentline = d.lastdisassembledata.prefix + ' ' + d.lastdisassembledata.opcode + ' ' +
+                                      d.lastdisassembledata.parameters;
+                    Console.WriteLine(currentline);
+                }
+                catch
+                {
+                    break;
+                }
+            }
             Console.ReadKey();
             Environment.Exit(1);
 

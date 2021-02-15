@@ -83,7 +83,6 @@
     <Compile Include="LAssembler\AOpCodes.cs" />
     <Compile Include="LAssembler\ASingleLineAssembler.cs" />
     <Compile Include="LAutoAssembler\AAutoAssembler.cs" />
-    <Content Include="LDisassembler\big.cs" />
     <Compile Include="LDisassembler\Disassembler.cs" />
     <Compile Include="LDisassembler\LEnums\tdisassemblerclass.cs" />
     <Compile Include="LDisassembler\LEnums\tdisassemblervaluetype.cs" />
