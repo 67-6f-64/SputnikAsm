@@ -10,8 +10,8 @@ namespace SputnikAsm.LCollections
             : base()
         {
         }
-        public ATByteArray(params UInt16[] bytes)
-            : base(bytes)
+        public ATByteArray(params UInt16[] values)
+            : base(values)
         {
         }
         #endregion

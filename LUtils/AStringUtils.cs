@@ -170,10 +170,6 @@ namespace SputnikAsm.LUtils
             }
             return hex;
         }
-        public static String IntToHex(IntPtr value, Int32 digits)
-        {
-            return IntToHex(value.ToInt64(), digits);
-        }
         public static String IntToHex(UIntPtr value, Int32 digits)
         {
             return IntToHex(value.ToUInt64(), digits);
@@ -438,6 +434,22 @@ namespace SputnikAsm.LUtils
             if (str.Length > 0 && str[0] == '$')
                 str = "0x" + str.Substring(1);
             return UStringUtils.StringToUInt64(str);
+        }
+        #endregion
+        #region BinToHexStr
+        public static String BinToHexStr(Byte[] bin)
+        {
+            var HexSymbols = "0123456789ABCDEF";
+            var str = UStringUtils.StrNew('\0', 2 * bin.Length);
+            using (var p = new UCharPtr(str))
+            {
+                for (var i = 0; i < bin.Length; i++)
+                {
+                    p[2 * i + 0] = HexSymbols[1 + (bin[i] >> 4) - 1];
+                    p[2 * i + 1] = HexSymbols[1 + (bin[i] & 0xf) - 1];
+                }
+            }
+            return str;
         }
         #endregion
         #region BinToStr

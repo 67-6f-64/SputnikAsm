@@ -10,8 +10,8 @@ namespace SputnikAsm.LCollections
             : base()
         {
         }
-        public ACharArray(params Char[] bytes)
-            : base(bytes)
+        public ACharArray(params Char[] values)
+            : base(values)
         {
         }
         #endregion

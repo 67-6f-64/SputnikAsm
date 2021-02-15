@@ -11,8 +11,8 @@ namespace SputnikAsm.LCollections
             : base()
         {
         }
-        public AStringArray(params String[] tokens)
-            : base(tokens)
+        public AStringArray(params String[] values)
+            : base(values)
         {
         }
         #endregion

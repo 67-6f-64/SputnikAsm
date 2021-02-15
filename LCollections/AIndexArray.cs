@@ -10,8 +10,8 @@ namespace SputnikAsm.LCollections
             : base()
         {
         }
-        public AIndexArray(params AIndex[] tokens)
-            : base(tokens)
+        public AIndexArray(params AIndex[] values)
+            : base(values)
         {
         }
         public AIndexArray(int size)

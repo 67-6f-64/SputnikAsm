@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Sputnik.LUtils;
 using SputnikAsm.LAssembler.LEnums;
 using SputnikAsm.LCollections;
+using SputnikAsm.LSymbolHandler;
 using SputnikAsm.LUtils;
 using SputnikWin;
 
@@ -10,37 +11,12 @@ namespace SputnikAsm.LAssembler
 {
     public class AAssembler
     {
-        #region dumy
-        public class TSymhandler
-        {
-            public TProcess process= new TProcess();
-            public IntPtr getaddressfromname(String name, Boolean waitforsymbols, out Boolean haserror)
-            {
-                if (name == "shinobi.exe")
-                {
-                    haserror = false;
-                    return (IntPtr) 0x400300;
-                }
-                if (name == "cat")
-                {
-                    haserror = false;
-                    return (IntPtr)0x777;
-                }
-                haserror = true;
-                return IntPtr.Zero;
-            }
-        }
-        public class TProcess
-        {
-            public Boolean is64bit = true;
-        }
-        #endregion
         #region Variables
         public AOpCode[] OpCodes;
         public int Parameter1, Parameter2, Parameter3;
         public int OpCodeNr;
         public AIndexArray AssemblerIndex;
-        public TSymhandler SymHandler = new TSymhandler();
+        public ASymbolHandler SymHandler = new ASymbolHandler();
         public ASingleLineAssembler Assembler;
         #endregion
         #region Properties
@@ -975,7 +951,7 @@ namespace SputnikAsm.LAssembler
             if (token.Length > 4 && token.StartsWith("[[") && token.EndsWith("]]"))
             {
                 //looks like a pointer in a address specifier (idiot user detected...)
-                temp = "[" + AStringUtils.IntToHex(SymHandler.getaddressfromname(AStringUtils.Copy(token, 2, token.Length - 4), false, out var haserror), 8) + ']';
+                temp = "[" + AStringUtils.IntToHex(SymHandler.GetAddressFromName(AStringUtils.Copy(token, 2, token.Length - 4), false, out var haserror), 8) + ']';
                 if (!haserror)
                     token = temp;
                 else
@@ -1033,7 +1009,7 @@ namespace SputnikAsm.LAssembler
                     AStringUtils.Val("0x" + tokens[i], out Int64 _, out var err);
                     if ((err != 0) && (GetReg(tokens[i], false) == -1))     //not a hexadecimal value and not a register
                     {
-                        temp = AStringUtils.IntToHex(SymHandler.getaddressfromname(tokens[i], false, out var hasError), 8);
+                        temp = AStringUtils.IntToHex(SymHandler.GetAddressFromName(tokens[i], false, out var hasError), 8);
                         if (!hasError)
                             tokens[i] = temp; //can be rewritten as a hexadecimal
                         else

@@ -5,11 +5,11 @@ namespace SputnikAsm.LUtils
     public static class AMathUtils
     {
         #region InRangeX
-        public static Boolean InRangeX(IntPtr value, IntPtr min, IntPtr max)
+        public static Boolean InRangeX(UIntPtr value, UIntPtr min, UIntPtr max)
         {
-            var v = value.ToInt64();
-            var mn = min.ToInt64();
-            var mx = max.ToInt64();
+            var v = value.ToUInt64();
+            var mn = min.ToUInt64();
+            var mx = max.ToUInt64();
             return v >= mn && v <= mx;
         }
         #endregion

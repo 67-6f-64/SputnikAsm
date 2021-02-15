@@ -13,8 +13,8 @@ namespace SputnikAsm.LCollections
             : base()
         {
         }
-        public ARefStringArray(params ARefString[] tokens)
-            : base(tokens)
+        public ARefStringArray(params ARefString[] values)
+            : base(values)
         {
         }
         #endregion

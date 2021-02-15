@@ -82,7 +82,7 @@ namespace SputnikAsm.LGenerics
         #region NextElement
         public virtual T NextElement(int index)
         {
-            return default;
+            return Activator.CreateInstance<T>();
         }
         #endregion
         #region Contains
@@ -114,6 +114,11 @@ namespace SputnikAsm.LGenerics
         public void AddRange(IEnumerable<T> array)
         {
             foreach (var item in array)
+                Add(item);
+        }
+        public void AddRange(AArrayManager<T> array)
+        {
+            foreach (var item in array.Raw)
                 Add(item);
         }
         #endregion

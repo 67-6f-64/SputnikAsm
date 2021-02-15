@@ -66,6 +66,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="LAssembler\AAssembler.cs" />
+    <Compile Include="LAutoAssembler\AAlloc.cs" />
+    <Compile Include="LAutoAssembler\LCollections\AAllocArray.cs" />
     <Compile Include="LCollections\ACharArray.cs" />
     <Compile Include="LCollections\ARefStringArray.cs" />
     <Compile Include="LCollections\ATByteArray.cs" />
@@ -83,6 +85,7 @@
     <Compile Include="LAutoAssembler\AAutoAssembler.cs" />
     <Compile Include="LGenerics\AArrayManager.cs" />
     <Compile Include="LString\ARefString.cs" />
+    <Compile Include="LSymbolHandler\ASymbolHandler.cs" />
     <Compile Include="LUtils\AArrayUtils.cs" />
     <Compile Include="LUtils\AMathUtils.cs" />
     <Compile Include="LUtils\ACharUtils.cs" />
