@@ -507,7 +507,7 @@ namespace SputnikAsm.LAutoAssembler
                     if (tokens[0].Value.ToUpper() == "ENDSTRUCT" || tokens[0].Value.ToUpper() == "ENDS")
                     {
                         endfound = true;
-                        break; //all done // todo this is meant to be continue?
+                        break; //all done
                     }
                 }
                 //if it's neither a label or structure end then it's a size defining token
@@ -585,7 +585,7 @@ namespace SputnikAsm.LAutoAssembler
                                             j += 1;
                                         }
                                         else
-                                            break; //nope // todo should this be continue
+                                            break; //nope
                                     }
 
                                 }
@@ -1693,7 +1693,7 @@ namespace SputnikAsm.LAutoAssembler
                     if (currentline[currentline.Length - 1] == ':')
                     {
                         ok1 = false;
-                        for (j = 0; j <= labels.Length - 1; j++)
+                        for (j = 0; j < labels.Length; j++)
                         {
                             if (i == labels[j].AssemblerLine)
                             {
@@ -1712,7 +1712,7 @@ namespace SputnikAsm.LAutoAssembler
                                     b = assembled[labels[j].References[k]].Bytes.Length; //new size
                                     assembled[labels[j].References[k]].Bytes.SetLength(a); //original size (original size is always bigger or equal than newsize)
                                                                                             //fill the difference with nops (not the most efficient approach, but it should work)
-                                    for (l = b; l <= a - 1; l++)
+                                    for (l = b; l < a; l++)
                                         assembled[labels[j].References[k]].Bytes[l] = 0x90;
                                 }
                                 break;
@@ -1920,6 +1920,7 @@ namespace SputnikAsm.LAutoAssembler
                             }
                         }
                     }
+                    #region hidden
                     //still here, so create threads if needed
                     //if (length(createthread) > 0)
                     //{
@@ -2000,6 +2001,7 @@ namespace SputnikAsm.LAutoAssembler
                     //        }
                     //    }
                     //}
+                    #endregion
                     if (popUpMessages)
                     {
                         s1 = "";

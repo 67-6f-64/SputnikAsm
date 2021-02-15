@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Sputnik.LUtils;
 
 namespace SputnikAsm.LSymbolHandler
 {
@@ -19,6 +20,11 @@ namespace SputnikAsm.LSymbolHandler
         }
         public UIntPtr GetAddressFromName(String name, Boolean waitforsymbols, out Boolean haserror)
         {
+            if (UStringUtils.IsXDigit(name))
+            {
+                haserror = false;
+                return (UIntPtr) UStringUtils.StringToUInt64("0x" + name);
+            }
             if (name == "shinobi.exe")
             {
                 haserror = false;

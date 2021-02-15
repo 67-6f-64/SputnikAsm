@@ -51,10 +51,10 @@ namespace SputnikAsm.LAssembler
                         AssemblerIndex[i].StartEntry = j;
                         AssemblerIndex[i].SubIndex = null; //default initialization
                         lastEntry = j;
-                        break; // todo check if should be continue
+                        break;
                     }
                     if (OpCodes[j].Mnemonic[0] > 'A' + i)
-                        break; // passed it // todo check if should be continue
+                        break; // passed it
                 }
             }
             if (AssemblerIndex.Last.StartEntry != -1)
@@ -85,7 +85,7 @@ namespace SputnikAsm.LAssembler
                                 lastIndex.NextEntry = k;
                             lastIndex = AssemblerIndex[i].SubIndex[j];
                             AssemblerIndex[i].SubIndex[j].StartEntry = k;
-                            break; // todo check if should be continue
+                            break;
                         }
                     }
                 }

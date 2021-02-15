@@ -6,6 +6,7 @@ using SputnikAsm.LAutoAssembler;
 using SputnikAsm.LAutoAssembler.LCollections;
 using SputnikAsm.LCollections;
 using SputnikAsm.LUtils;
+using SputnikWin.LFeatures.LWindows;
 
 namespace SputnikAsm
 {
@@ -16,8 +17,8 @@ namespace SputnikAsm
             var a = new AAssembler();
             var b = new AByteArray();
 
-            //var result = a.Assemble("mov eax, edx", 0x400300, b); // A1 09 00 00 00
-            var result = a.Assemble("mov eax, dword ptr [400500]", 0x400300, b); // A1 09 00 00 00
+            var result = a.Assemble("mov eax, edx", 0x400300, b); // A1 09 00 00 00
+            //var result = a.Assemble("mov eax, dword ptr [400500]", 0x400300, b); // A1 09 00 00 00
             //var result = a.Assemble("jmp 400500", 0x400300, b); // E9 FB 01 00 00
             Console.WriteLine("Result: " + result);
             Console.WriteLine("Bytes:");
@@ -27,7 +28,11 @@ namespace SputnikAsm
             var cc = @"
             [ENABLE]
             400300:
+            jmp 600700
             mov eax, edx
+            inc esi
+            dec edx
+            mov eax, dword ptr[411C88]
 
             [DISABLE]
             400300:
@@ -45,6 +50,9 @@ namespace SputnikAsm
                 Console.WriteLine("Line: " + o.Value);
             }
 
+            // var proc = new UTrainerEngine("pacwin.exe");
+            // Console.WriteLine(proc.ReadMem((IntPtr)0x411C88, ReadType.Int32));
+            // proc.Poke(scr.ToString());
 
             Console.ReadKey();
         }

@@ -663,7 +663,6 @@ namespace SputnikAsm.LAssembler
                 Assembler.AddDWord(modrm, (UInt32)disp);
                 found = true;
             }
-            // todo add TRY
             if ((reg[k] == "ESP") || (reg[-k] == "ESP") || (reg[k] == "RSP") || (reg[-k] == "RSP"))  //esp takes precedence
             {
                 if (reg[-k] == "ESP")
@@ -1018,7 +1017,7 @@ namespace SputnikAsm.LAssembler
                 if (!((tokens[i] == "LOCK") || (tokens[i] == "REP") || (tokens[i] == "REPNE") || (tokens[i] == "REPE")))
                 {
                     mnemonic = i;
-                    break; // todo figure out if this is meant to be break/continue
+                    break;
                 }
             }
             if (mnemonic == -1)
@@ -2359,8 +2358,7 @@ namespace SputnikAsm.LAssembler
                                             while (k <= endoflist)
                                             {
                                                 if (Assembler.OpCodes[k].Mnemonic != tokens[mnemonic])
-                                                    //nope, so continue with r/m,imm16
-                                                    continue; // todo figure out if this is meant to be break/continue
+                                                    continue; //nope, so continue with r/m,imm16
                                                 if (((Assembler.OpCodes[k].ParamType1 == AParam.par_rm16) && (Assembler.OpCodes[k].ParamType2 == AParam.par_imm16)) && ((Assembler.OpCodes[k].ParamType3 == AParam.par_noparam) && (parameter3 == "")))
                                                 {
                                                     //yes, there is
@@ -2394,8 +2392,7 @@ namespace SputnikAsm.LAssembler
                                             while (k <= endoflist)
                                             {
                                                 if (Assembler.OpCodes[k].Mnemonic != tokens[mnemonic])
-                                                    //nope, so continue with r/m,imm16
-                                                    continue; // todo figure out if this is meant to be break/continue
+                                                    continue; //nope, so continue with r/m,imm16
                                                 if (((Assembler.OpCodes[k].ParamType1 == AParam.par_rm16) && (Assembler.OpCodes[k].ParamType2 == AParam.par_imm8)) && ((Assembler.OpCodes[k].ParamType3 == AParam.par_noparam) && (parameter3 == "")))
                                                 {
                                                     //yes, there is
@@ -2488,7 +2485,7 @@ namespace SputnikAsm.LAssembler
                                             while (k <= endoflist)
                                             {
                                                 if (Assembler.OpCodes[k].Mnemonic != tokens[mnemonic])
-                                                    continue; // todo figure out if this is meant to be break/continue
+                                                    continue; // maybe we can find one...
                                                 if (((Assembler.OpCodes[k].ParamType1 == AParam.par_rm32) && (Assembler.OpCodes[k].ParamType2 == AParam.par_imm32)) && ((Assembler.OpCodes[k].ParamType3 == AParam.par_noparam) && (parameter3 == "")))
                                                 {
                                                     //yes, there is
@@ -2522,7 +2519,7 @@ namespace SputnikAsm.LAssembler
                                             {
                                                 if (Assembler.OpCodes[k].Mnemonic != tokens[mnemonic])
                                                     //nope, so continue with r/m,imm16
-                                                    continue; // todo figure out if this is meant to be break/continue
+                                                    continue; // maybe we can find one...
                                                 if (((Assembler.OpCodes[k].ParamType1 == AParam.par_rm32) && (Assembler.OpCodes[k].ParamType2 == AParam.par_imm8)) && ((Assembler.OpCodes[k].ParamType3 == AParam.par_noparam) && (parameter3 == "")) && ((!Assembler.OpCodes[k].Signed) | (signedvtype == 8)))
                                                 {
                                                     //yes, there is
