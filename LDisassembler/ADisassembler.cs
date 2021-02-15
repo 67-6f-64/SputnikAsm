@@ -797,7 +797,7 @@ namespace SputnikAsm.LDisassembler
                             if (GetRm(memory[modRmByte]) != 4)
                             {
                                 LastDisassembleData.ModRmValueType = ADisassemblerValueType.Value;
-                                LastDisassembleData.ModRmValue = (UIntPtr)(SByte)memory[modRmByte + 1];
+                                LastDisassembleData.ModRmValue = (UIntPtr)memory[modRmByte + 1];
                             }
                             switch (GetRm(memory[modRmByte]))
                             {
@@ -805,25 +805,25 @@ namespace SputnikAsm.LDisassembler
                                     if ((SByte)memory[modRmByte + 1] >= 0)
                                         result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "ax" + _endColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "ax" + _endColor + IntToHexSigned((UIntPtr)(SByte)memory[modRmByte + 1], 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "ax" + _endColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     break;
                                 case 1:
                                     if ((SByte)memory[modRmByte + 1] >= 0)
                                         result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "cx" + _endColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "cx" + _endColor + IntToHexSigned((UIntPtr)(SByte)memory[modRmByte + 1], 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "cx" + _endColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     break;
                                 case 2:
                                     if ((SByte)memory[modRmByte + 1] >= 0)
                                         result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "dx" + _endColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "dx" + _endColor + IntToHexSigned((UIntPtr)(SByte)memory[modRmByte + 1], 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "dx" + _endColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     break;
                                 case 3:
                                     if ((SByte)memory[modRmByte + 1] >= 0)
                                         result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "bx" + _endColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "bx" + _endColor + IntToHexSigned((UIntPtr)(SByte)memory[modRmByte + 1], 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "bx" + _endColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     break;
                                 case 4:
                                     result = GetSegmentOverride(prefix) + '[' + Sib(memory, modRmByte + 1, ref last, addressSize) + ']';
@@ -833,67 +833,67 @@ namespace SputnikAsm.LDisassembler
                                     if ((SByte)memory[modRmByte + 1] >= 0)
                                         result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "bp" + _endColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "bp" + _endColor + IntToHexSigned((UIntPtr)(SByte)memory[modRmByte + 1], 2, true, 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "bp" + _endColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2, true, 2) + ']';
                                     break;
                                 case 6:
                                     if ((SByte)memory[modRmByte + 1] >= 0)
                                         result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "si" + _endColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "si" + _endColor + IntToHexSigned((UIntPtr)(SByte)memory[modRmByte + 1], 2, true, 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "si" + _endColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2, true, 2) + ']';
                                     break;
                                 case 7:
                                     if ((SByte)memory[modRmByte + 1] >= 0)
                                         result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "di" + _endColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "di" + _endColor + IntToHexSigned((UIntPtr)(SByte)memory[modRmByte + 1], 2, true, 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "di" + _endColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2, true, 2) + ']';
                                     break;
                                 case 8:
                                     if ((SByte)memory[modRmByte + 1] >= 0)
                                         result = GetSegmentOverride(prefix) + '[' + _colorReg + "r8" + _endColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r8" + _endColor + IntToHexSigned((UIntPtr)(SByte)memory[modRmByte + 1], 2, true, 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r8" + _endColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2, true, 2) + ']';
                                     break;
                                 case 9:
                                     if ((SByte)memory[modRmByte + 1] >= 0)
                                         result = GetSegmentOverride(prefix) + '[' + _colorReg + "r9" + _endColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r9" + _endColor + IntToHexSigned((UIntPtr)(SByte)memory[modRmByte + 1], 2, true, 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r9" + _endColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2, true, 2) + ']';
                                     break;
                                 case 10:
                                     if ((SByte)memory[modRmByte + 1] >= 0)
                                         result = GetSegmentOverride(prefix) + '[' + _colorReg + "r10" + _endColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r10" + _endColor + IntToHexSigned((UIntPtr)(SByte)memory[modRmByte + 1], 2, true, 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r10" + _endColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2, true, 2) + ']';
                                     break;
                                 case 11:
                                     if ((SByte)memory[modRmByte + 1] >= 0)
                                         result = GetSegmentOverride(prefix) + '[' + _colorReg + "r11" + _endColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r11" + _endColor + IntToHexSigned((UIntPtr)(SByte)memory[modRmByte + 1], 2, true, 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r11" + _endColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2, true, 2) + ']';
                                     break;
                                 case 12:
                                     if ((SByte)memory[modRmByte + 1] >= 0)
                                         result = GetSegmentOverride(prefix) + '[' + _colorReg + "r12" + _endColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r12" + _endColor + IntToHexSigned((UIntPtr)(SByte)memory[modRmByte + 1], 2, true, 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r12" + _endColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2, true, 2) + ']';
                                     break;
                                 case 13:
                                     if ((SByte)memory[modRmByte + 1] >= 0)
                                         result = GetSegmentOverride(prefix) + '[' + _colorReg + "r13" + _endColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r13" + _endColor + IntToHexSigned((UIntPtr)(SByte)memory[modRmByte + 1], 2, true, 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r13" + _endColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2, true, 2) + ']';
                                     break;
                                 case 14:
                                     if ((SByte)memory[modRmByte + 1] >= 0)
                                         result = GetSegmentOverride(prefix) + '[' + _colorReg + "r14" + _endColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r14" + _endColor + IntToHexSigned((UIntPtr)(SByte)memory[modRmByte + 1], 2, true, 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r14" + _endColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2, true, 2) + ']';
                                     break;
                                 case 15:
                                     if ((SByte)memory[modRmByte + 1] >= 0)
                                         result = GetSegmentOverride(prefix) + '[' + _colorReg + "r15" + _endColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r15" + _endColor + IntToHexSigned((UIntPtr)(SByte)memory[modRmByte + 1], 2, true, 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r15" + _endColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2, true, 2) + ']';
                                     break;
                             }
                             last += 1;

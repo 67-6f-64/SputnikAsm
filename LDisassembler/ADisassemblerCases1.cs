@@ -113,7 +113,7 @@ namespace SputnikAsm.LDisassembler
                             {
                                 LastDisassembleData.ParameterValueType = ADisassemblerValueType.Value;
                                 LastDisassembleData.ParameterValue = (UIntPtr)dwordptr;
-                                LastDisassembleData.Parameters = _colorReg + "rax" + _endColor + ',' + IntToHexSigned((UIntPtr)(Int32)dwordptr, 8);
+                                LastDisassembleData.Parameters = _colorReg + "rax" + _endColor + ',' + IntToHexSigned((UIntPtr)dwordptr, 8);
 
                                 description = "add " + AStringUtils.IntToHex(dwordptr, 8) + " to rax (sign extended)";
                             }
@@ -227,7 +227,7 @@ namespace SputnikAsm.LDisassembler
 
                             if (RexW)
                             {
-                                LastDisassembleData.Parameters = _colorReg + "rax" + _endColor + ',' + IntToHexSigned((UIntPtr)(int)(LastDisassembleData.ParameterValue), 8);
+                                LastDisassembleData.Parameters = _colorReg + "rax" + _endColor + ',' + IntToHexSigned((UIntPtr)LastDisassembleData.ParameterValue, 8);
                                 description = description + " (sign-extended)";
                             }
                             else

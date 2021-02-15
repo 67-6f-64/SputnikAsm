@@ -94,12 +94,10 @@ namespace SputnikAsm
                 {
                     var dis = d.Disassemble(ref ptr, ref s1);
                     var cl = d.LastDisassembleData.Prefix + ' ' + d.LastDisassembleData.OpCode + ' ' + d.LastDisassembleData.Parameters;
-                    //var dec = d.DecodeLastParametersToString();
-                    //Console.WriteLine(cl + " ; " + d.DecodeLastParametersToString());
-                    d.SplitDisassembledString(dis, true, out var address, out var bytes, out var opcode, out var special);
-                    Console.WriteLine($"0x{address.PadRight(8)} {bytes.PadRight(20)} {opcode} {special} ");
-                    var prev = d.PreviousOpCode((UIntPtr)UStringUtils.StringToUInt64("0x" + address));
-                    Console.WriteLine("Prev: " + prev);
+                    var dec = d.DecodeLastParametersToString();
+                    //Console.WriteLine(cl + " ; " + dec);
+                    d.SplitDisassembledString(dis, false, out var address, out var bytes, out var opcode, out var special);
+                    Console.WriteLine($"0x{address.PadRight(8)} {bytes.PadRight(20)} {opcode} {special} ; {dec}");
                 }
                 catch (Exception e)
                 {
