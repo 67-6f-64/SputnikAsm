@@ -1,4 +1,5 @@
 ﻿using System;
+using SputnikWin.LExtra.LMemorySharp.Native;
 
 namespace SputnikAsm.LAutoAssembler
 {
@@ -9,6 +10,7 @@ namespace SputnikAsm.LAutoAssembler
         public UIntPtr Address;
         public UInt32 Size;
         public UIntPtr Preferred;
+        public MemoryProtectionFlags Protection;
         #endregion
         #region Constructor
         public AAlloc()
@@ -17,13 +19,15 @@ namespace SputnikAsm.LAutoAssembler
             Address = UIntPtr.Zero;
             Size = 0;
             Preferred = UIntPtr.Zero;
+            Protection = MemoryProtectionFlags.ExecuteReadWrite;
         }
-        public AAlloc(String name, UIntPtr address, UInt32 size, UIntPtr preferred)
+        public AAlloc(String name, UIntPtr address, UInt32 size, UIntPtr preferred, MemoryProtectionFlags protection)
         {
             Name = name;
             Address = address;
             Size = size;
             Preferred = preferred;
+            Protection = protection;
         }
         #endregion
     };

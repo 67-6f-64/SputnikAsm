@@ -37,19 +37,36 @@ namespace SputnikAsm
             var b = new AByteArray();
             a.SymHandler.Process = pacWin;
 
-            var result = a.Assemble("mov eax, [edx+esi+66]", 0x400300, b); // E9 FB 01 00 00
-            Console.WriteLine("Result: " + result);
-            Console.WriteLine("Bytes:");
-            Console.WriteLine(UBinaryUtils.Expand(b.Raw));
+            //var result = a.Assemble("mov eax, [edx+esi+66]", 0x400300, b); // E9 FB 01 00 00
+            //Console.WriteLine("Result: " + result);
+            //Console.WriteLine("Bytes:");
+            //Console.WriteLine(UBinaryUtils.Expand(b.Raw));
 
             //Console.ReadKey();
             //Environment.Exit(1);
 
             var cc = @"
             [ENABLE]
+registersymbol(meeko)
+alloc(dog, $1000)
+label(noerror)
+label(cat)
 400300:
 mov eax, dword ptr[400500]
-MULX eax, edx, [38]
+mov eax, edx
+cat:
+mov eax,[ecx+10]
+jmp short noerror
+xor eax,eax
+noerror:
+jmp dog
+jmp cat
+meeko:
+    db 00 00 00 00
+
+dog:
+mov eax, edx
+jmp 400300
 
 [DISABLE]
             ".Trim();
@@ -59,18 +76,23 @@ MULX eax, edx, [38]
             aa.RemoveComments(code);
 
             var scr = new ARefStringArray();
-            var allocs = new AAllocArray();
-            var ret = aa.AutoAssemble(pacWin, code, false, true, false, allocs, new AStringArray(), false, scr);
+            var info = new ADisableInfo();
+            var ret = aa.AutoAssemble(pacWin, code, false, true, false, false, info, false, scr);
             Console.WriteLine("Result: " + ret);
-            aa.AutoAssemble(pacWin, code, false, true, false, allocs, new AStringArray(), true, scr);
-            foreach (var o in scr.Raw)
-            {
-                Console.WriteLine("Line: " + o.Value);
-            }
-            Console.WriteLine("Cat Loc: " + a.SymHandler.GetUserDefinedSymbolByName("cat").ToUInt64().ToString("X"));
+            //aa.AutoAssemble(pacWin, code, false, true, false, false, info, true, scr);
+            //foreach (var o in scr.Raw)
+            //{
+            //    Console.WriteLine("Line: " + o.Value);
+            //}
+            Console.WriteLine("meeko Loc: " + a.SymHandler.GetUserDefinedSymbolByName("meeko").ToUInt64().ToString("X"));
 
             // Console.WriteLine(proc.ReadMem((IntPtr)0x411C88, ReadType.Int32));
             // proc.Poke(scr.ToString());
+
+            var labels = new AStringArray();
+            aa.GetPotentialLabels(code, labels);
+            foreach (var o in labels.Raw)
+                Console.WriteLine("Label: " + o);
 
             Console.ReadKey();
         }

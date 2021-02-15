@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Windows.Forms;
+using Sputnik.LBinary;
 using Sputnik.LFileSystem;
 using Sputnik.LString;
 using Sputnik.LUtils;
@@ -9,6 +11,7 @@ using SputnikAsm.LAutoAssembler.LCollections;
 using SputnikAsm.LCollections;
 using SputnikAsm.LExtensions;
 using SputnikAsm.LGenerics;
+using SputnikAsm.LString;
 using SputnikAsm.LSymbolHandler;
 using SputnikAsm.LUtils;
 using SputnikWin.LExtra.LMemorySharp.Native;
@@ -18,12 +21,29 @@ namespace SputnikAsm.LAutoAssembler
     public class AAutoAssembler
     {
         #region Internal Classes
+        #region AAssemblerLine
+        internal class AAssemblerLine
+        {
+            #region Variables
+            public String Line;
+            public int LineNr;
+            #endregion
+            #region Constructor
+            public AAssemblerLine()
+            {
+                Line = "";
+                LineNr = 0;
+            }
+            #endregion
+        }
+        #endregion
         #region ALabels
         internal class ALabels
         {
             #region Variables
             public String Name;
             public Boolean Defined;
+            public Boolean AfterCCode;
             public Boolean InsideAllocatedMemory;
             public UIntPtr Address;
             public int AssemblerLine;
@@ -35,6 +55,7 @@ namespace SputnikAsm.LAutoAssembler
             {
                 Name = "";
                 Defined = false;
+                AfterCCode = false;
                 Address = UIntPtr.Zero;
                 AssemblerLine = 0;
                 References = new AByteArray();
@@ -49,17 +70,14 @@ namespace SputnikAsm.LAutoAssembler
             #region Variables
             public UIntPtr Address;
             public AByteArray Bytes;
+            public int CreateThreadAndWait;
             #endregion
             #region Constructor
             public AAssembled()
             {
                 Address = UIntPtr.Zero;
                 Bytes = new AByteArray();
-            }
-            public AAssembled(UIntPtr address, AByteArray bytes)
-            {
-                Address = address;
-                Bytes = bytes;
+                CreateThreadAndWait = 01;
             }
             #endregion
         }
@@ -123,6 +141,67 @@ namespace SputnikAsm.LAutoAssembler
             {
                 Address = address;
                 Size = size;
+            }
+            #endregion
+        }
+        #endregion
+        #region AReadMems
+        internal class AReadMems
+        {
+            #region Variables
+            public AByteArray Bytes;
+            public int Length;
+            #endregion
+            #region Constructor
+            public AReadMems()
+            {
+                Bytes = new AByteArray();
+                Length = 0;
+            }
+            public AReadMems(AByteArray bytes, int length)
+            {
+                Bytes = bytes;
+                Length = length;
+            }
+            #endregion
+        }
+        #endregion
+        #region ATryElem
+        internal class ATryElem
+        {
+            #region Variables
+            public int LineNr;
+            public int TryNr;
+            public Boolean HasExcept;
+            public String TryLabel;
+            public String ExceptLabel;
+            #endregion
+            #region Constructor
+            public ATryElem()
+            {
+                LineNr = 0;
+                TryNr = 0;
+                HasExcept = false;
+                TryLabel = "";
+                ExceptLabel = "";
+            }
+            #endregion
+        }
+        #endregion
+        #region ACreateThreadAndWait
+        internal class ACreateThreadAndWait
+        {
+            #region Variables
+            public String Name;
+            public int Position;
+            public int Timeout;
+            #endregion
+            #region Constructor
+            public ACreateThreadAndWait()
+            {
+                Name = "";
+                Position = 0;
+                Timeout = 0;
             }
             #endregion
         }
@@ -661,14 +740,141 @@ namespace SputnikAsm.LAutoAssembler
             }
         }
         #endregion
-        #region AobScans -- todo make this work!!!
-        public void AobScans(AProcess process, ARefStringArray code, Boolean syntaxCheckOnly)
+        #region ParseTryExcept
+        public void ParseTryExcept(ARefStringArray code, AExceptionInfoArray exceptionList)
         {
-
+            var tryList = new AArrayManager<ATryElem>();
+            var tryNr = 0;
+            tryList.SetLength(0);
+            for (var i = 0; i < code.Length; i++)
+            {
+                if (code[i].Value.ToUpper().Trim() == "{$TRY}")
+                {
+                    tryNr += 1;
+                    var j = tryList.Length;
+                    tryList.SetLength(j + 1);
+                    tryList[j].TryNr = tryNr;
+                    tryList[j].HasExcept = false;
+                    tryList[j].LineNr = code[i].Position;
+                    tryList[j].TryLabel = "tryoperation_" + tryNr;
+                    code[i].Value = tryList[j].TryLabel + ":";
+                }
+                if (code[i].Value.ToUpper().Trim() == "{$EXCEPT}")
+                {
+                    //find the last try that doesn't have an except filled in
+                    var found = false;
+                    for (var j = tryList.Length - 1; j >= 0; j--)
+                    {
+                        if (tryList[j].HasExcept == false)
+                        {
+                            tryList[j].HasExcept = true;
+                            tryList[j].ExceptLabel = "tryoperation" + tryList[j].TryNr + "_except";
+                            code[i].Value = tryList[j].ExceptLabel + ":";
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found)
+                        throw new Exception(UStringUtils.Sprintf("Found an {$EXCEPT} at line %d with no matching {$TRY}", code[i].Position));
+                }
+            }
+            exceptionList.SetLength(tryList.Length);
+            for (var i = 0; i < tryList.Length; i++)
+            {
+                code.Insert(0, "label(" + tryList[i].TryLabel + ')');
+                code.Insert(0, "label(" + tryList[i].ExceptLabel + ')');
+                exceptionList[i].TryLabel = tryList[i].TryLabel;
+                exceptionList[i].ExceptLabel = tryList[i].ExceptLabel;
+                if (tryList[i].HasExcept == false)
+                    throw new Exception(UStringUtils.Sprintf(rsMissingExcept, tryList[i].LineNr));
+            }
+        }
+        #endregion
+        #region StripCpuSpecificCode
+        public void StripCpuSpecificCode(ARefStringArray code, Boolean strip32Bit)
+        {
+            var inExcludedBitBlock = false;
+            for (var i = 0; i < code.Length; i++)
+            {
+                var s = code[i].Value.Trim().ToUpper();
+                if (s == "[32-BIT]")
+                {
+                    if (strip32Bit)
+                        inExcludedBitBlock = true;
+                    code[i].Value = " ";
+                }
+                if (s == "[/32-BIT]")
+                {
+                    if (strip32Bit)
+                        inExcludedBitBlock = false;
+                    code[i].Value = " ";
+                }
+                if (s == "[64-BIT]")
+                {
+                    if (!strip32Bit)
+                        inExcludedBitBlock = true;
+                    code[i].Value = " ";
+                }
+                if (s == "[/64-BIT]")
+                {
+                    if (!strip32Bit)
+                        inExcludedBitBlock = false;
+                    code[i].Value = " ";
+                }
+                if (inExcludedBitBlock)
+                    code[i].Value = " ";
+            }
+        }
+        #endregion
+        #region AobScans -- todo make this work!!!
+        public Boolean AobScans(AProcess process, ARefStringArray code, Boolean syntaxCheckOnly)
+        {
+            return false;
+        }
+        #endregion
+        #region GetAddressFromScript
+        private UIntPtr GetAddressFromScript(
+            String name, 
+            Boolean targetSelf, 
+            AArrayManager<ALabels> labels, 
+            AAllocArray allocs, 
+            AAllocArray kallocs, 
+            AArrayManager<ADefines> defines
+            )
+        {
+            var result = UIntPtr.Zero;
+            if (targetSelf)
+                result = SelfSymbolHandler.GetAddressFromName(name);
+            else
+                result = Assembler.SymHandler.GetAddressFromName(name);
+            if (result != UIntPtr.Zero)
+                return result;
+            name = name.ToUpper();
+            for (var j = 0; j < labels.Length; j++)
+            {
+                if (labels[j].Name.ToUpper() == name)
+                    return labels[j].Address;
+            }
+            for (var j = 0; j < allocs.Length; j++)
+            {
+                if (allocs[j].Name.ToUpper() == name)
+                    return allocs[j].Address;
+            }
+            for (var j = 0; j < kallocs.Length; j++)
+            {
+                if (kallocs[j].Name.ToUpper() == name)
+                    return kallocs[j].Address;
+            }
+            for (var j = 0; j < defines.Length; j++)
+            {
+                if (defines[j].Name.ToUpper() == name)
+                    return Assembler.SymHandler.GetAddressFromName(defines[j].Whatever);
+            }
+            return result;
         }
         #endregion
         #region AutoAssemble
-        public Boolean AutoAssemble(AProcess process, ARefStringArray code, Boolean popUpMessages, Boolean enable, Boolean syntaxCheckOnly, AAllocArray allocArray, AStringArray registeredSymbols, Boolean createScript, ARefStringArray newScript)
+        public Boolean AutoAssemble(AProcess process, ARefStringArray code, Boolean popUpMessages, Boolean enable, Boolean syntaxCheckOnly, Boolean targetSelf, ADisableInfo disableInfo, Boolean createScript, ARefStringArray newScript)
         {
             //add line numbers to the code
             for (var i = 0; i < code.Length; i++)
@@ -706,19 +912,24 @@ namespace SputnikAsm.LAutoAssembler
                 switch (enable)
                 {
                     case true:
-                        GetScript(code, tempStrings, true);
+                        GetEnableOrDisableScript(code, tempStrings, true);
                         break;
                     case false:
-                        GetScript(code, tempStrings, false);
+                        GetEnableOrDisableScript(code, tempStrings, false);
                         break;
                 }
             }
-            var result = AutoAssemble2(process, tempStrings, popUpMessages, syntaxCheckOnly, allocArray, registeredSymbols, createScript, newScript);
+            var strip32BitCode = process.IsX64;
+            if (targetSelf)
+                strip32BitCode = Assembler.Is64Bit;
+            if (strip32BitCode)
+                StripCpuSpecificCode(tempStrings, strip32BitCode);
+            var result = AutoAssemble2(process, tempStrings, popUpMessages, syntaxCheckOnly, targetSelf, disableInfo, createScript, newScript);
             return result;
         }
         #endregion
         #region AutoAssemble2
-        public Boolean AutoAssemble2(AProcess process, ARefStringArray code, Boolean popUpMessages, Boolean syntaxCheckOnly, AAllocArray allocArray, AStringArray registeredSymbols, Boolean createScript, ARefStringArray newScript)
+        public Boolean AutoAssemble2(AProcess process, ARefStringArray code, Boolean popUpMessages, Boolean syntaxCheckOnly, Boolean targetSelf, ADisableInfo disableInfo, Boolean createScript, ARefStringArray newScript)
         {
             var i = 0;
             var j = 0;
@@ -726,19 +937,23 @@ namespace SputnikAsm.LAutoAssembler
             var l = 0;
             var e = 0;
             String currentline = "";
+            String currentline2 = "";
             int currentlinenr = 0;
             var currentaddress = UIntPtr.Zero;
             var assembled = new AArrayManager<AAssembled>();
-            UInt64 x = 0;
+            UIntPtr x = UIntPtr.Zero;
+            UInt32 y = 0;
             UInt32 op = 0;
-            UInt64 op2 = 0;
+            UInt32 op2 = 0;
             Boolean ok1 = false;
             var ok2 = false;
             var loadbinary = new AArrayManager<ALoadLibrary>();
+            var readmems = new AArrayManager<AReadMems>();
             var globalallocs = new AAllocArray();
             var allocs = new AAllocArray();
             var kallocs = new AAllocArray();
             var sallocs = new AAllocArray();
+            var tempalloc = new AAlloc();
             var labels = new AArrayManager<ALabels>();
             var defines = new AArrayManager<ADefines>();
             var fullaccess = new AArrayManager<AFullAccess>();
@@ -746,6 +961,7 @@ namespace SputnikAsm.LAutoAssembler
             var addsymbollist = new AStringArray();
             var deletesymbollist = new AStringArray();
             var createthread = new AStringArray();
+            var createthreadandwait = new AArrayManager<ACreateThreadAndWait>();
             var a = 0;
             var b = 0;
             var c = 0;
@@ -753,16 +969,32 @@ namespace SputnikAsm.LAutoAssembler
             var s1 = "";
             var s2 = "";
             var s3 = "";
-            var assemblerlines = new AStringArray();
+            var assemblerlines = new AArrayManager<AAssemblerLine>();
+            var exceptionlist = new AExceptionInfoArray();
             var varsize = 0;
             var tokens = new ARefStringArray();
             var baseaddress = UIntPtr.Zero;
             var include = new ARefStringArray();
+            var multilineinjection = new AStringArray();
+            var potentiallabels = new AStringArray();
+            var hastryexcept = false;
+            var strictmode = false;
+            var slist = new AStringArray();
+            var sli = 0;
+            var diff = UIntPtr.Zero;
+            var incomment = false;
+            var usesaobscan = false;
+            var createthreadandwaitid = -1;
+            var mustbefar = false;
+            var nops = new AByteArray();
+            UInt32 testdword = 0;
             UInt32 bw = 0;
             UInt64 bw2 = 0;
             var testPtr = UIntPtr.Zero;
             var bytes = new ATByteArray();
-            UIntPtr prefered = UIntPtr.Zero;
+            var prefered = UIntPtr.Zero;
+            var oldprefered = UIntPtr.Zero;
+            var protection = MemoryProtectionFlags.ExecuteReadWrite;
             var intPtrSize = 0;
             var intPtrHexSize = 0;
             var result = false;
@@ -771,19 +1003,20 @@ namespace SputnikAsm.LAutoAssembler
             globalallocs.SetLength(0);
             sallocs.SetLength(0);
             createthread.SetLength(0);
+            createthreadandwait.SetLength(0);
             currentaddress = UIntPtr.Zero;
-            if (Assembler.Is64Bit)
+            if (Assembler.Is64Bit) // todo remove intptrsize stuff
                 intPtrSize = 8;
             else
                 intPtrSize = 4;
             intPtrHexSize = intPtrSize * 2;
-            if (syntaxCheckOnly && (registeredSymbols != null))
+            //add all symbols as defined labels
+            if (disableInfo != null)
             {
-                //add the symbols as defined labels
-                labels.SetLength(registeredSymbols.Length);
-                for (i = 0; i < registeredSymbols.Length; i++)
+                labels.SetLength(disableInfo.RegisteredSymbols.Length);
+                for (i = 0; i < disableInfo.RegisteredSymbols.Length; i++)
                 {
-                    labels[i].Name = registeredSymbols[i];
+                    labels[i].Name = disableInfo.RegisteredSymbols[i];
                     labels[i].Defined = true;
                     labels[i].Address = UIntPtr.Zero;
                     labels[i].AssemblerLine = 0;
@@ -798,6 +1031,7 @@ namespace SputnikAsm.LAutoAssembler
             try
             {
                 assembled.SetLength(1);
+                readmems.SetLength(0);
                 kallocs.SetLength(0);
                 allocs.SetLength(0);
                 dealloc.SetLength(0);
@@ -807,10 +1041,46 @@ namespace SputnikAsm.LAutoAssembler
                 deletesymbollist.SetLength(0);
                 defines.SetLength(0);
                 loadbinary.SetLength(0);
+                exceptionlist.SetLength(0);
                 tokens = new ARefStringArray();
-                RemoveComments(code);
+                incomment = false;
+                // todo fill this in for additional stuff
+                //if (!targetSelf)
+                //    for (i = 0; i < autoassemblerprologues.Length; i++)
+                //        if (assigned(autoassemblerprologues[i]))
+                //            autoassemblerprologues[i](code, syntaxcheckonly);
+                //
+                //luacode(code, syntaxcheckonly, memrec); //replaces {$lua}/{$asm} blocks with the output of those functions
+                //autoassemblercodepass1(code, dataforaacodepass2, syntaxcheckonly, targetself); //replaces the {$luacode} and {$ccode} blocks with a call to extra routines added to the script
+                //still here
+                //one more time getting rid of {$ASM} lines that have been added while they shouldn't be required
+                for (i = 0; i < code.Length; i++)
+                    if (code[i].Value.Trim().ToUpper() == "{$ASM}")
+                        code[i].Value = "";
+                strictmode = false;
+                for (i = 0; i < code.Length; i++)
+                {
+                    currentline = code[i].Value.Trim().ToUpper();
+                    if (currentline == "{$STRICT}")
+                        strictmode = true;
+
+                    if (currentline == "{$TRY}")
+                        hastryexcept = true;
+                }
+                if (hastryexcept)
+                    ParseTryExcept(code, exceptionlist);
+                RemoveComments(code); //also trims each line
                 UnlabeledLabels(code);
-                AobScans(process, code, syntaxCheckOnly);
+                if (!strictmode)
+                    GetPotentialLabels(code, potentiallabels);
+                //6.3: do the aobscans first
+                //this will break scripts that use define(state,33) aobscan(name, 11 22 state 44 55), but really, live with it
+                usesaobscan = AobScans(process, code, syntaxCheckOnly);
+                // todo fil this in
+                // if not targetself then
+                // for i:= 0 to length(AutoAssemblerProloguesPostAOBSCAN) - 1 do
+                //     if assigned(AutoAssemblerProloguesPostAOBSCAN[i]) then
+                // AutoAssemblerProloguesPostAOBSCAN[i](code, syntaxcheckonly);
                 //first pass
                 i = 0;
                 while (i < code.Length)
@@ -826,15 +1096,6 @@ namespace SputnikAsm.LAutoAssembler
                                 continue;
                             if (AStringUtils.Copy(currentline, 0, 2) == "//")
                                 continue; //skip
-                            currentline = currentline.Trim();
-                            for (j = 0; j < defines.Length; j++)
-                                currentline = ReplaceToken(currentline, defines[j].Name, defines[j].Whatever);
-                            if (currentline.Length == 0)
-                                continue;
-                            if (AStringUtils.Copy(currentline, 0, 2) == "//")
-                                continue; //skip
-                            assemblerlines.SetLength(assemblerlines.Length + 1);
-                            assemblerlines.Last = currentline;
                             //do this first. Do not touch register symbol with any kind of define/label/whatsoever
                             #region Command REGISTERSYMBOL()
                             if (AStringUtils.Copy(currentline, 0, 15).ToUpper() == "REGISTERSYMBOL(")
@@ -845,15 +1106,63 @@ namespace SputnikAsm.LAutoAssembler
                                 if (a > 0 && b > 0)
                                 {
                                     s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
-                                    addsymbollist.SetLength(addsymbollist.Length + 1);
-                                    addsymbollist.Last = s1;
-                                    registeredSymbols?.Add(s1);
+                                    slist.Assign(s1.Split(',', ' '));
+                                    foreach(var s1v in slist.Raw)
+                                    {
+                                        addsymbollist.SetLength(addsymbollist.Length + 1);
+                                        addsymbollist.Last = s1v;
+                                    }
+                                    disableInfo?.RegisteredSymbols?.Add(s1);
                                 }
                                 else
                                     throw new Exception(rsSyntaxError);
                                 assemblerlines.SetLength(assemblerlines.Length - 1);
                                 continue;
                             }
+                            #endregion
+                            #region Apply Defines
+                            //apply defines (before DEFINE since define(bla, 123) and define(xxx, bla+123) should work
+                            //also, do not touch define with any previous define
+                            if (AStringUtils.Copy(currentline, 0, 7).ToUpper() == "DEFINE(")
+                            {
+                                //syntax: define(x,whatever)    x=variable name size=bytes
+                                //allocate memory
+                                a = AStringUtils.Pos("(", currentline);
+                                b = AStringUtils.Pos(",", currentline);
+                                c = AStringUtils.RPos(")", currentline);
+                                if ((a > 0) && (b > 0) && (c > 0))
+                                {
+                                    s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
+                                    s2 = AStringUtils.Copy(currentline, b + 1, c - b - 1).Trim();
+                                    //apply earlier defines to the second part
+                                    for (j = 0; j < defines.Length; j++)
+                                        s2 = ReplaceToken(s2, defines[j].Name, defines[j].Whatever);
+                                    ok1 = true;
+                                    for (j = 0; j < defines.Length; j++)
+                                    {
+                                        if (!String.Equals(defines[j].Name, s1, StringComparison.CurrentCultureIgnoreCase))
+                                            continue;
+                                        //redefined from here on
+                                        ok1 = false;
+                                        defines[defines.Length - 1].Whatever = s2;
+                                    }
+                                    if (ok1)  //not duplicate, create it
+                                    {
+                                        defines.SetLength(defines.Length + 1);
+                                        defines.Last.Name = s1;
+                                        defines.Last.Whatever = s2;
+                                    }
+                                    continue;
+                                }
+                                else
+                                    throw new Exception(rsWrongSyntaxDEFINENameWhatever + " Got " + currentline);
+                            }
+                            //normal loop code
+                            for (j = 0; j < defines.Length; j++)
+                                currentline = ReplaceToken(currentline, defines[j].Name, defines[j].Whatever);
+                            assemblerlines.SetLength(assemblerlines.Length + 1);
+                            assemblerlines.Last.LineNr = currentlinenr;
+                            assemblerlines.Last.Line = currentline;
                             #endregion
                             //if the newline is empty then it has been handled and the plugin doesn't want it to be added for phase2
                             if (currentline.Length == 0)
@@ -871,7 +1180,7 @@ namespace SputnikAsm.LAutoAssembler
                                     a = AStringUtils.Pos("(", currentline);
                                     b = AStringUtils.Pos(",", currentline);
                                     c = AStringUtils.Pos(")", currentline);
-                                    if (a > 0 && b > 0 && c > 0)
+                                    if (a != -1 && b != -1 && c != -1)
                                     {
                                         s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim(); //address
                                         s2 = AStringUtils.Copy(currentline, b + 1, c - b - 1).Trim(); //aob
@@ -922,7 +1231,7 @@ namespace SputnikAsm.LAutoAssembler
                                 a = pos("(", currentline);
                                 b = pos(",", currentline);
                                 c = pos(")", currentline);
-                                if ((a > 0) && (b > 0) && (c > 0))
+                                if ((a != -1) && (b != -1) && (c != -1))
                                 {
                                     s1 = trim(copy(currentline, a + 1, b - a - 1));
                                     s2 = trim(copy(currentline, b + 1, c - b - 1));
@@ -953,35 +1262,48 @@ namespace SputnikAsm.LAutoAssembler
                             {
                                 a = pos("(", currentline);
                                 b = pos(",", currentline);
-                                c = pos(")", currentline);
-                                if ((a > 0) && (b > 0) && (c > 0))
+                                c = posex(',', currentline, b + 1);
+                                d = pos(")", currentline);
+
+                                if ((a != -1) && (b != -1) && (d != -1))
                                 {
                                     s1 = trim(copy(currentline, a + 1, b - a - 1));
-                                    s2 = trim(copy(currentline, b + 1, c - b - 1));
 
-                                    try
+                                    if (c > 0)
                                     {
-                                        x = strtoint(s2);
+                                        s2 = trim(copy(currentline, b + 1, c - b - 1));
+                                        s3 = trim(copy(currentline, c + 1, d - c - 1));
                                     }
-                                    catch
+                                    else
                                     {
-                                        throw new Exception(UStringUtils.Sprintf(rsIsNotAValidSize, set::of(s2, eos)));
+                                        s2 = trim(copy(currentline, b + 1, d - b - 1));
+                                        s3 = "";
                                     }
+
+
+                                    //try
+                                    x = strtoint(s2);
+                                    //except
+                                    create(format(rsisnotavalidsize, set::of(s2, eos)));
+                                    //end;
 
                                     //define it here already
-                                    symHandler.SetUserdefinedSymbolAllocSize(s1, x);
+                                    if (s3 != "")
+                                        symhandler.setuserdefinedsymbolallocsize(s1, x, symhandler.getaddressfromname(s3));
+                                    else
+                                        symhandler.setuserdefinedsymbolallocsize(s1, x);
 
                                     setlength(globalallocs, length(globalallocs) + 1);
-                                    globalallocs[length(globalallocs) - 1].address = symHandler.GetUserdefinedSymbolByName(s1);
+                                    globalallocs[length(globalallocs) - 1].address = symhandler.getuserdefinedsymbolbyname(s1);
                                     globalallocs[length(globalallocs) - 1].varname = s1;
                                     globalallocs[length(globalallocs) - 1].size = x;
+
 
                                     setlength(assemblerlines, length(assemblerlines) - 1);
                                     continue_;
 
                                 }
-                                else throw new Exception(rsWrongSyntaxGLOBALALLOCNameSize);
-
+                                else create(rswrongsyntaxglobalallocnamesize);
                             }
                             */
                             #endregion
@@ -990,7 +1312,7 @@ namespace SputnikAsm.LAutoAssembler
                             {
                                 a = AStringUtils.Pos("(", currentline);
                                 b = AStringUtils.Pos(")", currentline);
-                                if (a > 0 && b > 0)
+                                if (a != -1 && b != -1)
                                 {
                                     s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
 
@@ -1002,7 +1324,6 @@ namespace SputnikAsm.LAutoAssembler
                                     include.AddRange(UIo.File.ReadAllLines(s1));
                                     RemoveComments(include);
                                     UnlabeledLabels(include);
-                                    AobScans(process, include, syntaxCheckOnly);
                                     for (j = i + 1; j <= (i + 1) + (include.Length - 1); j++)
                                         code.Insert(j, include[j - (i + 1)]);
                                     assemblerlines.SetLength(assemblerlines.Length - 1);
@@ -1014,22 +1335,65 @@ namespace SputnikAsm.LAutoAssembler
                             #endregion
                             #region Command CREATETHREAD() -- todo
                             /*
-                            if (uppercase(copy(currentline, 1, 13)) == "CREATETHREAD(")
+
+                            if (uppercase(copy(currentline, 1, 12)) == "CREATETHREAD")
                             {
-                                //load a binary file into memory , this one already executes BEFORE the 2nd pass to get addressnames correct
-                                a = pos("(", currentline);
-                                b = pos(")", currentline);
-                                if ((a > 0) && (b > 0))
+                                if (currentline[13] == '(')  //CREATETHREAD(
                                 {
-                                    s1 = trim(copy(currentline, a + 1, b - a - 1));
+                                    //create a thread
+                                    a = pos("(", currentline);
+                                    b = pos(")", currentline);
+                                    if ((a != -1) && (b != -1))
+                                    {
+                                        s1 = trim(copy(currentline, a + 1, b - a - 1));
+                                        setlength(createthread, length(createthread) + 1);
+                                        createthread[length(createthread) - 1] = s1;
 
-                                    setlength(createthread, length(createthread) + 1);
-                                    createthread[length(createthread) - 1] = s1;
-
-                                    setlength(assemblerlines, length(assemblerlines) - 1);
-                                    continue_;
+                                        setlength(assemblerlines, length(assemblerlines) - 1);
+                                        continue_;
+                                    }
+                                    else create(rswrongsyntaxcreatethreadaddress);
                                 }
-                                else throw new Exception(rsWrongSyntaxCreateThreadAddress);
+                                else
+                                {
+                                    //could be createthreadandwait
+                                    if (uppercase(copy(currentline, 13, 8)) == "ANDWAIT(")  //CREATETHREADANDWAIT(
+                                    {
+                                        a = pos("(", currentline);
+                                        b = pos(")", currentline);
+                                        if ((a > 0) && (b > 0))
+                                        {
+                                            s1 = trim(copy(currentline, a + 1, b - a - 1));
+
+                                            slist = s1.split(set::of(',', eos));
+                                            if (length(slist) == 2)
+                                            {
+                                                //try
+                                                j = strtoint(trim(slist[1]));
+                                                //except
+                                                create("Invalid timeout for createthreadandwait");
+                                                //end;
+                                            }
+                                            else
+                                            {
+                                                if ((lastloadedtableversion > 0) && (lastloadedtableversion <= 30))  //when the current table was made with an older CE build and it uses  CREATETHREADANDWAIT
+                                                    j = 5000;
+                                                else
+                                                    j = 0;
+                                            }
+
+
+                                            setlength(createthreadandwait, length(createthreadandwait) + 1);
+                                            createthreadandwait[length(createthreadandwait) - 1].name = slist[0];
+                                            createthreadandwait[length(createthreadandwait) - 1].position = length(assemblerlines) - 1;
+                                            createthreadandwait[length(createthreadandwait) - 1].timeout = j;
+
+                                            setlength(assemblerlines, length(assemblerlines) - 1);
+                                            continue_;
+                                        }
+                                        else create(rswrongsyntaxcreatethreadaddress);
+                                    }
+                                }
                             }
                             */
                             #endregion
@@ -1040,7 +1404,7 @@ namespace SputnikAsm.LAutoAssembler
                                 a = AStringUtils.Pos("(", currentline);
                                 b = AStringUtils.Pos(",", currentline);
                                 c = AStringUtils.Pos(")", currentline);
-                                if ((a > 0) && (b > 0) && (c > 0))
+                                if ((a != -1) && (b != -1) && (c != -1))
                                 {
                                     s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
                                     s2 = AStringUtils.Copy(currentline, b + 1, c - b - 1).Trim();
@@ -1049,102 +1413,166 @@ namespace SputnikAsm.LAutoAssembler
                                     a = AStringUtils.StrToInt(s2);
                                     if (a == 0)
                                         throw new Exception(rsInvalidSizeForReadMem);
-                                    var byteBuf = (Byte[])process.ReadMem((IntPtr)testPtr.ToUInt64(), ReadType.Binary, a);
-                                    if (byteBuf.Length <= 0 | (byteBuf.Length < a))
-                                        throw new Exception(UStringUtils.Sprintf(rsTheMemoryAtCouldNotBeFullyRead, s1));
+                                    Byte[] byteBuf;
+                                    if (!syntaxCheckOnly)
+                                    {
+                                        byteBuf = (Byte[])process.ReadMem((IntPtr)testPtr.ToUInt64(), ReadType.Binary, a);
+                                        if (byteBuf.Length <= 0 | (byteBuf.Length < a))
+                                            throw new Exception(UStringUtils.Sprintf(rsTheMemoryAtCouldNotBeFullyRead, s1));
+                                    }
+                                    else
+                                        byteBuf = UBinaryUtils.EmptyArray;
                                     //still here so everything ok
-                                    assemblerlines.SetLength(assemblerlines.Length - 1);
-                                    s1 = "db";
-                                    for (j = 0; j <= a - 1; j++)
-                                    {
-                                        s1 = s1 + ' ' + AStringUtils.IntToHex(byteBuf[j], 2);
-                                        if (j % 16 == 15)
-                                        {
-                                            assemblerlines.SetLength(assemblerlines.Length + 1);
-                                            assemblerlines.Last = s1;
-                                            s1 = "db";
-                                        }
-                                    }
-                                    if (s1.Length > 2)
-                                    {
-                                        assemblerlines.SetLength(assemblerlines.Length + 1);
-                                        assemblerlines.Last = s1;
-                                    }
+                                    assemblerlines[assemblerlines.Length - 1].LineNr = currentlinenr;
+                                    assemblerlines[assemblerlines.Length - 1].Line = "<READMEM" + readmems.Length + '>';
+                                    readmems.SetLength(readmems.Length + 1);
+                                    readmems.Last.Length = a;
+                                    readmems.Last.Bytes = new AByteArray(byteBuf);
+                                    byteBuf = null;
                                 }
                                 else
                                     throw new Exception(rsWrongSyntaxReadMemAddressSize);
                                 continue;
                             }
                             #endregion
-                            #region Command LOADBINARY() -- todo
+                            #region Command REASSEMBLE() -- todo
                             /*
-                            if (uppercase(copy(currentline, 1, 11)) == "LOADBINARY(")
+                            if (uppercase(copy(currentline, 1, 11)) == "REASSEMBLE(")
                             {
-                                //load a binary file into memory
                                 a = pos("(", currentline);
-                                b = pos(",", currentline);
-                                c = pos(")", currentline);
-                                if ((a > 0) && (b > 0) && (c > 0))
+                                b = pos(")", currentline);
+
+                                if ((a != -1) && (b != -1))
                                 {
                                     s1 = trim(copy(currentline, a + 1, b - a - 1));
-                                    s2 = trim(copy(currentline, b + 1, c - b - 1));
 
-                                    if (~fileexists(s2)) throw new Exception(UStringUtils.Sprintf(rsTheFileDoesNotExist, set::of(s2, eos)));
+                                    //try
+                                    testptr = symhandler.getaddressfromname(s1);
+                                    //except
+                                    create(format(rsxcouldnotbefound, set::of(s1, eos)));
+                                    //end;
 
-                                    setlength(loadbinary, length(loadbinary) + 1);
-                                    loadbinary[length(loadbinary) - 1].address = s1;
-                                    loadbinary[length(loadbinary) - 1].filename = s2;
+                                    disassembler = tdisassembler.create;
+                                    disassembler.dataonly = true;
+                                    disassembler.disassemble(testptr, s1);
+
+                                    if (syntaxcheckonly) currentline = "nop";
+                                    else
+                                        currentline = disassembler.lastdisassembledata.prefix + ' ' + disassembler.lastdisassembledata.opcode + ' ' + disassembler.lastdisassembledata.parameters; ;
+
+                                    assemblerlines[length(assemblerlines) - 1].linenr = currentlinenr;
+                                    assemblerlines[length(assemblerlines) - 1].line = currentline;
+                                    disassembler.free;
+                                }
+                                else create(rswrongsyntaxreassemble);
+
+                            }
+                            */
+                            #endregion
+                            #region Command LOADBINARY() -- todo
+                            /*
+                            if (uppercase(copy(currentline, 1, 12)) == "LOADLIBRARY(")
+                            {
+                                //load a library into memory , this one already executes BEFORE the 2nd pass to get addressnames correct
+                                a = pos("(", currentline);
+                                b = pos(")", currentline);
+
+                                if ((a != -1) && (b != -1))
+                                {
+                                    s1 = trim(copy(currentline, a + 1, b - a - 1));
+
+                                    if ((length(s1) > 1) && ((s1[1] == '\'') || (s1[1] == '"')))
+                                        s1 = ansidequotedstr(s1, s1[1]);
+
+                                    if (pos(":", s1) == 0)
+                                    {
+                                        s2 = extractfilename(s1);
+
+                                        if (getconnection == nil)  //no connection, so local. Check if the file can be found locally and if so, set the specific path
+                                        {
+                                            if (fileexists(cheatenginedir + s2)) s1 = cheatenginedir + s2;
+                                            else
+                                            if (fileexists(getcurrentdir + pathdelim + s2)) s1 = getcurrentdir + pathdelim + s2;
+                                            else
+                                            if (fileexists(cheatenginedir + s1)) s1 = cheatenginedir + s1;
+                                        }
+
+                                        //else just hope it's in the dll searchpath
+                                    } //else direct file path
+
+                                    // try
+                                    if (symhandler.getmodulebyname(extractfilename(s1), mi) == false)  //check if it's already injected
+                                    {
+                                        injectdll(s1, "");
+                                        symhandler.reinitialize;
+                                    }
+                                    symhandler.waitforsymbolsloaded;
+                                    //except
+                                    create(format(rscouldnotbeinjected, set::of(s1, eos)));
+                                    //end;
 
                                     setlength(assemblerlines, length(assemblerlines) - 1);
                                     continue_;
                                 }
-                                else throw new Exception(rsWrongSyntaxLoadBinaryAddressFilename);
+                                else create(rswrongsyntaxloadlibraryfilename);
+                            }
+                            */
+                            #endregion
+                            #region Command LUACALL() -- todo
+                            /*
+                            if (uppercase(copy(currentline,1,8))=="LUACALL(") 
+                            {
+                                //execute a given lua command
+                                a = pos("(", currentline);
+                                b = length(currentline);
+
+                                if (currentline[b] != ')') b = -1;
+
+                                if ((a != -1) && (b != -1))
+                                {
+                                    s1 = trim(copy(currentline, a + 1, b - a - 1));
+
+                                    lua_doscript(s1); //raises an exception on error, which is exactly what we want here
+
+                                    setlength(assemblerlines, length(assemblerlines) - 1);
+                                    continue_;
+                                }
+                                else create(rswrongsyntaxluacall);
                             }
                             */
                             #endregion
                             #region Command UNREGISTERSYMBOL()
-                            if (AStringUtils.Copy(currentline, 0, 17).ToUpper() == "UNREGISTERSYMBOL(")
+                            if (disableInfo != null && AStringUtils.Copy(currentline, 0, 17).ToUpper() == "UNREGISTERSYMBOL(")
                             {
                                 //add this symbol to the register symbollist
                                 a = AStringUtils.Pos("(", currentline);
                                 b = AStringUtils.Pos(")", currentline);
-                                if (a > 0 && b > 0)
+                                if (a != -1 && b != -1)
                                 {
                                     s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
-                                    deletesymbollist.SetLength(deletesymbollist.Length + 1);
-                                    deletesymbollist.Last = s1;
+                                    if (s1 == "*")
+                                    {
+                                        j = deletesymbollist.Length;
+                                        deletesymbollist.SetLength(j + disableInfo.RegisteredSymbols.Length);
+
+                                        for (k = 0; k <= disableInfo.RegisteredSymbols.Length - 1; k++)
+                                            deletesymbollist[j + k] = disableInfo.RegisteredSymbols[k];
+                                    }
+                                    else
+                                    {
+                                        slist.Assign(s1.Split(',', ' '));
+                                        for (sli = 0; sli < slist.Length; sli++)
+                                        {
+                                            s1 = slist[sli];
+                                            deletesymbollist.SetLength(deletesymbollist.Length + 1);
+                                            deletesymbollist.Last = s1;
+                                        }
+                                    }
                                 }
                                 else
                                     throw new Exception(rsSyntaxError);
                                 assemblerlines.SetLength(assemblerlines.Length - 1);
                                 continue;
-                            }
-                            #endregion
-                            #region Command DEFINE()
-                            if (AStringUtils.Copy(currentline, 0, 7).ToUpper() == "DEFINE(")
-                            {
-                                //syntax: alloc(x,size)    x=variable name size=bytes
-                                //allocate memory
-                                a = AStringUtils.Pos("(", currentline);
-                                b = AStringUtils.Pos(",", currentline);
-                                c = AStringUtils.Pos(")", currentline);
-                                if ((a > 0) && (b > 0) && (c > 0))
-                                {
-                                    s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
-                                    s2 = AStringUtils.Copy(currentline, b + 1, c - b - 1);
-                                    for (j = 0; j < defines.Length; j++)
-                                    {
-                                        if (String.Equals(defines[j].Name, s1, StringComparison.CurrentCultureIgnoreCase))
-                                            throw new Exception(UStringUtils.Sprintf(rsDefineAlreadyDefined, s1));
-                                    }
-                                    defines.SetLength(defines.Length + 1);
-                                    defines.Last.Name = s1;
-                                    defines.Last.Whatever = s2;
-                                    assemblerlines.SetLength(assemblerlines.Length - 1);   //don't bother with this in the 2nd pass
-                                    continue;
-                                }
-                                else
-                                    throw new Exception(rsWrongSyntaxDEFINENameWhatever);
                             }
                             #endregion
                             #region Command STRUCT()
@@ -1162,7 +1590,7 @@ namespace SputnikAsm.LAutoAssembler
                                 a = AStringUtils.Pos("(", currentline);
                                 b = AStringUtils.Pos(",", currentline);
                                 c = AStringUtils.Pos(")", currentline);
-                                if (a > 0 && b > 0 && c > 0)
+                                if (a != -1 && b != -1 && c != -1)
                                 {
                                     s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
                                     s2 = AStringUtils.Copy(currentline, b + 1, c - b - 1).Trim();
@@ -1186,41 +1614,46 @@ namespace SputnikAsm.LAutoAssembler
                                 if (a != -1 && b != -1)
                                 {
                                     s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
-                                    AStringUtils.Val("0x" + s1, out j, out a);
-                                    if (a == 0)
-                                        throw new Exception(UStringUtils.Sprintf(rsIsNotAValidIdentifier, s1));
-                                    varsize = s1.Length;
-                                    while (j < labels.Length && labels[j].Name.Length > varsize)
+                                    slist.Assign(s1.Split(',', ' '));
+                                    for (sli = 0; sli < slist.Length; sli++)
                                     {
-                                        if (labels[j].Name == s1)
-                                            throw new Exception(UStringUtils.Sprintf(rsIsBeingRedeclared, s1));
-                                        j += 1;
-                                    }
-                                    j = labels.Length;//quickfix
-                                    l = j;
-                                    //check for the line "labelname:"
-                                    ok1 = false;
-                                    for (j = 0; j <= code.Length - 1; j++)
-                                    {
-                                        if (code[j].Value.Trim() == s1 + ':')
+                                        s1 = slist[sli];
+                                        AStringUtils.Val("$" + s1, out j, out a);
+                                        if (a == 0)
+                                            throw new Exception(UStringUtils.Sprintf(rsIsNotAValidIdentifier, s1));
+                                        varsize = s1.Length;
+                                        j = 0;
+                                        while (j < labels.Length && labels[j].Name.Length >= varsize)
                                         {
+                                            if (labels[j].Name == s1)
+                                                throw new Exception(UStringUtils.Sprintf(rsIsBeingRedeclared, s1));
+                                            j += 1;
+                                        }
+                                        j = labels.Length; // quickfix
+                                        l = j;
+                                        //check for the line "labelname:"
+                                        ok1 = false;
+                                        for (j = 0; j < code.Length; j++)
+                                        {
+                                            if (code[j].Value.Trim() != s1 + ':')
+                                                continue;
                                             if (ok1)
                                                 throw new Exception(UStringUtils.Sprintf(rsLabelIsBeingDefinedMoreThanOnce, s1));
                                             ok1 = true;
                                         }
+                                        if (!ok1)
+                                            throw new Exception(UStringUtils.Sprintf(rsLabelIsNotDefinedInTheScript, s1));
+                                        //still here so ok
+                                        //insert it
+                                        labels.SetLength(labels.Length + 1);
+                                        for (k = labels.Length - 1; k >= j + 1; k--)
+                                            labels[k] = labels[k - 1];
+                                        labels[l].Name = s1;
+                                        labels[l].Defined = false;
+                                        labels[l].References.SetLength(0);
+                                        labels[l].References2.SetLength(0);
                                     }
-                                    if (!ok1)
-                                        throw new Exception(UStringUtils.Sprintf(rsLabelIsNotDefinedInTheScript, s1));
-                                    //still here so ok
-                                    //insert it
-                                    labels.SetLength(labels.Length + 1);
-                                    for (k = labels.Length - 1; k >= j + 1; k--)
-                                        labels[k] = labels[k - 1];
-                                    labels[l].Name = s1;
-                                    labels[l].Defined = false;
                                     assemblerlines.SetLength(assemblerlines.Length - 1);
-                                    labels[l].References.SetLength(0);
-                                    labels[l].References2.SetLength(0);
                                     continue;
                                 }
                                 else
@@ -1228,24 +1661,35 @@ namespace SputnikAsm.LAutoAssembler
                             }
                             #endregion
                             #region Command DEALLOC()
-                            if (AStringUtils.Copy(currentline, 0, 8).ToUpper() == "DEALLOC(")
+                            if (disableInfo != null && AStringUtils.Copy(currentline, 0, 8).ToUpper() == "DEALLOC(")
                             {
-                                if (allocArray != null) //memory dealloc=possible
+                                //syntax: dealloc(x)  x=name of region to deallocate
+                                //later on in the code there has to be a line with "labelname:"
+                                a = AStringUtils.Pos("(", currentline);
+                                b = AStringUtils.Pos(")", currentline);
+                                if ((a != -1) && (b != -1))
                                 {
-                                    //syntax: dealloc(x)  x=name of region to deallocate
-                                    //later on in the code there has to be a line with "labelname:"
-                                    a = AStringUtils.Pos("(", currentline);
-                                    b = AStringUtils.Pos(")", currentline);
-                                    if (a > 0 && b > 0)
+                                    s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
+                                    if (s1 == "*")
                                     {
-                                        s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
-                                        //find s1 in the ceallocarray
-                                        for (j = 0; j < allocArray.Length; j++)
+                                        //everything that the script allocated
+                                        dealloc.SetLength(disableInfo.Allocs.Length);
+                                        for (j = 0; j < disableInfo.Allocs.Length; j++)
+                                            dealloc[j] = disableInfo.Allocs[j].Address;
+                                    }
+                                    else
+                                    {
+                                        slist.Assign(s1.Split(',', ' '));
+                                        for (sli = 0; sli < slist.Length; sli++)
                                         {
-                                            if (String.Equals(allocArray[j].Name, s1, StringComparison.CurrentCultureIgnoreCase))
+                                            s1 = slist[sli];
+                                            //find s1 in the ceallocarray
+                                            for (j = 0; j < disableInfo.Allocs.Length; j++)
                                             {
+                                                if (!String.Equals(disableInfo.Allocs[j].Name, s1, StringComparison.CurrentCultureIgnoreCase))
+                                                    continue;
                                                 dealloc.SetLength(dealloc.Length + 1);
-                                                dealloc.Last = allocArray[j].Address;
+                                                dealloc.Last = disableInfo.Allocs[j].Address;
                                             }
                                         }
                                     }
@@ -1303,6 +1747,11 @@ namespace SputnikAsm.LAutoAssembler
                                         allocs[j].Preferred = symHandler.GetAddressFromName(s3);
                                     else
                                         allocs[j].Preferred = UIntPtr.Zero;
+                                    allocs[j].Protection = MemoryProtectionFlags.ExecuteReadWrite;
+                                    if (AStringUtils.Copy(currentline, 1, 8).ToUpper() == "ALLOCNX(")
+                                        allocs[j].Protection = MemoryProtectionFlags.ReadWrite;
+                                    else if (AStringUtils.Copy(currentline, 1, 8).ToUpper() == "ALLOCXO(")
+                                        allocs[j].Protection = MemoryProtectionFlags.ReadOnly;
                                     assemblerlines.SetLength(assemblerlines.Length - 1);   //don't bother with this in the 2nd pass
                                     continue;
                                 }
@@ -1405,22 +1854,41 @@ namespace SputnikAsm.LAutoAssembler
                                     }
                                     if (ok1)
                                         continue; //no check
+                                    //still here, so more complex
+                                    if (syntaxCheckOnly & (disableInfo != null))
+                                    {
+                                        //replace tokens with registered symbols from the enable part
+                                        for (j = 0; j < disableInfo.RegisteredSymbols.Length; j++)
+                                            currentline = ReplaceToken(currentline, disableInfo.RegisteredSymbols[j], "00000000");
+                                    }
                                     try
                                     {
                                         // todo is this ok as just an int?!?!?
-                                        j = (int)symHandler.GetAddressFromName(AStringUtils.Copy(currentline, 0, currentline.Length - 1));
+                                        s1 = AStringUtils.Copy(currentline, 0, currentline.Length - 1);
+                                        if (!String.IsNullOrEmpty(s1))
+                                            testPtr = symHandler.GetAddressFromName(s1);
                                     }
                                     catch
                                     {
                                         currentline = AStringUtils.IntToHex(symHandler.GetAddressFromName(AStringUtils.Copy(currentline, 1, currentline.Length - 1)), 8) + ':';
-                                        assemblerlines[assemblerlines.Length - 1] = currentline;
+                                        assemblerlines[assemblerlines.Length - 1].LineNr = currentlinenr;
+                                        assemblerlines[assemblerlines.Length - 1].Line = currentline;
                                     }
-                                    continue; //next line
                                 }
                                 catch
                                 {
-                                    throw new Exception(rsThisAddressSpecifierIsNotValid);
+                                    if (potentiallabels.IndexOf(AStringUtils.Copy(currentline, 0, currentline.Length - 1)) == -1)
+                                        throw new Exception(rsThisAddressSpecifierIsNotValid);
+
+                                    j = labels.Length;
+                                    labels.SetLength(j + 1);
+                                    labels[j].Name = AStringUtils.Copy(currentline, 0, currentline.Length - 1);
+                                    labels[j].AssemblerLine = assemblerlines.Length - 1;
+                                    labels[j].Defined = false;
+                                    labels[j].References.SetLength(0);
+                                    labels[j].References2.SetLength(0);
                                 }
+                                continue; //next line
                             }
                             //replace label references with 00000000 so the assembler check doesn't complain about it
                             if (process.IsX64)
@@ -1436,7 +1904,86 @@ namespace SputnikAsm.LAutoAssembler
                             try
                             {
                                 //replace identifiers in the line with their address
-                                if (!Assembler.Assemble(currentline, currentaddress.ToUInt64(), assembled[0].Bytes, AAssemblerPreference.apnone, true))
+                                ok1 = false;
+                                try
+                                {
+                                    ok1 = Assembler.Assemble(currentline, currentaddress.ToUInt64(), assembled[0].Bytes, AAssemblerPreference.apnone, true);
+                                }
+                                catch
+                                {
+                                    // ignored
+                                }
+                                if (!ok1)  //the instruction could not be assembled as it is right now
+                                {
+                                    //try potential labels
+                                    ok1 = false;
+                                    for (j = 0; j < potentiallabels.Length; j++)
+                                    {
+                                        if (process.IsX64)
+                                            currentline = ReplaceToken(currentline, potentiallabels[j], "ffffffffffffffff");
+                                        else
+                                            currentline = ReplaceToken(currentline, potentiallabels[j], "00000000");
+                                        try
+                                        {
+                                            ok1 = Assembler.Assemble(currentline, currentaddress.ToUInt64(), assembled[0].Bytes, AAssemblerPreference.apnone, true);
+                                            if (ok1)
+                                            {
+                                                //define this potential label as a full label
+                                                k = labels.Length;
+                                                labels.SetLength(k + 1);
+                                                labels[k].Name = potentiallabels[j];
+                                                labels[k].Defined = false;
+                                                labels[k].AfterCCode = false;
+                                                labels[k].References.SetLength(0);
+                                                labels[k].References2.SetLength(0);
+                                                break;
+                                            }
+                                        }
+                                        catch
+                                        {
+                                            //don't quit yet
+                                        }
+                                    }
+                                    #region C-Symbols -- todo
+                                    // todo add back in when its time to make the C code stuff
+                                    // //c-symbol addition
+                                    // if (!ok1)
+                                    // {
+                                    //     //last chance, try the c-code symbols
+                                    //     for (j = 0; j <= length(dataforaacodepass2.cdata.symbols) - 1; j++)
+                                    //     {
+                                    //         if (process.IsX64)
+                                    //             currentline = ReplaceToken(currentline, dataforaacodepass2.cdata.symbols[j].name, "ffffffffffffffff");
+                                    //         else
+                                    //             currentline = ReplaceToken(currentline, dataforaacodepass2.cdata.symbols[j].name, "00000000");
+                                    //         try
+                                    //         {
+                                    // 
+                                    //             ok1 = Assembler.Assemble(currentline, currentaddress.ToUInt64(), assembled[0].Bytes, AAssemblerPreference.apnone, true);
+                                    //             if (ok1)
+                                    //             {
+                                    //                 //define this c-code symbol as an undefined label
+                                    //                 k = length(labels);
+                                    //                 setlength(labels, k + 1);
+                                    //                 labels[k].labelname = dataforaacodepass2.cdata.symbols[j].name;
+                                    //                 labels[k].defined = false;
+                                    //                 labels[k].afterccode = true;
+                                    //                 labels[k].assemblerline = -1;
+                                    //                 setlength(labels[k].references, 0);
+                                    //                 setlength(labels[k].references2, 0);
+                                    //                 flush();
+                                    //             }
+                                    //         }
+                                    //         catch
+                                    //         {
+                                    //             //don't quit yet
+                                    //         }
+                                    //     }
+                                    // }
+                                    // //c-symbol addition^
+                                    #endregion
+                                }
+                                if (!ok1)
                                     throw new Exception("bla");
                             }
                             catch
@@ -1561,6 +2108,61 @@ namespace SputnikAsm.LAutoAssembler
                 //    }
                 //}
                 #endregion
+                #region Sanity Check (Create Thread And Wait) -- todo
+                // if (length(createthreadandwait) > 0)
+                //     for (i = 0; i <= length(createthreadandwait) - 1; i++)
+                //     {
+                //         ok1 = true;
+                // 
+                //         //try
+                //         testptr = symhandler.getaddressfromname(createthreadandwait[i].name);
+                //         //except
+                //         ok1 = false;
+                //         //end;
+                // 
+                //         if (~ok1)
+                //             for (j = 0; j <= length(labels) - 1; j++)
+                //                 if (uppercase(labels[j].labelname) == uppercase(createthreadandwait[i].name))
+                //                 {
+                //                     ok1 = true;
+                //                     flush();
+                //                 }
+                // 
+                //         if (~ok1)
+                //             for (j = 0; j <= length(allocs) - 1; j++)
+                //                 if (uppercase(allocs[j].varname) == uppercase(createthreadandwait[i].name))
+                //                 {
+                //                     ok1 = true;
+                //                     flush();
+                //                 }
+                // 
+                //         if (~ok1)
+                //             for (j = 0; j <= length(kallocs) - 1; j++)
+                //                 if (uppercase(kallocs[j].varname) == uppercase(createthreadandwait[i].name))
+                //                 {
+                //                     ok1 = true;
+                //                     flush();
+                //                 }
+                // 
+                //         if (~ok1)
+                //             for (j = 0; j <= length(defines) - 1; j++)
+                //                 if (uppercase(defines[j].name) == uppercase(createthreadandwait[i].name))
+                //                 {
+                //                     //try
+                //                     testptr = symhandler.getaddressfromname(defines[j].whatever);
+                //                     ok1 = true;
+                //                     //except
+                //                     //end;
+                //                     flush();
+                //                 }
+                // 
+                //         if (~ok1)
+                //         {
+                //             create(format(rstheaddressincreatethreadandwaitisnotvalid, set::of(createthreadandwait[i].name, eos)));
+                //         }
+                // 
+                //     }
+                #endregion
                 #region Sanity Check (Load Binary) -- todo
                 //if (length(loadbinary) > 0)
                 //{
@@ -1616,6 +2218,21 @@ namespace SputnikAsm.LAutoAssembler
                 //    }
                 //}
                 #endregion
+                if (popUpMessages & process.IsX64 & usesaobscan & (allocs.Length > 0))
+                {
+                    //check if a preferred address is used
+                    prefered = UIntPtr.Zero;
+                    for (i = 0; i < allocs.Length; i++)
+                    {
+                        if (allocs[i].Preferred != UIntPtr.Zero)
+                        {
+                            prefered = allocs[i].Preferred;
+                            break;
+                        }
+                    }
+                    if (prefered == UIntPtr.Zero && MessageBox.Show(rsNoPreferedRangeAllocWarning, "", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+                        return false;
+                }
                 if (syntaxCheckOnly)
                 {
                     result = true;
@@ -1629,48 +2246,81 @@ namespace SputnikAsm.LAutoAssembler
                 #region Allocate The Memory
                 if (allocs.Length > 0)
                 {
+                    k = allocs.Length;
+                    i = 0;
+                    while (i < k)
+                    {
+                        if (allocs[i].Name.StartsWith("ceinternal_autofree"))
+                        {
+                            //move it to the back
+                            tempalloc = allocs[i];
+                            for (j = i; j < allocs.Length - 1; j++)
+                                allocs[j] = allocs[j + 1];
+                            allocs[allocs.Length - 1] = tempalloc;
+                            k -= 1;
+                        }
+                        else
+                            i += 1;
+                    }
                     j = 0; //entry to go from
                     prefered = allocs[0].Preferred;
-                    x = allocs[0].Size;
+                    protection = allocs[0].Protection;
+                    var allocSz = allocs[0].Size;
                     for (i = 1; i <= allocs.Length - 1; i++)
                     {
-                        //does this entry have a prefered location?
-                        if (allocs[i].Preferred != UIntPtr.Zero)
+                        //does this entry have a preferred location or a non default protection
+                        if (allocs[i].Preferred != UIntPtr.Zero || allocs[i].Protection != MemoryProtectionFlags.ExecuteReadWrite)
                         {
                             //if yes, is it the same as the previous entry? (or was the previous one that doesn't care?)
-                            if (prefered != allocs[i].Preferred && prefered != UIntPtr.Zero)
+                            if (prefered == UIntPtr.Zero)
+                                prefered = allocs[i].Preferred;
+                            //if yes, is it the same as the previous entry? (or was the previous one that doesn't care?)
+                            if (prefered != allocs[i].Preferred && protection != allocs[i].Protection)
                             {
-                                //different preferred address
-                                if (x > 0)  //it has some previous entries with compatible locations
+                                //different preferred address or protection
+                                if (allocSz > 0)  //it has some previous entries with compatible locations
                                 {
                                     k = 10;
                                     allocs[j].Address = UIntPtr.Zero;
                                     while (k > 0 && allocs[j].Address == UIntPtr.Zero)
                                     {
                                         //try allocating until a memory region has been found (e.g due to quick allocating by the game)
-                                        allocs[j].Address = process.AllocNear(prefered.ToIntPtr(), (int)x, MemoryProtectionFlags.ExecuteReadWrite, MemoryAllocationFlags.Reserve | MemoryAllocationFlags.Commit).ToUIntPtr();
+                                        if (prefered == UIntPtr.Zero && j > 0)  //if not a preferred address but there is a previous alloc, allocate near there
+                                            prefered = allocs[j - 1].Address;
+                                        oldprefered = prefered;
+                                        prefered = process.FindFreeBlockForRegion(prefered, (UInt32)x);
+                                        if (prefered == UIntPtr.Zero && oldprefered != UIntPtr.Zero)
+                                            prefered = oldprefered;
+                                        // todo save old protection!
+                                        allocs[j].Address = process.AllocNear(prefered.ToIntPtr(), (int)allocSz, MemoryProtectionFlags.ExecuteReadWrite, MemoryAllocationFlags.Reserve | MemoryAllocationFlags.Commit).ToUIntPtr();
                                         if (allocs[j].Address == UIntPtr.Zero)
+                                        {
                                             OutputDebugString(rsFailureToAllocateMemory + " 1");
+                                            prefered += 65536;
+                                        }
                                         k -= 1;
                                     }
                                     if (allocs[j].Address == UIntPtr.Zero)
-                                        allocs[j].Address = process.Alloc((int)x, MemoryProtectionFlags.ExecuteReadWrite, MemoryAllocationFlags.Reserve | MemoryAllocationFlags.Commit).ToUIntPtr();
+                                        allocs[j].Address = process.LastChanceAllocPreferred(prefered.ToIntPtr(), (int)x, protection).ToUIntPtr();
+                                    if (allocs[j].Address == UIntPtr.Zero)
+                                        throw new Exception(UStringUtils.Sprintf(rsFailureAlloc, prefered));
                                     if (allocs[j].Address == UIntPtr.Zero)
                                         OutputDebugString(rsFailureToAllocateMemory + " 2");
                                     //adjust the addresses of entries that are part of this block
                                     for (k = j + 1; k <= i - 1; k++)
                                         allocs[k].Address = (UIntPtr)(allocs[k - 1].Address.ToUInt64() + allocs[k - 1].Size);
-                                    x = 0;
+                                    allocSz = 0;
                                 }
                                 //new preferred address
                                 j = i;
                                 prefered = allocs[i].Preferred;
+                                protection = allocs[i].Protection;
                             }
                         }
                         //no preferred location specified, OR same preferred location
-                        x += allocs[i].Size;
+                        allocSz += allocs[i].Size;
                     }
-                    if (x > 0)
+                    if (allocSz > 0)
                     {
                         //adjust the address of entries that are part of this final block
                         k = 10;
@@ -1678,190 +2328,292 @@ namespace SputnikAsm.LAutoAssembler
                         while (k > 0 && allocs[j].Address == UIntPtr.Zero)
                         {
                             i = 0;
-                            prefered = process.FindFreeBlockForRegion(prefered, (UInt32)x);
-                            allocs[j].Address = process.Alloc(prefered.ToIntPtr(), (int)x, MemoryProtectionFlags.ExecuteReadWrite, MemoryAllocationFlags.Reserve | MemoryAllocationFlags.Commit).ToUIntPtr();
+                            prefered = process.FindFreeBlockForRegion(prefered, allocSz);
+                            allocs[j].Address = process.Alloc(prefered.ToIntPtr(), (int)allocSz, MemoryProtectionFlags.ExecuteReadWrite, MemoryAllocationFlags.Reserve | MemoryAllocationFlags.Commit).ToUIntPtr();
                             if (allocs[j].Address == UIntPtr.Zero)
                                 OutputDebugString(rsFailureToAllocateMemory + " 3");
                             k -= 1;
                         }
                         if (allocs[j].Address == UIntPtr.Zero)
-                            allocs[j].Address = process.Alloc((int)x, MemoryProtectionFlags.ExecuteReadWrite, MemoryAllocationFlags.Reserve | MemoryAllocationFlags.Commit).ToUIntPtr();
+                            allocs[j].Address = process.Alloc((int)allocSz, MemoryProtectionFlags.ExecuteReadWrite, MemoryAllocationFlags.Reserve | MemoryAllocationFlags.Commit).ToUIntPtr();
                         if (allocs[j].Address == UIntPtr.Zero)
                             throw new Exception(rsFailureToAllocateMemory + " 4");
-                        for (i = j + 1; i <= allocs.Length - 1; i++)
+                        for (i = j + 1; i < allocs.Length; i++)
                             allocs[i].Address = (UIntPtr)(allocs[i - 1].Address.ToUInt64() + allocs[i - 1].Size);
                     }
                 }
                 #endregion
                 //-----------------------2nd pass------------------------
-                //assembler lines only contains label specifiers and assembler instructions
+                //assemblerlines only contains label specifiers and assembler instructions
                 assembled.SetLength(0);
-                for (i = 0; i < assemblerlines.Length; i++)
+                currentlinenr = 0;
+                try
                 {
-                    currentline = assemblerlines[i];
-                    Tokenize(currentline, tokens);
-                    //if alloc then replace with the address
-                    for (j = 0; j < allocs.Length; j++)
-                        currentline = ReplaceToken(currentline, allocs[j].Name, AStringUtils.IntToHex(allocs[j].Address, 8));
-                    //if kalloc then replace with the address
-                    for (j = 0; j < kallocs.Length; j++)
-                        currentline = ReplaceToken(currentline, kallocs[j].Name, AStringUtils.IntToHex(kallocs[j].Address, 8));
-                    for (j = 0; j < defines.Length; j++)
-                        currentline = ReplaceToken(currentline, defines[j].Name, defines[j].Whatever);
-                    ok1 = false;
-                    if (currentline[currentline.Length - 1] != ':') //if it's not a definition then
+                    for (i = 0; i < assemblerlines.Length; i++)
                     {
-                        for (j = 0; j < labels.Length; j++)
+                        currentline = assemblerlines[i].Line;
+                        currentlinenr = assemblerlines[i].LineNr;
+                        createthreadandwaitid = -1;
+                        for (j = 0; j < createthreadandwait.Length; j++) //there can be multiple at the time of assembly.  All entries up to the higest value will be picked at a blockwrite (and made 0 so next blockwrite won't do them)
                         {
-                            if (!TokenCheck(currentline, labels[j].Name))
-                                continue;
-                            if (!labels[j].Defined)
-                            {
-                                //the address hasn't been found yet
-                                //this is the part that causes those nops after a short jump below the current instruction
-                                //close
-                                s1 = ReplaceToken(currentline, labels[j].Name, AStringUtils.IntToHex(currentaddress, 8));
-                                //far and big
-                                if (process.IsX64)  //and not in region
-                                    currentline = ReplaceToken(currentline, labels[j].Name, AStringUtils.IntToHex(currentaddress + 0xfffff, 8));
-                                else
-                                    currentline = ReplaceToken(currentline, labels[j].Name, AStringUtils.IntToHex(currentaddress + 0xfffff, 8));
-                                assembled.SetLength(assembled.Length + 1);
-                                assembled.Last.Address = currentaddress;
-                                Assembler.Assemble(currentline, currentaddress.ToUInt64(), assembled[assembled.Length - 1].Bytes, AAssemblerPreference.apnone, true);
-                                a = assembled[assembled.Length - 1].Bytes.Length;
-                                Assembler.Assemble(s1, currentaddress.ToUInt64(), assembled[assembled.Length - 1].Bytes, AAssemblerPreference.apnone, true);
-                                b = assembled[assembled.Length - 1].Bytes.Length;
-                                if (a > b)  //pick the biggest one
-                                    Assembler.Assemble(currentline, currentaddress.ToUInt64(), assembled[assembled.Length - 1].Bytes);
-                                labels[j].References.SetLength(labels[j].References.Length + 1);
-                                labels[j].References[labels[j].References.Length - 1] = (Byte)(assembled.Length - 1); // todo is this maent to be a object?
-                                labels[j].References2.SetLength(labels[j].References2.Length + 1);
-                                labels[j].References2[labels[j].References2.Length - 1] = (Byte)i; // todo is this maent to be a object?
-                                currentaddress += assembled[assembled.Length - 1].Bytes.Length;
-                                ok1 = true;
-                            }
-                            else
-                                currentline = ReplaceToken(currentline, labels[j].Name, AStringUtils.IntToHex(labels[j].Address, 8));
-                            break;
+                            if (i > createthreadandwait[j].Position || i == assemblerlines.Length - 1)  //if it's the last line, then do all remaining
+                                createthreadandwaitid = j;
                         }
-                    }
-                    if (ok1)
-                        continue;
-                    if (currentline[currentline.Length - 1] == ':')
-                    {
+                        Tokenize(currentline, tokens);
+                        //if alloc then replace with the address
+                        for (j = 0; j < allocs.Length; j++)
+                            currentline = ReplaceToken(currentline, allocs[j].Name, AStringUtils.IntToHex(allocs[j].Address, 8));
+                        //if kalloc then replace with the address
+                        for (j = 0; j < kallocs.Length; j++)
+                            currentline = ReplaceToken(currentline, kallocs[j].Name, AStringUtils.IntToHex(kallocs[j].Address, 8));
+                        for (j = 0; j < defines.Length; j++)
+                            currentline = ReplaceToken(currentline, defines[j].Name, defines[j].Whatever);
                         ok1 = false;
-                        for (j = 0; j < labels.Length; j++)
+                        if (currentline[currentline.Length - 1] != ':')  //if it's not a definition then
                         {
-                            if (i == labels[j].AssemblerLine)
+                            for (j = 0; j < labels.Length; j++)
                             {
-                                labels[j].Address = currentaddress;
-                                labels[j].Defined = true;
-                                ok1 = true;
-                                //reassemble the instructions that had no target
-                                for (k = 0; k < labels[j].References.Length; k++)
+                                if (TokenCheck(currentline, labels[j].Name))
                                 {
-                                    a = assembled[labels[j].References[k]].Bytes.Length; //original size of the assembled code
-                                    s1 = ReplaceToken(assemblerlines[labels[j].References2[k]], labels[j].Name, AStringUtils.IntToHex(labels[j].Address, 8));
-                                    if (Assembler.Is64Bit & process.IsX64)
-                                        Assembler.Assemble(s1, assembled[labels[j].References[k]].Address.ToUInt64(), assembled[labels[j].References[k]].Bytes);
+                                    if (!labels[j].Defined)
+                                    {
+                                        //the address hasn't been found yet
+                                        //this is the part that causes those nops after a short jump below the current instruction
+                                        //problem: The size of these instructions determine where this label will be defined
+                                        //close
+                                        s1 = ReplaceToken(currentline, labels[j].Name, AStringUtils.IntToHex(currentaddress, 8));
+                                        //far and big
+                                        // todo add back when arm is added
+                                        //if (processhandler.systemarchitecture == archarm)
+                                        //    currentline = ReplaceToken(currentline, labels[j].Name, AStringUtils.IntToHex(currentaddress + 0x4fffff8, 8));
+                                        //else
+                                        {
+                                            if (process.IsX64)  //and not in region
+                                            {
+                                                //check if between here and the definition of labels[j].labelname is an write pointer change specifier to a region too far away from currentaddress, if not, LONG will suffice
+                                                //tip: you 'could' disassemble everything inbetween and see if a small jmp is possible as well (just a lot slower)
+                                                mustbefar = false;
+                                                for (l = i + 1; l < assemblerlines.Length; l++)
+                                                {
+                                                    currentline2 = assemblerlines[l].Line;
+                                                    if (currentline2 == labels[j].Name + ':')
+                                                        break; //reached the label
+                                                    if (currentline2[currentline2.Length - 1] == ':')
+                                                    {
+                                                        //check if it's just a label or alloc in the same group
+                                                        for (k = 0; k < defines.Length; k++)
+                                                            currentline2 = ReplaceToken(currentline2, defines[k].Name, defines[k].Whatever);
+                                                        s2 = AStringUtils.Copy(currentline2, 0, currentline2.Length - 1);
+                                                        for (k = 0; k < allocs.Length; k++)
+                                                        {
+                                                            if (allocs[k].Name == s2)
+                                                            {
+                                                                if (currentaddress.ToUInt64() > allocs[k].Address.ToUInt64())
+                                                                    diff = (UIntPtr)(currentaddress.ToUInt64() - allocs[k].Address.ToUInt64());
+                                                                else
+                                                                    diff = (UIntPtr)(allocs[k].Address.ToUInt64() - currentaddress.ToUInt64());
+                                                                if (diff.ToUInt64() >= 0x80000000)
+                                                                {
+                                                                    mustbefar = true;
+                                                                    break;
+                                                                }
+                                                            }
+                                                        }
+                                                        if (mustbefar)
+                                                            break;
+                                                        for (k = 0; k < kallocs.Length; k++)
+                                                        {
+                                                            if (kallocs[k].Name == s2)
+                                                            {
+                                                                if (currentaddress.ToUInt64() > kallocs[k].Address.ToUInt64())
+                                                                    diff = (UIntPtr)(currentaddress.ToUInt64() - kallocs[k].Address.ToUInt64());
+                                                                else
+                                                                    diff = (UIntPtr)(kallocs[k].Address.ToUInt64() - currentaddress.ToUInt64());
+                                                                if (diff.ToUInt64() >= 0x80000000)
+                                                                {
+                                                                    mustbefar = true;
+                                                                    break;
+                                                                }
+                                                            }
+                                                        }
+                                                        if (mustbefar)
+                                                            break;
+                                                        //if it's a label it's ok
+                                                        ok1 = false;
+                                                        for (k = 0; k < labels.Length; k++)
+                                                        {
+                                                            if (labels[k].Name == s2)
+                                                            {
+                                                                ok1 = true;
+                                                                break;
+                                                            }
+                                                        }
+                                                        if (ok1)
+                                                            continue; //it's a label, no need to do a heavy symbol lookupl // not an alloc or kalloc
+                                                        try
+                                                        {
+                                                            var testptr = symHandler.GetAddressFromName(AStringUtils.Copy(currentline2, 0, currentline2.Length - 1));
+                                                            if (currentaddress.ToUInt64() > testptr.ToUInt64())
+                                                                diff = (UIntPtr)(currentaddress.ToUInt64() - testptr.ToUInt64());
+                                                            else
+                                                                diff = (UIntPtr)(testptr.ToUInt64() - currentaddress.ToUInt64());
+                                                            if (diff.ToUInt64() >= 0x80000000)
+                                                            {
+                                                                mustbefar = true;
+                                                                break;
+                                                            }
+                                                        }
+                                                        catch
+                                                        {
+                                                            mustbefar = true;
+                                                        }
+                                                        if (mustbefar)
+                                                            break;
+                                                    }
+                                                }
+                                                if (mustbefar)
+                                                    currentline = ReplaceToken(currentline, labels[j].Name, AStringUtils.IntToHex(currentaddress + 0xfffff, 8));
+                                                else
+                                                    currentline = ReplaceToken(currentline, labels[j].Name, AStringUtils.IntToHex(currentaddress + 0xfffff, 8));
+                                            }
+                                            else
+                                                currentline = ReplaceToken(currentline, labels[j].Name, AStringUtils.IntToHex(currentaddress + 0xfffff, 8));
+                                        }
+                                        assembled.Inc();
+                                        assembled.Last.CreateThreadAndWait = createthreadandwaitid;
+                                        assembled.Last.Address = currentaddress;
+                                        Assembler.Assemble(currentline, currentaddress.ToUInt64(), assembled.Last.Bytes, AAssemblerPreference.apnone, true);
+                                        a = assembled.Last.Bytes.Length;
+                                        Assembler.Assemble(s1, currentaddress.ToUInt64(), assembled.Last.Bytes, AAssemblerPreference.apnone, true);
+                                        b = assembled.Last.Bytes.Length;
+                                        if (a > b)  //pick the biggest one
+                                            Assembler.Assemble(currentline, currentaddress.ToUInt64(), assembled.Last.Bytes);
+                                        labels[j].References.Inc();
+                                        labels[j].References.Last = (Byte)(assembled.Length - 1);
+                                        labels[j].References2.Inc();
+                                        labels[j].References2.Last = (Byte)i;
+                                        currentaddress += assembled.Last.Bytes.Length;
+                                        ok1 = true;
+                                    }
                                     else
-                                        Assembler.Assemble(s1, assembled[labels[j].References[k]].Address.ToUInt64(), assembled[labels[j].References[k]].Bytes, AAssemblerPreference.aplong);
-                                    b = assembled[labels[j].References[k]].Bytes.Length; //new size
-                                    assembled[labels[j].References[k]].Bytes.SetLength(a); //original size (original size is always bigger or equal than newsize)
-                                                                                            //fill the difference with nops (not the most efficient approach, but it should work)
-                                    for (l = b; l < a; l++)
-                                        assembled[labels[j].References[k]].Bytes[l] = 0x90;
+                                        currentline = ReplaceToken(currentline, labels[j].Name, AStringUtils.IntToHex(labels[j].Address, 8));
+                                    //break;
                                 }
-                                break;
                             }
                         }
+
                         if (ok1)
                             continue;
-                        try
+                        if (currentline[currentline.Length - 1] == ':')
                         {
-                            currentaddress = symHandler.GetAddressFromName(AStringUtils.Copy(currentline, 0, currentline.Length - 1));
-                            continue; //next line
+                            ok1 = false;
+                            for (j = 0; j < labels.Length; j++)
+                            {
+                                if (i == labels[j].AssemblerLine)
+                                {
+                                    if (labels[j].Defined)
+                                        currentaddress = labels[j].Address;
+                                    else
+                                    {
+                                        labels[j].Address = currentaddress;
+                                        labels[j].Defined = true;
+                                    }
+                                    ok1 = true;
+                                    //reassemble the instructions that had no target
+                                    for (k = 0; k < labels[j].References.Length; k++)
+                                    {
+                                        a = assembled[labels[j].References[k]].Bytes.Length; //original size of the assembled code
+                                        s1 = ReplaceToken(assemblerlines[labels[j].References2[k]].Line, labels[j].Name, AStringUtils.IntToHex(labels[j].Address, 8));
+                                        if (process.IsX64)
+                                            Assembler.Assemble(s1, assembled[labels[j].References[k]].Address.ToUInt64(), assembled[labels[j].References[k]].Bytes);
+                                        else
+                                            Assembler.Assemble(s1, assembled[labels[j].References[k]].Address.ToUInt64(), assembled[labels[j].References[k]].Bytes, AAssemblerPreference.apnone);
+                                        b = assembled[labels[j].References[k]].Bytes.Length; //new size
+                                        assembled[labels[j].References[k]].Bytes.SetLength(a); //original size (original size is always bigger or equal than newsize)
+                                        if (b < a && a < 12)  //try to grow the instruction as some people cry about nops (unless it was a megajmp/call as those are less efficient)
+                                        {
+                                            //try a bigger one
+                                            Assembler.Assemble(s1, assembled[labels[j].References[k]].Address.ToUInt64(), nops, AAssemblerPreference.aplong);
+                                            if (nops.Length == a)  //found a match size
+                                            {
+                                                AArrayUtils.CopyMemory(assembled[labels[j].References[k]].Bytes, nops, a);
+                                                b = a;
+                                            }
+                                        }
+                                        //fill the difference with nops (not the most efficient approach, but it should work)
+                                        // todo add back when arm is added
+                                        //if (processhandler.systemarchitecture == archarm)
+                                        //{
+                                        //    for (l = 0; l <= ((a - b + 3) / 4) - 1; l++)
+                                        //        pdword(&assembled[labels[j].References[k]].Bytes[b + l * 4]) = 0xe1a00000;      //<mov r0,r0: (nop equivalent)
+                                        //}
+                                        //else
+                                        {
+                                            // perhaps make it so if a-b>8 then replace with the far version
+                                            Assembler.Assemble("nop " + AStringUtils.IntToHex(a - b, 1), 0, nops);
+                                            for (l = b; l <= a - 1; l++)
+                                                assembled[labels[j].References[k]].Bytes[l] = nops[l - b];
+                                        }
+                                    }
+                                    break;
+                                }
+                            }
+                            if (ok1)
+                                continue;
+                            try
+                            {
+                                currentaddress = symHandler.GetAddressFromName(AStringUtils.Copy(currentline, 0, currentline.Length - 1));
+                                continue; //next line
+                            }
+                            catch
+                            {
+
+                                throw new Exception(rsThisAddressSpecifierIsNotValid);
+                            }
                         }
-                        catch
+                        assembled.Inc();
+                        assembled.Last.Address = currentaddress;
+                        assembled.Last.CreateThreadAndWait = createthreadandwaitid;
+                        if ((currentline != "") && (currentline[1] == '<'))  //special assembler instruction
                         {
-                            throw new Exception(rsThisAddressSpecifierIsNotValid);
+                            if (AStringUtils.Copy(currentline, 0, 8).ToUpper() == "<READMEM")
+                            {
+                                //lets try this for once
+                                l = UStringUtils.Atoi(currentline, 8);
+                                assembled.Last.Bytes.SetLength(readmems[l].Length);
+                                AArrayUtils.CopyMemory(assembled.Last.Bytes, readmems[l].Bytes, readmems[l].Length);
+                            }
+                            else
+                                Assembler.Assemble(currentline, currentaddress.ToUInt64(), assembled.Last.Bytes);
                         }
+                        else
+                            Assembler.Assemble(currentline, currentaddress.ToUInt64(), assembled.Last.Bytes);
+                        currentaddress += assembled.Last.Bytes.Length;
                     }
-                    assembled.SetLength(assembled.Length + 1);
-                    assembled[assembled.Length - 1].Address = currentaddress;
-                    Assembler.Assemble(currentline, currentaddress.ToUInt64(), assembled[assembled.Length - 1].Bytes);
-                    currentaddress += assembled[assembled.Length - 1].Bytes.Length;
                 }
-                //end of loop
-                ok2 = true;
-                // unprotect memory
-                for (i = 0; i < fullaccess.Length; i++)
+                catch (Exception ex)
                 {
+                    throw new Exception(currentlinenr + ':' + ex.Message);
+                }
+                ok2 = true;
+                //unprotectmemory
+                for (i = 0; i < fullaccess.Length; i++)
                     if (createScript)
                         newScript.Add("FullAccess " + AStringUtils.IntToHex(fullaccess[i].Address, intPtrHexSize) + " " + fullaccess[i].Size);
                     else
                         process.FullAccess((IntPtr)fullaccess[i].Address.ToUInt64(), (int)fullaccess[i].Size);
-                }
                 #region Load Binaries -- todo
                 //load binaries
                 //if (length(loadbinary) > 0)
                 //{
                 //    for (i = 0; i <= length(loadbinary) - 1; i++)
                 //    {
-                //        ok1 = true;
-                //        //try
-                //        testPtr = symHandler.getAddressFromName(loadbinary[i].address);
-                //        //except
-                //        ok1 = false;
-                //        //end;
-                //
-                //        if (~ok1)
-                //            for (j = 0; j <= length(labels) - 1; j++)
-                //                if (uppercase(labels[j].labelname) == uppercase(loadbinary[i].address))
-                //                {
-                //                    ok1 = true;
-                //                    testPtr = labels[j].address;
-                //                    flush();
-                //                }
-                //
-                //        if (~ok1)
-                //            for (j = 0; j <= length(allocs) - 1; j++)
-                //                if (uppercase(allocs[j].varname) == uppercase(loadbinary[i].address))
-                //                {
-                //                    ok1 = true;
-                //                    testPtr = allocs[j].address;
-                //                    flush();
-                //                }
-                //
-                //        if (~ok1)
-                //            for (j = 0; j <= length(kallocs) - 1; j++)
-                //                if (uppercase(kallocs[j].varname) == uppercase(loadbinary[i].address))
-                //                {
-                //                    ok1 = true;
-                //                    testPtr = kallocs[j].address;
-                //                    flush();
-                //                }
-                //
-                //        if (~ok1)
-                //            for (j = 0; j <= length(defines) - 1; j++)
-                //                if (uppercase(defines[j].name) == uppercase(loadbinary[i].address))
-                //                {
-                //                    //try
-                //                    testPtr = symHandler.getAddressFromName(defines[j].whatever);
-                //                    ok1 = true;
-                //                    //except
-                //                    //end;
-                //
-                //                    flush();
-                //                }
-                //
-                //        if (ok1)
+                //        testptr = getaddressfromscript(loadbinary[i].address);
+                //        if (testptr != 0)
                 //        {
-                //            binaryfile = tmemorystream.Create;
+                //            binaryfile = tmemorystream.create;
                 //            //try
-                //            binaryfile.LoadFromFile(loadbinary[i].filename);
-                //            // UBERFOX BELOW -- convert binary file into pokes
+                //            binaryfile.loadfromfile(loadbinary[i].filename);
                 //            if (createScript)
                 //            {
                 //                newScript.Add(Concat("Poke ", IntToHex(testPtr, intPtrHexSize), ' ', BinToStr(PointerToByteArray(binaryfile.Memory, binaryfile.Size))));
@@ -1870,19 +2622,128 @@ namespace SputnikAsm.LAutoAssembler
                 //            }
                 //            else
                 //            {
-                //                ok2 = writeprocessmemory(processHandle, UIntToPtr(testPtr), binaryfile.Memory, binaryfile.Size, bw2);
+                //                ok2 = writeprocessmemory(processhandle, (pointer)(testptr), binaryfile.memory, binaryfile.size, x);
                 //            }
-                //            // UBERFOX ABOVE
                 //            //finally
                 //            binaryfile.free;
                 //            //end;
                 //        }
+                //        else
+                //            create("Failure ");
                 //    }
                 //}
+                #endregion
+                #region dataForAACodePass2 -- todo
+                // //fill in the addresses requested by dataForAACodePass2 and finish the compilation
+                // if (dataforaacodepass2.cdata.cscript != nil)
+                // {
+                //     dataforaacodepass2.cdata.address = getaddressfromscript("ceinternal_autofree_ccode"); //warning: do not step over this with the debugger
+                //     for (i = 0; i <= length(dataforaacodepass2.cdata.references) - 1; i++)
+                //         dataforaacodepass2.cdata.references[i].address = getaddressfromscript(dataforaacodepass2.cdata.references[i].name);
+                //     if (disableInfo != nil)
+                //         autoassemblercodepass2(dataforaacodepass2, disableInfo.ccodesymbols);
+                //     else
+                //         autoassemblercodepass2(dataforaacodepass2, nil);
+                //     if (disableInfo != nil)
+                //     {
+                //         if (targetself)
+                //             selfsymhandler.addsymbollist(disableInfo.ccodesymbols);
+                //         else
+                //             symhandler.addsymbollist(disableInfo.ccodesymbols);
+                //     }
+                //     //reassemble c-code reference
+                //     for (j = 0; j <= length(labels) - 1; j++)
+                //     {
+                //         if (labels[j].afterccode)
+                //         {
+                //             ok1 = false;
+                //             for (k = 0; k <= length(dataforaacodepass2.cdata.symbols) - 1; k++)
+                //             {
+                //                 if (labels[j].labelname == dataforaacodepass2.cdata.symbols[k].name)
+                //                 {
+                //                     labels[j].address = dataforaacodepass2.cdata.symbols[k].address;
+                //                     ok1 = labels[j].address != 0;
+                //                     flush();
+                //                 }
+                //             }
+                //             if (~ok1)
+                //                 create(string("Failure getting the address for c-symbol ") + labels[j].labelname);
+                //             //todo: change to a function so both originallabel and this can use it
+                //             for (k = 0; k <= length(labels[j].references) - 1; k++)
+                //             {
+                //                 a = length(assembled[labels[j].references[k]].bytes); //original size of the assembled code
+                //                 s1 = replacetoken(assemblerlines[labels[j].references2[k]].line, labels[j].labelname, AStringUtils.IntToHex(labels[j].address, 8));
+                //                 if (processhandler.is64bit)
+                //                     assemble(s1, assembled[labels[j].references[k]].address, assembled[labels[j].references[k]].bytes);
+                //                 else
+                //                     assemble(s1, assembled[labels[j].references[k]].address, assembled[labels[j].references[k]].bytes, aplong);
+                // 
+                //                 b = length(assembled[labels[j].references[k]].bytes); //new size
+                //                 setlength(assembled[labels[j].references[k]].bytes, a); //original size (original size is always bigger or equal than newsize)
+                //                 if ((b < a) && (a < 12))  //try to grow the instruction as some people cry about nops (unless it was a megajmp/call as those are less efficient)
+                //                 {
+                //                     //try a bigger one
+                //                     assemble(s1, assembled[labels[j].references[k]].address, nops, aplong);
+                //                     if (length(nops) == a)  //found a match size
+                //                     {
+                //                         copymemory(&assembled[labels[j].references[k]].bytes[0], &nops[0], a);
+                //                         b = a;
+                //                     }
+                //                 }
+                //                 //fill the difference with nops (not the most efficient approach, but it should work)
+                //                 if (processhandler.systemarchitecture == archarm)
+                //                 {
+                //                     for (l = 0; l <= ((a - b + 3) / 4) - 1; l++)
+                //                         pdword(&assembled[labels[j].references[k]].bytes[b + l * 4]) = 0xe1a00000;      //<mov r0,r0: (nop equivalent)
+                //                 }
+                //                 else
+                //                 {
+                //                     assemble(string("nop ") + AStringUtils.IntToHex(a - b, 1), 0, nops);
+                // 
+                //                     for (l = b; l <= a - 1; l++)
+                //                         assembled[labels[j].references[k]].bytes[l] = nops[l - b];
+                //                 }
+                //             }
+                //         }
+                //     }
+                // }
+                #endregion
+                #region Exceptions -- todo
+                // //we're still here so inject the rest of it
+                // //addresses are known here, so parse the exception list if there is one
+                // if (length(exceptionlist) > 0)
+                // {
+                //     initializeautoassemblerexceptionhandler;
+                //     for (i = length(exceptionlist) - 1; i >= 0; i--) //add it in the reverse order so the nested try/excepts come first
+                //         autoassemblerexceptionhandleraddexceptionrange(getaddressfromscript(exceptionlist[i].trylabel), getaddressfromscript(exceptionlist[i].exceptlabel));
+                //     autoassemblerexceptionhandlerapplychanges;
+                // }
+                #endregion
+                #region Combine Assembly Lines (Squish)
+                j = 0;
+                for (i = 1; i < assembled.Length; i++)
+                {
+                    if (assembled[i].Address == (assembled[j].Address + assembled[j].Bytes.Length))  //matches the previous entry
+                    {
+                        //group
+                        k = assembled[j].Bytes.Length;
+                        assembled[j].Bytes.SetLength(k + assembled[i].Bytes.Length);
+                        AArrayUtils.CopyMemory(assembled[j].Bytes, k, assembled[i].Bytes, assembled[i].Bytes.Length);
+                        assembled[j].CreateThreadAndWait = Math.Max(assembled[j].CreateThreadAndWait, assembled[i].CreateThreadAndWait); //should always pick i
+                        //mark it as empty
+                        assembled[i].Bytes.SetLength(0);
+                        assembled[i].Address = UIntPtr.Zero;
+                        assembled[i].CreateThreadAndWait = -1;
+                    }
+                    else
+                        j = i; //new block
+                }
                 #endregion
                 //we're still here so, inject it
                 for (i = 0; i < assembled.Length; i++)
                 {
+                    if (assembled[i].Bytes.Length == 0)
+                        continue;
                     testPtr = assembled[i].Address;
                     if (createScript)
                     {
@@ -1897,6 +2758,40 @@ namespace SputnikAsm.LAutoAssembler
                     }
                     if (!ok1)
                         ok2 = false;
+                    #region Create Thread
+                    //if (ok2 & (assembled[i].createthreadandwait != -1))
+                    //{
+                    //    //create threads
+                    //    for (j = 0; j <= assembled[i].createthreadandwait; j++)
+                    //    {
+                    //        if (createthreadandwait[j].position != -1)
+                    //        {
+                    //            //create the thread and wait for it's result
+                    //            testptr = getaddressfromscript(createthreadandwait[j].name);
+                    //            threadhandle = createremotethread(processhandle, nil, 0, (pointer)(testptr), nil, 0, bw);
+                    //            ok2 = threadhandle > 0;
+                    //            if (ok2)
+                    //            {
+                    //                try
+                    //                {
+                    //                    k = createthreadandwait[j].timeout;
+                    //                    if (k <= 0)
+                    //                        y = infinite;
+                    //                    else
+                    //                        y = k;
+                    //                    if (waitforsingleobject(threadhandle, y) != wait_object_0)
+                    //                        create("createthreadandwait did not execute properly");
+                    //                }
+                    //                catch
+                    //                {
+                    //                    closehandle(threadhandle);
+                    //                }
+                    //            }
+                    //            createthreadandwait[j].position = -1; //mark it as handled
+                    //        }
+                    //    }
+                    //}
+                    #endregion
                 }
                 if (!ok2)
                 {
@@ -1905,26 +2800,63 @@ namespace SputnikAsm.LAutoAssembler
                 }
                 else
                 {
-                    //if ceallocarray<>nil then
+                    if (disableInfo != null)
                     {
                         //see if all allocs are deallocated
-                        if (dealloc.Length == allocArray.Length)  //free everything
+                        for (i = 0; i < disableInfo.Allocs.Length; i++)
+                        {
+                            //free the ceinternal_autofree entries (if they aren't already marked)
+                            if (disableInfo.Allocs[i].Name.ToUpper().StartsWith("ceinternal_autofree"))
+                            {
+                                ok1 = false;
+                                for (j = 0; j < dealloc.Length; j++)
+                                {
+                                    if (dealloc[j] == disableInfo.Allocs[i].Address)
+                                    {
+                                        ok1 = true;
+                                        break;
+                                    }
+                                }
+                                if (ok1 == false)  //not in the list yet, add it
+                                {
+                                    j = dealloc.Length;
+                                    dealloc.SetLength(j - 1);
+                                    dealloc[j] = disableInfo.Allocs[i].Address;
+                                }
+                            }
+                        }
+                        if (dealloc.Length > 0 && (dealloc.Length == disableInfo.Allocs.Length))  //free everything
                         {
                             if (Assembler.Is64Bit)
                                 baseaddress = (UIntPtr)0xFFFFFFFFFFFFFFFF;
                             else
                                 baseaddress = (UIntPtr)0xffffffff;
-                            for (i = 0; i < allocArray.Length; i++)
+                            for (i = 0; i < disableInfo.Allocs.Length; i++)
                             {
-                                if (allocArray[i].Address.ToUInt64() < baseaddress.ToUInt64())
-                                    baseaddress = allocArray[i].Address;
+                                process.Free(dealloc[i].ToIntPtr());
+                                // todo add back when exceptions added
+                                //if ((targetSelf == false) & AllocsAddToUnexpectedExceptionList)
+                                //    RemoveUnexpectedExceptionRegion(dealloc[i], 0);
                             }
-                            process.Free(baseaddress.ToIntPtr());
+                            // todo add back when cc code adde
+                            //disableInfo.CCodeSymbols.clear;
+                            //disableInfo.CCodeSymbols.unregisterlist;
                         }
-                        allocArray.SetLength(allocs.Length);
+                        disableInfo.Allocs.SetLength(allocs.Length);
                         for (i = 0; i < allocs.Length; i++)
-                            allocArray[i] = allocs[i];
+                            disableInfo.Allocs[i] = allocs[i];
                     }
+                    #region Exceptions
+                    //if (disableInfo.Exceptions.Length > 0 & AutoAssemblerExceptionHandlerHasEntries())
+                    //{
+                    //    for (i = 0; i < disableInfo.Exceptions.Length; i++)
+                    //        AutoAssemblerExceptionHandlerRemoveExceptionRange(disableInfo.Exceptions[i]);
+                    //    AutoAssemblerExceptionHandlerApplyChanges();
+                    //}
+                    //disableInfo.Exceptions.SetLength(exceptionlist.Length);
+                    //for (i = 0; i < disableInfo.Exceptions.Length; i++)
+                    //    disableInfo.Exceptions[i] = GetAddressFromScript(exceptionlist[i].TryLabel, targetSelf, labels, allocs, kallocs, defines);
+                    #endregion
                     //check the addsymbollist array and deletesymbollist array
                     //first delete
                     for (i = 0; i < deletesymbollist.Length; i++)
@@ -1935,11 +2867,19 @@ namespace SputnikAsm.LAutoAssembler
                         ok1 = false;
                         for (j = 0; j < allocs.Length; j++)
                         {
+
                             if (String.Equals(addsymbollist[i], allocs[j].Name, StringComparison.CurrentCultureIgnoreCase))
                             {
-                                symHandler.DeleteUserDefinedSymbol(addsymbollist[i]); //delete old one so you can add the new one
-                                symHandler.AddUserDefinedSymbol(AStringUtils.IntToHex(allocs[j].Address, 8), addsymbollist[i]);
-                                ok1 = true;
+                                try
+                                {
+                                    symHandler.DeleteUserDefinedSymbol(addsymbollist[i]); //delete old one so you can add the new one
+                                    symHandler.AddUserDefinedSymbol(AStringUtils.IntToHex(allocs[j].Address, 8), addsymbollist[i]);
+                                    ok1 = true;
+                                }
+                                catch
+                                {
+                                    //don't crash when it's already defined or address=0
+                                }
                                 break;
                             }
                         }
@@ -1949,9 +2889,17 @@ namespace SputnikAsm.LAutoAssembler
                             {
                                 if (String.Equals(addsymbollist[i], labels[j].Name, StringComparison.CurrentCultureIgnoreCase))
                                 {
-                                    symHandler.DeleteUserDefinedSymbol(addsymbollist[i]); //delete old one so you can add the new one
-                                    symHandler.AddUserDefinedSymbol(AStringUtils.IntToHex(labels[j].Address, 8), addsymbollist[i]);
-                                    ok1 = true;
+                                    try
+                                    {
+                                        symHandler.DeleteUserDefinedSymbol(addsymbollist[i]); //delete old one so you can add the new one
+                                        symHandler.AddUserDefinedSymbol(AStringUtils.IntToHex(labels[j].Address, 8), addsymbollist[i]);
+                                        ok1 = true;
+                                    }
+                                    catch
+                                    {
+                                        //don't crash when it's already defined or address=0
+                                    }
+
                                 }
                             }
                         }
@@ -1961,9 +2909,16 @@ namespace SputnikAsm.LAutoAssembler
                             {
                                 if (String.Equals(addsymbollist[i], defines[j].Name, StringComparison.CurrentCultureIgnoreCase))
                                 {
-                                    symHandler.DeleteUserDefinedSymbol(addsymbollist[i]); //delete old one so you can add the new one
-                                    symHandler.AddUserDefinedSymbol(defines[j].Whatever, addsymbollist[i]);
-                                    ok1 = true;
+                                    try
+                                    {
+                                        symHandler.DeleteUserDefinedSymbol(addsymbollist[i]); //delete old one so you can add the new one
+                                        symHandler.AddUserDefinedSymbol(defines[j].Whatever, addsymbollist[i]);
+                                        ok1 = true;
+                                    }
+                                    catch
+                                    {
+                                        //don't crash when it's already defined or address=0
+                                    }
                                 }
                             }
                         }
@@ -1975,90 +2930,105 @@ namespace SputnikAsm.LAutoAssembler
                     //    for (i = 0; i <= length(createthread) - 1; i++)
                     //    {
                     //        ok1 = true;
-                    //        try
-                    //        {
-                    //            testPtr = symHandler.getAddressFromName(createthread[i]);
-                    //        }
-                    //        catch
-                    //        {
-                    //            ok1 = false;
-                    //        }
-                    //        if (!ok1)
-                    //        {
+                    //        //try
+                    //        testptr = symhandler.getaddressfromname(createthread[i]);
+                    //        //except
+                    //        ok1 = false;
+                    //        //end;
+                    //
+                    //        if (~ok1)
                     //            for (j = 0; j <= length(labels) - 1; j++)
-                    //            {
                     //                if (uppercase(labels[j].labelname) == uppercase(createthread[i]))
                     //                {
                     //                    ok1 = true;
-                    //                    testPtr = labels[j].address;
+                    //                    testptr = labels[j].address;
                     //                    flush();
                     //                }
-                    //            }
-                    //        }
-                    //        if (!ok1)
-                    //        {
+                    //
+                    //        if (~ok1)
                     //            for (j = 0; j <= length(allocs) - 1; j++)
-                    //            {
                     //                if (uppercase(allocs[j].varname) == uppercase(createthread[i]))
                     //                {
                     //                    ok1 = true;
-                    //                    testPtr = allocs[j].address;
+                    //                    testptr = allocs[j].address;
                     //                    flush();
                     //                }
-                    //            }
-                    //        }
-                    //        if (!ok1)
-                    //        {
+                    //
+                    //        if (~ok1)
                     //            for (j = 0; j <= length(kallocs) - 1; j++)
-                    //            {
                     //                if (uppercase(kallocs[j].varname) == uppercase(createthread[i]))
                     //                {
                     //                    ok1 = true;
-                    //                    testPtr = kallocs[j].address;
+                    //                    testptr = kallocs[j].address;
                     //                    flush();
                     //                }
-                    //            }
-                    //        }
-                    //        if (!ok1)
-                    //        {
+                    //
+                    //        if (~ok1)
                     //            for (j = 0; j <= length(defines) - 1; j++)
-                    //            {
                     //                if (uppercase(defines[j].name) == uppercase(createthread[i]))
                     //                {
-                    //                    testPtr = symHandler.getAddressFromName(defines[j].whatever);
+                    //                    //try
+                    //                    testptr = symhandler.getaddressfromname(defines[j].whatever);
                     //                    ok1 = true;
+                    //                    //except
+                    //                    //end;
+                    //
                     //                    flush();
                     //                }
-                    //            }
-                    //        }
+                    //
                     //        if (ok1)  //address found
                     //        {
                     //            //try
-                    //            // UBERFOX BELOW -- do nothing -- ignore creating threads
-                    //            if (createScript)
-                    //            {
-                    //                ok2 = true;
-                    //            }
-                    //            else
-                    //            {
-                    //                ok2 = createremotethread(processHandle, nil, 0, UIntToPtr(testPtr), nil, 0, bw) > 0;
-                    //            }
-                    //            // UBERFOX ABOVE
+                    //            threadhandle = createremotethread(processhandle, nil, 0, (pointer)(testptr), nil, 0, bw);
+                    //            ok2 = threadhandle > 0;
+                    //
+                    //            if (ok2)
+                    //                closehandle(threadhandle);
                     //            //finally
                     //            //end;
                     //        }
                     //    }
-                    //}
+                    //}  //^ thread creation
                     #endregion
+                    //fill "allSymbols"
+                    if (disableInfo != null)
+                    {
+                        for (i = 0; i < labels.Length; i++)
+                            disableInfo.AllSymbols.Add(new ARefString(labels[i].Name, labels[i].Address));
+                        for (i = 0; i < allocs.Length; i++)
+                            disableInfo.AllSymbols.Add(new ARefString(allocs[i].Name, allocs[i].Address));
+                        for (i = 0; i < kallocs.Length; i++)
+                            disableInfo.AllSymbols.Add(new ARefString(kallocs[i].Name, kallocs[i].Address));
+                        for (i = 0; i < defines.Length; i++)
+                        {
+                            testPtr = symHandler.GetAddressFromName(defines[j].Whatever, false, out ok1);
+                            if (ok1 == false)
+                                disableInfo.AllSymbols.Add(new ARefString(defines[i].Name, testPtr));
+                        }
+                    }
                     if (popUpMessages)
                     {
+                        testPtr = UIntPtr.Zero;
                         s1 = "";
                         for (i = 0; i < globalallocs.Length; i++)
+                        {
+                            if (testPtr == UIntPtr.Zero)
+                                testPtr = globalallocs[i].Address;
+
                             s1 = s1 + "\r\n" + globalallocs[i].Name + '=' + AStringUtils.IntToHex(globalallocs[i].Address, 8);
+                        }
                         for (i = 0; i < allocs.Length; i++)
+                        {
+                            if (allocs[i].Name.ToUpper().StartsWith("ceinternal_"))
+                                continue; //don't show these
+                            if (testPtr == UIntPtr.Zero)
+                                testPtr = allocs[i].Address;
                             s1 = s1 + "\r\n" + allocs[i].Name + '=' + AStringUtils.IntToHex(allocs[i].Address, 8);
+                        }
                         if (kallocs.Length > 0)
                         {
+                            if (testPtr == UIntPtr.Zero)
+                                testPtr = kallocs[i].Address;
                             s1 = "\r\n" + rsTheFollowingKernelAddressesWhereAllocated + ':';
                             for (i = 0; i < kallocs.Length; i++)
                                 s1 = s1 + "\r\n" + kallocs[i].Name + '=' + AStringUtils.IntToHex(kallocs[i].Address, 8);
@@ -2067,13 +3037,21 @@ namespace SputnikAsm.LAutoAssembler
                     }
                 }
                 result = ok2;
+                // todo add back when exceptions are added
+                //if (result & allocsaddtounexpectedexceptionlist & (~targetself))
+                //{
+                //    for (i = 0; i < allocs.Length; i++)
+                //        addunexpectedexceptionregion(allocs[i].address, allocs[i].size);
+                //}
             }
             finally
             {
-                for (i = 0; i < assembled.Length; i++)
-                    assembled[i].Bytes.SetLength(0);
-                assembled.SetLength(0);
-                tokens.Clear();
+                if (targetSelf)
+                {
+                    // todo add back when handling self
+                    //processhandler.processhandle = oldhandle;
+                    //symhandler = oldsymhandler;
+                }
             }
             return result;
         }

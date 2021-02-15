@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using Sputnik.LBinary;
+using Sputnik.LDateTime;
 using Sputnik.LEngine;
 using Sputnik.LEnums;
 using Sputnik.LMarshal;
@@ -1484,6 +1485,25 @@ namespace SputnikAsm.LSymbolHandler
             return MemoryCore.Allocate(_process.GetSafeHandle(), address, size, protectionFlags, allocFlags);
         }
         #endregion
+        #region LastChanceAllocPreferred
+        public IntPtr LastChanceAllocPreferred(IntPtr preferred, int size, MemoryProtectionFlags protection)
+        {
+            var startTime = UDateTime.Ticks();
+            var address = UIntPtr.Zero;
+            var distance = 0UL;
+            var count = 0;
+            if (preferred.ToInt64() % 65536 > 0)
+                preferred = (IntPtr)(preferred.ToInt64() - (preferred.ToInt64() % 65536));
+            while (address == UIntPtr.Zero && (count < 10 || (UDateTime.Ticks() < startTime + 10000)) && (distance < 0x80000000UL))
+            {
+                address = AllocNear((IntPtr)(preferred.ToUIntPtr().ToUInt64() + distance), size, protection, MemoryAllocationFlags.Reserve | MemoryAllocationFlags.Commit).ToUIntPtr();
+                if (address == UIntPtr.Zero)
+                    distance += 65536;
+                count += 1;
+            }
+            return address.ToIntPtr();
+        }
+        #endregion
         #region Free
         public Boolean Free(IntPtr pointer)
         {
@@ -1492,8 +1512,8 @@ namespace SputnikAsm.LSymbolHandler
             return MemoryCore.Free(_process.GetSafeHandle(), pointer);
         }
         #endregion
-        #region FindFreeBlockForRegion
-        public UIntPtr FindFreeBlockForRegion(UIntPtr baseAddress, UInt32 size)
+        #region FindFreeBlockForRegion -- to do
+        public UIntPtr FindFreeBlockForRegion(UIntPtr baseAddress, UInt32 size) // todo fill this in
         {
             return UIntPtr.Zero;
             //MemoryBasicInformation32 mbi = new MemoryBasicInformation32();

@@ -68,7 +68,10 @@
     <Compile Include="LAssembler\AAssembler.cs" />
     <Compile Include="LAssembler\LEnums\AVexLeadingOpCode.cs" />
     <Compile Include="LAssembler\LEnums\AVexOpCodeExtension.cs" />
+    <Compile Include="LAutoAssembler\AExceptionInfo.cs" />
     <Compile Include="LAutoAssembler\AAlloc.cs" />
+    <Compile Include="LAutoAssembler\ADisableInfo.cs" />
+    <Compile Include="LAutoAssembler\LCollections\AExceptionInfoArray.cs" />
     <Compile Include="LAutoAssembler\LCollections\AAllocArray.cs" />
     <Compile Include="LCollections\ACharArray.cs" />
     <Compile Include="LCollections\ARefStringArray.cs" />

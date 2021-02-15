@@ -588,5 +588,35 @@ namespace SputnikAsm.LGenerics
             }
         }
         #endregion
+        #region IndexOf
+        public int IndexOf(T item)
+        {
+            lock (_lock)
+            {
+                var comp = EqualityComparer<T>.Default;
+                for (var i = 0; i < Length; ++i)
+                {
+                    if (comp.Equals(Raw[i], item))
+                        return i;
+                }
+                return -1;
+            }
+        }
+        #endregion
+        #region LastIndexOf
+        public int LastIndexOf(T item)
+        {
+            lock (_lock)
+            {
+                var comp = EqualityComparer<T>.Default;
+                for (var i = Length - 1; i >= 0; --i)
+                {
+                    if (comp.Equals(Raw[i], item))
+                        return i;
+                }
+                return -1;
+            }
+        }
+        #endregion
     }
 }

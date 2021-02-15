@@ -9,6 +9,7 @@ namespace SputnikAsm.LString
         public String Value;
         public int Position;
         public int Length;
+        public UIntPtr Pointer;
         #endregion
         #region Constructor
         public ARefString()
@@ -16,18 +17,28 @@ namespace SputnikAsm.LString
             Value = "";
             Position = 0;
             Length = 0;
+            Pointer = UIntPtr.Zero;
         }
         public ARefString(String value)
         {
             Value = value;
             Position = -1;
             Length = Value.Length;
+            Pointer = UIntPtr.Zero;
         }
         public ARefString(String value, int position)
         {
             Value = value;
             Position = position;
             Length = Value.Length;
+            Pointer = UIntPtr.Zero;
+        }
+        public ARefString(String value, UIntPtr pointer)
+        {
+            Value = value;
+            Position = -1;
+            Length = Value.Length;
+            Pointer = pointer;
         }
         #endregion
         #region Equals and other checks
