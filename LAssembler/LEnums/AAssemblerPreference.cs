@@ -4,7 +4,7 @@
     {
         apnone,
         apshort,
-        aplong, 
-        last_tassemblerpreference
+        aplong,
+        apfar
     }
 }

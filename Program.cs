@@ -29,22 +29,10 @@ namespace SputnikAsm
 
             var cc = @"
             [ENABLE]
-struct cat
-    moo: DB ?
-    kitten: DB ?
-endstruct
-struct cat2
-    moo: DB ? ?
-    kitten: DB ?
-endstruct
-
-
 400300:
-mov eax, dword ptr[411c88]
-    NOP 3
+mov eax, dword ptr[400500]
 
 400311:
-    db 44 ?? ?? 44
 
 [DISABLE]
             ".Trim();

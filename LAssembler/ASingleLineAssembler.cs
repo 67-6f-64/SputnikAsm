@@ -1260,14 +1260,20 @@ namespace SputnikAsm.LAssembler
                 parameter3 = tokens[mnemonic + 3];
             else
                 parameter3 = "";
-            overrideshort = AStringUtils.Pos("SHORT ", parameter1) != -1;
-            overridelong = (AStringUtils.Pos("LONG ", parameter1) != -1);
-            if (Assembler.SymHandler.Process.IsX64)
-                overridefar = (AStringUtils.Pos("FAR ", parameter1) != -1);
+            if ((nroftokens - 1) >= mnemonic + 4)
+                parameter4 = tokens[mnemonic + 4];
             else
-                overridelong |= (AStringUtils.Pos("FAR ", parameter1) != -1);
-            if (!(overrideshort | overridelong) & (aPref != AAssemblerPreference.apnone))  //no override chooce by the user and not a normal preference
+                parameter4 = "";
+            overrideshort = AStringUtils.Pos("SHORT ", parameter1, true) != -1;
+            overridelong = (AStringUtils.Pos("LONG ", parameter1, true) != -1);
+            if (Assembler.SymHandler.Process.IsX64)
+                overridefar = (AStringUtils.Pos("FAR ", parameter1, true) != -1);
+            else
+                overridelong |= (AStringUtils.Pos("FAR ", parameter1, true) != -1);
+            if (!(overrideshort | overridelong | overridefar) & (aPref != AAssemblerPreference.apnone))  //no override choice by the user and not a normal preference
             {
+                if (aPref == AAssemblerPreference.apfar)
+                    overridefar = true;
                 if (aPref == AAssemblerPreference.aplong)
                     overridelong = true;
                 else if (aPref == AAssemblerPreference.apshort)
@@ -1276,6 +1282,7 @@ namespace SputnikAsm.LAssembler
             paramtype1 = Assembler.GetTokenType(ref parameter1, parameter2);
             paramtype2 = Assembler.GetTokenType(ref parameter2, parameter1);
             paramtype3 = Assembler.GetTokenType(ref parameter3, "");
+            paramtype4 = Assembler.GetTokenType(ref parameter4, "");
             if (Assembler.SymHandler.Process.IsX64)
             {
                 if (paramtype1 == ATokenType.ttregister8bitwithprefix)
@@ -1297,8 +1304,11 @@ namespace SputnikAsm.LAssembler
                 {
                     RexW = true;
                     paramtype2 = ATokenType.ttregister32bit;
-                    if (paramtype1 == ATokenType.ttmemorylocation64)
-                        paramtype1 = ATokenType.ttmemorylocation32;
+                }
+                if (paramtype3 == ATokenType.ttregister64bit)
+                {
+                    RexW = true;
+                    paramtype3 = ATokenType.ttregister32bit;
                 }
                 if (paramtype1 == ATokenType.ttmemorylocation64)
                 {
@@ -1311,26 +1321,41 @@ namespace SputnikAsm.LAssembler
                     paramtype2 = ATokenType.ttmemorylocation32;
                 }
             }
-            if (tokens[0] == "DW")
+            if (tokens[0][0] == 'R')  //R*
             {
-                for (i = 1; i <= nroftokens - 1; i++)
-                    Assembler.AddWord(bytes, (UInt16)AStringUtils.HexStrToInt(tokens[i]));
-                result = true;
-                return result;
-            }
-            if (tokens[0] == "DD")
-            {
-                for (i = 1; i <= nroftokens - 1; i++)
-                    Assembler.AddDWord(bytes, (UInt16) AStringUtils.HexStrToInt(tokens[i]));
-                result = true;
-                return result;
-            }
-            if (tokens[0] == "DQ")
-            {
-                for (i = 1; i <= nroftokens - 1; i++)
-                    Assembler.AddQWord(bytes, (UInt16)AStringUtils.HexStrToInt64(tokens[i]));
-                result = true;
-                return result;
+                //only 2 tokens, the first token is 4 chars and it starts with RES
+                if (tokens.Length == 2 && tokens[0].Length == 4 && AStringUtils.Copy(tokens[0], 0, 3).ToUpper() == "RES")
+                {
+                    //RES* X
+                    switch (tokens[0][3])
+                    {
+                        case 'B':
+                            i = 1; break; //1 byte long entries
+                        case 'W':
+                            i = 2; break; //2 byte long entries
+                        case 'D':
+                            i = 4; break; //4 byte long entries
+                        case 'Q':
+                            i = 8; break; //8 byte long entries
+                        default:
+                            throw new Exception("Invalid");
+                    }
+                    i *= AStringUtils.StrToInt(tokens[1]);
+                    bytes.SetLength(i);
+                    var bt = (Byte[])Assembler.SymHandler.Process.ReadMem((IntPtr)address, ReadType.Binary, i);
+                    if (bt.Length == bytes.Length)
+                    {
+                        for (i = 0; i < bt.Length; i++)
+                            bytes[i] = bt[i];
+                    }
+                    else
+                    {
+                        for (j = 0; j <= i - 1; j++)
+                            bytes[j] = 0; //init the bytes to 0 (actually it should be uninitialized, but really... (Use structs for that)}
+                    }
+                    result = true;
+                    return true;
+                }
             }
             if ((paramtype1 >= ATokenType.ttmemorylocation) && (paramtype1 <= ATokenType.ttmemorylocation128))
             {
@@ -1425,6 +1450,11 @@ namespace SputnikAsm.LAssembler
                     v2type = Assembler.StringValueToType(parameter3);
                 }
             }
+            if (paramtype4 == ATokenType.ttvalue)
+            {
+                v = AStringUtils.StrToQWordEx(parameter4);
+                vtype = Assembler.StringValueToType(parameter4);
+            }
             signedvtype = Assembler.SignedValueToType((IntPtr)v);
             signedv2type = Assembler.SignedValueToType((IntPtr)v2);
             result = false;
@@ -1470,7 +1500,7 @@ namespace SputnikAsm.LAssembler
                 return result;
             startoflist = j;
             endoflist = startoflist;
-            while ((endoflist <= Assembler.OpCodeCount) && (Assembler.OpCodes[endoflist].Mnemonic == tokens[mnemonic]))
+            while (endoflist <= Assembler.OpCodeCount && Assembler.OpCodes[endoflist].Mnemonic == tokens[mnemonic])
                 endoflist += 1;
             endoflist -= 1;
             try
@@ -1484,6 +1514,17 @@ namespace SputnikAsm.LAssembler
                         j += 1;
                         continue; // todo figure out if this is meant to be break/continue
                     }
+                    oldParamtype1 = paramtype1;
+                    oldParamtype2 = paramtype2;
+                    if (Assembler.OpCodes[j].W0)
+                    {
+                        //undo rex_w change
+                        if (paramtype1 == ATokenType.ttmemorylocation32)
+                            paramtype1 = Assembler.GetTokenType(ref parameter1, parameter2);
+                        if (paramtype2 == ATokenType.ttmemorylocation32)
+                            paramtype2 = Assembler.GetTokenType(ref parameter2, parameter3);
+                    }
+                    candoaddressswitch = Assembler.OpCodes[j].CanDoAddressSwitch;
                     switch (Assembler.OpCodes[j].ParamType1)
                     {
                         case AParam.par_noparam:
@@ -1560,6 +1601,8 @@ namespace SputnikAsm.LAssembler
                                         {
                                             if (Assembler.OpCodes[k].ParamType1 == AParam.par_imm32)
                                             {
+                                                if ((signedvtype == 64) & RexW)
+                                                    Invalid64BitValueFor32BitField(v);
                                                 AddOpCode(bytes, k);
                                                 Assembler.AddDWord(bytes, (UInt32)v);
                                                 result = true;
@@ -1583,6 +1626,24 @@ namespace SputnikAsm.LAssembler
                                 if ((Assembler.OpCodes[j].ParamType2 == AParam.par_noparam) && (parameter2 == ""))
                                 {
                                     //imm16
+                                    if ((vtype == 32) || (signedvtype > 8))
+                                    {
+                                        //see if there is also a 'opcode imm32' variant
+                                        var k = startoflist;
+                                        while (k <= Assembler.OpCodeCount && Assembler.OpCodes[k].Mnemonic == tokens[mnemonic])
+                                        {
+                                            if (Assembler.OpCodes[k].ParamType1 == AParam.par_imm32)
+                                            {
+                                                if ((signedvtype == 64) & RexW)
+                                                    Invalid64BitValueFor32BitField(v);
+                                                AddOpCode(bytes, k);
+                                                Assembler.AddDWord(bytes, (UInt32)v);
+                                                result = true;
+                                                return true;
+                                            }
+                                            k += 1;
+                                        }
+                                    }
                                     AddOpCode(bytes, j);
                                     Assembler.AddWord(bytes, (UInt16)v);
                                     result = true;
@@ -1608,6 +1669,8 @@ namespace SputnikAsm.LAssembler
                                 if ((Assembler.OpCodes[j].ParamType2 == AParam.par_noparam) && (parameter2 == ""))
                                 {
                                     //imm32
+                                    if ((signedvtype == 64) & RexW)
+                                        Invalid64BitValueFor32BitField(v);
                                     AddOpCode(bytes, j);
                                     Assembler.AddDWord(bytes, (UInt32)v);
                                     result = true;
@@ -1627,9 +1690,12 @@ namespace SputnikAsm.LAssembler
                                         AStringUtils.Val("0x" + AStringUtils.Copy(parameter1, k + 1, l - k - 1), out v, out k);
                                         if (k == 0)
                                         {
-                                            //verified, it doesn't have a registerbase in it
+                                            //verified, it doesn't have a register base in it
                                             AddOpCode(bytes, j);
-                                            Assembler.AddDWord(bytes, (UInt32)v);
+                                            if (Assembler.SymHandler.Process.IsX64)
+                                                Assembler.AddQWord(bytes, v);
+                                            else
+                                                Assembler.AddDWord(bytes, (UInt32)v);
                                             result = true;
                                             return result;
                                         }
@@ -1649,9 +1715,12 @@ namespace SputnikAsm.LAssembler
                                         AStringUtils.Val("0x" + AStringUtils.Copy(parameter1, k + 1, l - k - 1), out v, out k);
                                         if (k == 0)
                                         {
-                                            //verified, it doesn't have a registerbase in it
+                                            //verified, it doesn't have a register base in it
                                             AddOpCode(bytes, j);
-                                            Assembler.AddDWord(bytes, (UInt32)v);
+                                            if (Assembler.SymHandler.Process.IsX64)
+                                                Assembler.AddQWord(bytes, v);
+                                            else
+                                                Assembler.AddDWord(bytes, (UInt32)v);
                                             result = true;
                                             return result;
                                         }
@@ -1673,7 +1742,10 @@ namespace SputnikAsm.LAssembler
                                         {
                                             //verified, it doesn't have a registerbase in it
                                             AddOpCode(bytes, j);
-                                            Assembler.AddDWord(bytes, (UInt32)v);
+                                            if (Assembler.SymHandler.Process.IsX64)
+                                                Assembler.AddQWord(bytes, v);
+                                            else
+                                                Assembler.AddDWord(bytes, (UInt32)v);
                                             result = true;
                                             return result;
                                         }
@@ -1727,12 +1799,13 @@ namespace SputnikAsm.LAssembler
                                         {
                                             //verified, it doesn't have a registerbase in it
                                             AddOpCode(bytes, j);
-                                            Assembler.AddDWord(bytes, (UInt32)v);
+                                            if (Assembler.SymHandler.Process.IsX64)
+                                                Assembler.AddQWord(bytes, v);
+                                            else
+                                                Assembler.AddDWord(bytes, (UInt32)v);
                                             result = true;
                                             return result;
                                         }
-
-
                                     }
                                 }
                             }
@@ -1798,7 +1871,10 @@ namespace SputnikAsm.LAssembler
                                         {
                                             //verified, it doesn't have a registerbase in it
                                             AddOpCode(bytes, j);
-                                            Assembler.AddDWord(bytes, (UInt32)v);
+                                            if (Assembler.SymHandler.Process.IsX64)
+                                                Assembler.AddQWord(bytes, v);
+                                            else
+                                                Assembler.AddDWord(bytes, (UInt32)v);
                                             result = true;
                                             return result;
                                         }
@@ -1877,6 +1953,8 @@ namespace SputnikAsm.LAssembler
                                         }
                                         if ((Assembler.OpCodes[j].OpCode1 == AExtraOpCode.eo_id) && (Assembler.OpCodes[j].OpCode2 == AExtraOpCode.eo_none))
                                         {
+                                            if ((signedvtype == 64) & RexW)
+                                                Invalid64BitValueFor32BitField(v);
                                             AddOpCode(bytes, j);
                                             Assembler.AddDWord(bytes, (UInt32)v);
                                             result = true;
@@ -1895,7 +1973,10 @@ namespace SputnikAsm.LAssembler
                                         {
                                             //verified, it doesn't have a registerbase in it
                                             AddOpCode(bytes, j);
-                                            Assembler.AddDWord(bytes, (UInt32)v);
+                                            if (Assembler.SymHandler.Process.IsX64)
+                                                Assembler.AddQWord(bytes, v);
+                                            else
+                                                Assembler.AddDWord(bytes, (UInt32)v);
                                             result = true;
                                             return result;
                                         }
@@ -2118,6 +2199,7 @@ namespace SputnikAsm.LAssembler
                                         AddOpCode(bytes, j);
                                         result = CreateModRm(bytes, GetReg(parameter1), parameter2);
                                         Assembler.Add(bytes, (Byte)v);
+                                        return result;
                                     }
                                 }
                                 if ((Assembler.OpCodes[j].ParamType2 == AParam.par_imm16) && (paramtype2 == ATokenType.ttvalue))
@@ -2217,6 +2299,32 @@ namespace SputnikAsm.LAssembler
                                         AddOpCode(bytes, j);
                                         result = CreateModRm(bytes, Assembler.EoToReg(Assembler.OpCodes[j].OpCode1), parameter1);
                                         return result;
+                                    }
+                                }
+                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_r32) && (paramtype2 == ATokenType.ttregister32bit))
+                                {
+                                    //r32,r32,
+                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.par_rm32) & (Assembler.IsMem32(paramtype3)))
+                                    {
+                                        //r32,r32,rm32
+                                        if (Assembler.OpCodes[j].VexExtraParam == 2)
+                                        {
+                                            AddOpCode(bytes, j);
+                                            vexvvvv = (~GetReg(parameter2)) & 0xf;
+                                            result = CreateModRm(bytes, GetReg(parameter1), parameter3);
+                                            return result;
+                                        }
+                                    }
+                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.par_m32) && (paramtype3 == ATokenType.ttmemorylocation32))
+                                    {
+                                        //r32,r32,m32
+                                        if (Assembler.OpCodes[j].VexExtraParam == 2)
+                                        {
+                                            AddOpCode(bytes, j);
+                                            vexvvvv = (~GetReg(parameter2)) & 0xf;
+                                            result = CreateModRm(bytes, GetReg(parameter1), parameter3);
+                                            return result;
+                                        }
                                     }
                                 }
                                 //eax

@@ -928,7 +928,7 @@ namespace SputnikAsm.LAssembler
                     else
                         j = i - last;
                     tokens.Last = AStringUtils.Copy(opCode, last, j);
-                    if ((j > 0) && (tokens.Last[0] != '$') && ((j < 7) || (AStringUtils.Pos("KERNEL_", tokens.Last.ToUpper()) == -1)))  //only uppercase if it's not kernel_
+                    if ((j > 0) && (tokens.Last[0] != '$') && ((j < 7) || (AStringUtils.Pos("KERNEL_", tokens.Last, true) == -1)))  //only uppercase if it's not kernel_
                     {
                         //don't uppercase empty strings, kernel_ strings or strings starting with $
                         if (tokens.Last.Length > 2)
