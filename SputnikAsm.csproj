@@ -46,14 +46,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\Sputnik.exe</HintPath>
     </Reference>
-    <Reference Include="SputnikNative, Version=1.0.6457.38882, Culture=neutral, processorArchitecture=x86">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\Sputnik\bin\SputnikNative.dll</HintPath>
-    </Reference>
-    <Reference Include="SputnikWin, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\SputnikWin.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
@@ -75,6 +67,7 @@
     <Compile Include="LAutoAssembler\LCollections\AScriptBytesArray.cs" />
     <Compile Include="LAutoAssembler\LCollections\AExceptionInfoArray.cs" />
     <Compile Include="LAutoAssembler\LCollections\AAllocArray.cs" />
+    <Compile Include="LAutoAssembler\LEnums\AScriptObjectType.cs" />
     <Compile Include="LCollections\ACharArray.cs" />
     <Compile Include="LCollections\ARefStringArray.cs" />
     <Compile Include="LCollections\ATByteArray.cs" />
@@ -92,9 +85,114 @@
     <Compile Include="LAutoAssembler\AAutoAssembler.cs" />
     <Compile Include="LExtensions\XPointerExt.cs" />
     <Compile Include="LGenerics\AArrayManager.cs" />
+    <Compile Include="LProcess\AProcessSharp.cs" />
+    <Compile Include="LProcess\LApplied\AAppliedManager.cs" />
+    <Compile Include="LProcess\LApplied\AComplexAppliedManager.cs" />
+    <Compile Include="LProcess\LApplied\IAApplied.cs" />
+    <Compile Include="LProcess\LApplied\IAAppliedManager.cs" />
+    <Compile Include="LProcess\LApplied\IAComplexApplied.cs" />
+    <Compile Include="LProcess\LApplied\IAComplexAppliedManager.cs" />
+    <Compile Include="LProcess\LApplied\LDetours\ADetour.cs" />
+    <Compile Include="LProcess\LApplied\LDetours\ADetourManager.cs" />
+    <Compile Include="LProcess\LApplied\LPatches\APatch.cs" />
+    <Compile Include="LProcess\LApplied\LPatches\APatchManager.cs" />
+    <Compile Include="LProcess\LAssembly\AAssemblyFactory.cs" />
+    <Compile Include="LProcess\LAssembly\AAssemblyTransaction.cs" />
+    <Compile Include="LProcess\LAssembly\IAAssemblyFactory.cs" />
+    <Compile Include="LProcess\LAssembly\IAAssemblyTransaction.cs" />
+    <Compile Include="LProcess\LAssembly\LAssemblers\ASharpAsm.cs" />
+    <Compile Include="LProcess\LAssembly\LAssemblers\IAAssembler.cs" />
+    <Compile Include="LProcess\LAssembly\LCallingConventions\ACallingConventionSelector.cs" />
+    <Compile Include="LProcess\LAssembly\LCallingConventions\ACdeclCallingConvention.cs" />
+    <Compile Include="LProcess\LAssembly\LCallingConventions\AFastCallCallingConvention.cs" />
+    <Compile Include="LProcess\LAssembly\LCallingConventions\AStdCallCallingConvention.cs" />
+    <Compile Include="LProcess\LAssembly\LCallingConventions\AThisCallCallingConvention.cs" />
+    <Compile Include="LProcess\LAssembly\LCallingConventions\IACallingConvention.cs" />
+    <Compile Include="LProcess\LExtensions\AAttributeExtensions.cs" />
+    <Compile Include="LProcess\LExtensions\ANativeExtensions.cs" />
+    <Compile Include="LProcess\LExtensions\AProcessExtensions.cs" />
+    <Compile Include="LProcess\LExtensions\AProcessModuleExtensions.cs" />
+    <Compile Include="LProcess\LExtensions\AUnsafeMemoryExtensions.cs" />
+    <Compile Include="LProcess\LMarshaling\AMarshalCache.cs" />
+    <Compile Include="LProcess\LMarshaling\AMarshalledValue.cs" />
+    <Compile Include="LProcess\LMarshaling\AMarshalType.cs" />
+    <Compile Include="LProcess\LMarshaling\AMarshalValue.cs" />
+    <Compile Include="LProcess\LMarshaling\IADisposableState.cs" />
+    <Compile Include="LProcess\LMarshaling\IAMarshalledValue.cs" />
+    <Compile Include="LProcess\LMemory\AAllocatedMemory.cs" />
+    <Compile Include="LProcess\LMemory\AExternalProcessMemory.cs" />
+    <Compile Include="LProcess\LMemory\ALocalProcessMemory.cs" />
+    <Compile Include="LProcess\LMemory\ALocalUnmanagedMemory.cs" />
+    <Compile Include="LProcess\LMemory\AMemoryFactory.cs" />
+    <Compile Include="LProcess\LMemory\AMemoryPointer.cs" />
+    <Compile Include="LProcess\LMemory\AMemoryProtection.cs" />
+    <Compile Include="LProcess\LMemory\AMemoryProtectionOperation.cs" />
+    <Compile Include="LProcess\LMemory\AMemoryRegion.cs" />
+    <Compile Include="LProcess\LMemory\AMemoryType.cs" />
+    <Compile Include="LProcess\LMemory\AProcessMemory.cs" />
+    <Compile Include="LProcess\LMemory\IAAllocatedMemory.cs" />
+    <Compile Include="LProcess\LMemory\IAMemory.cs" />
+    <Compile Include="LProcess\LMemory\IAMemoryFactory.cs" />
+    <Compile Include="LProcess\LMemory\IAPointer.cs" />
+    <Compile Include="LProcess\LModules\AInjectedModule.cs" />
+    <Compile Include="LProcess\LModules\AModuleFactory.cs" />
+    <Compile Include="LProcess\LModules\ARemoteFunction.cs" />
+    <Compile Include="LProcess\LModules\ARemoteModule.cs" />
+    <Compile Include="LProcess\LModules\IAModuleFactory.cs" />
+    <Compile Include="LProcess\LModules\IAProcessFunction.cs" />
+    <Compile Include="LProcess\LModules\IAProcessModule.cs" />
+    <Compile Include="LProcess\LNative\Advapi32.cs" />
+    <Compile Include="LProcess\LNative\ANative.cs" />
+    <Compile Include="LProcess\LNative\Callbacks.cs" />
+    <Compile Include="LProcess\LNative\Kernel32.cs" />
+    <Compile Include="LProcess\LNative\LTypes\ASafeLoadLibrary.cs" />
+    <Compile Include="LProcess\LNative\LTypes\ASafeMemoryHandle.cs" />
+    <Compile Include="LProcess\LNative\LTypes\NativeEnums.cs" />
+    <Compile Include="LProcess\LNative\LTypes\NativeStructs.cs" />
+    <Compile Include="LProcess\LNative\Nt.cs" />
+    <Compile Include="LProcess\LNative\User32.cs" />
+    <Compile Include="LProcess\LPatterns\ADwordPattern.cs" />
+    <Compile Include="LProcess\LPatterns\ADwordPatternData.cs" />
+    <Compile Include="LProcess\LPatterns\AMemoryPatternType.cs" />
+    <Compile Include="LProcess\LPatterns\APatternScanner.cs" />
+    <Compile Include="LProcess\LPatterns\APatternScannerAlgorithm.cs" />
+    <Compile Include="LProcess\LPatterns\APatternScanResult.cs" />
+    <Compile Include="LProcess\LPatterns\IAMemoryPattern.cs" />
+    <Compile Include="LProcess\LPatterns\IAPatternScanner.cs" />
+    <Compile Include="LProcess\LThreads\AFrozenThread.cs" />
+    <Compile Include="LProcess\LThreads\ARemoteThread.cs" />
+    <Compile Include="LProcess\LThreads\AThreadFactory.cs" />
+    <Compile Include="LProcess\LThreads\IAFrozenThread.cs" />
+    <Compile Include="LProcess\LThreads\IARemoteThread.cs" />
+    <Compile Include="LProcess\LThreads\IAThreadFactory.cs" />
+    <Compile Include="LProcess\LWindows\AHookEventArgs.cs" />
+    <Compile Include="LProcess\LWindows\AMessage.cs" />
+    <Compile Include="LProcess\LWindows\ARemoteWindow.cs" />
+    <Compile Include="LProcess\LWindows\AWindowFactory.cs" />
+    <Compile Include="LProcess\LWindows\AWndProcEventArgs.cs" />
+    <Compile Include="LProcess\LWindows\AWndProcHook.cs" />
+    <Compile Include="LProcess\LWindows\IAWindow.cs" />
+    <Compile Include="LProcess\LWindows\IAWindowFactory.cs" />
+    <Compile Include="LProcess\LWindows\LKeyboard\AKeyboardHook.cs" />
+    <Compile Include="LProcess\LWindows\LKeyboard\AKeyboardHookEventArgs.cs" />
+    <Compile Include="LProcess\LWindows\LKeyboard\AMessageKeyboard.cs" />
+    <Compile Include="LProcess\LWindows\LKeyboard\IAKeyboard.cs" />
+    <Compile Include="LProcess\LWindows\LMouse\AMouseHook.cs" />
+    <Compile Include="LProcess\LWindows\LMouse\AMouseHookEventArgs.cs" />
+    <Compile Include="LProcess\LWindows\LMouse\ASendInputMouse.cs" />
+    <Compile Include="LProcess\LWindows\LMouse\IAMouse.cs" />
+    <Compile Include="LProcess\Utilities\ABoyerMooreHorspool.cs" />
+    <Compile Include="LProcess\Utilities\AHandleManipulator.cs" />
+    <Compile Include="LProcess\Utilities\AMemoryHelper.cs" />
+    <Compile Include="LProcess\Utilities\AModuleHelper.cs" />
+    <Compile Include="LProcess\Utilities\ANaive.cs" />
+    <Compile Include="LProcess\Utilities\AProcessHelper.cs" />
+    <Compile Include="LProcess\Utilities\ARandomizer.cs" />
+    <Compile Include="LProcess\Utilities\ASingleton.cs" />
+    <Compile Include="LProcess\Utilities\AThreadHelper.cs" />
+    <Compile Include="LProcess\Utilities\AWindowHelper.cs" />
     <Compile Include="LString\ARefString.cs" />
     <Compile Include="LSymbolHandler\ASymbol.cs" />
-    <Compile Include="LSymbolHandler\AProcess.cs" />
     <Compile Include="LSymbolHandler\ASymbolHandler.cs" />
     <Compile Include="LSymbolHandler\AUserDefinedSymbol.cs" />
     <Compile Include="LUtils\AArrayUtils.cs" />
@@ -103,6 +201,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="LUtils\AStringUtils.cs" />
+    <Compile Include="UTokenSp.cs" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

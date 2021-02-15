@@ -1,10 +1,14 @@
 ﻿using System;
 using Sputnik.LUtils;
-using SputnikAsm.LAssembler;
 using SputnikAsm.LAutoAssembler;
 using SputnikAsm.LAutoAssembler.LCollections;
 using SputnikAsm.LCollections;
-using SputnikAsm.LSymbolHandler;
+using SputnikAsm.LProcess;
+using SputnikAsm.LProcess.LAssembly;
+using SputnikAsm.LProcess.LAssembly.LAssemblers;
+using SputnikAsm.LProcess.LMemory;
+using SputnikAsm.LUtils;
+using SputnikWin.LFeatures.LWindows;
 
 namespace SputnikAsm
 {
@@ -12,31 +16,11 @@ namespace SputnikAsm
     {
         static void Main(string[] args)
         {
-            //var v2 = new AVex2Byte();
-            //var v3 = new AVex3Byte();
-            //
-            //Console.WriteLine(v2.ToUInt64());
-            //
-            //v2.L = 1;
-            //v2.Pp = 1;
-            //v2.Vvvv = 11;
-            //
-            //Console.WriteLine(v2.ToUInt64());
-            //Console.WriteLine(UBinaryUtils.Expand(UBitConverter.PackSingle("K", v2.ToUInt64())));
-            //
-            //Console.WriteLine(v2.L);
-            //Console.WriteLine(v2.Pp);
-            //Console.WriteLine(v2.Vvvv);
-            //
-            //Console.ReadKey();
-            //Environment.Exit(1);
-
-
-            var pacWin = new AProcess("pacwin.exe");
-            var a = new AAssembler();
-            var b = new AByteArray();
-            a.SymHandler.Process = pacWin;
-
+            UTokenSp.Activate();
+            //var a = new AAssembler();
+            //var b = new AByteArray();
+            var m = new AProcessSharp(System.Diagnostics.Process.GetProcessesByName("pacwin")[0], AMemoryType.Remote);
+            //a.SymHandler.Process = m;
             //var result = a.Assemble("mov eax, [edx+esi+66]", 0x400300, b); // E9 FB 01 00 00
             //Console.WriteLine("Result: " + result);
             //Console.WriteLine("Bytes:");
@@ -45,52 +29,54 @@ namespace SputnikAsm
             //Console.ReadKey();
             //Environment.Exit(1);
 
+            var aa = new AAutoAssembler();
+            aa.Assembler.SymHandler.Process = m;
+            var tokens = new AStringArray();
+            aa.Assembler.Tokenize("mov eax, dword ptr[400500]", tokens);
             var cc = @"
             [ENABLE]
-registersymbol(meeko)
 alloc(dog, $1000)
-label(noerror)
-label(cat)
 400300:
 mov eax, dword ptr[400500]
 mov eax, edx
-cat:
-mov eax,[ecx+10]
-jmp short noerror
-xor eax,eax
-noerror:
 jmp dog
-jmp cat
-meeko:
-    db 00 00 00 00
 
-{$try}
 dog:
 mov eax, edx
 jmp 400300
-{$except}
-mov edx, edi
 
 [DISABLE]
+dealloc(dog)
             ".Trim();
-            var aa = new AAutoAssembler(a);
             var code = new ARefStringArray();
             code.Assign(UStringUtils.GetLines(cc).ToArray());
             aa.RemoveComments(code);
-
-            var scr = new ARefStringArray();
+            var scr = new AScriptBytesArray();
             var info = new ADisableInfo();
-            var ret = aa.AutoAssemble(pacWin, code, false, true, false, false, info, false, scr);
+            var ret = aa.AutoAssemble(m, code, false, true, false, false, info, false, scr);
             Console.WriteLine("Result: " + ret);
-            aa.AutoAssemble(pacWin, code, false, true, false, false, info, true, scr);
+            aa.AutoAssemble(m, code, false, true, false, false, info, true, scr);
             foreach (var o in scr.Raw)
-                Console.WriteLine("Line: " + o.Value);
-            Console.WriteLine("meeko Loc: " + a.SymHandler.GetUserDefinedSymbolByName("meeko").ToUInt64().ToString("X"));
+                Console.WriteLine("Line: " + o.Type + " " + o.Address.ToUInt64().ToString("X") + " " + AStringUtils.BinToHexStr(o.Bytes.Raw));
 
-            // Console.WriteLine(proc.ReadMem((IntPtr)0x411C88, ReadType.Int32));
-            // proc.Poke(scr.ToString());
+            var f = new AAssemblyFactory(m, new ASharpAsm());
+            f.Inject(
+                new[]
+                {
+                    "mov, eax 7",
+                    "push 0",
+                    "add esp, 4",
+                    "retn"
+                },
+                (IntPtr)0x400310);
+            
+            var reta = f.Execute<int>((IntPtr)0x400310);
+            Console.WriteLine("Return: " + reta);
+
 
             Console.ReadKey();
+            //aa.AutoAssemble(m, code, false, false, false, false, info, false, scr);
+            Environment.Exit(1);
         }
     }
 }

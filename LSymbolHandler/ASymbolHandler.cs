@@ -1,24 +1,26 @@
 ﻿using System;
 using Sputnik.LUtils;
-using SputnikAsm.LAssembler;
 using SputnikAsm.LCollections;
+using SputnikAsm.LExtensions;
 using SputnikAsm.LGenerics;
+using SputnikAsm.LProcess;
+using SputnikAsm.LProcess.LNative.LTypes;
+using SputnikAsm.LProcess.Utilities;
 using SputnikAsm.LUtils;
-using SputnikWin.LExtra.LMemorySharp.Native;
-using SputnikWin.LFileSystem;
 
 namespace SputnikAsm.LSymbolHandler
 {
     public class ASymbolHandler
     {
         #region Variables
-        public AProcess Process = new AProcess();
+        public AProcessSharp Process;
         public AArrayManager<ASymbol> SymbolList;
         public AArrayManager<AUserDefinedSymbol> UserDefinedSymbols;
         #endregion
         #region Constructor
         public ASymbolHandler()
         {
+            Process = null;
             SymbolList = new AArrayManager<ASymbol>();
             UserDefinedSymbols = new AArrayManager<AUserDefinedSymbol>();
         }
@@ -203,7 +205,7 @@ namespace SputnikAsm.LSymbolHandler
                     if (j <= 0)
                         continue; // hexadecimal value 
                     //not a hexadecimal value
-                    var mi = Process.GetModule(tokens[i]);
+                    var mi = Process.ModuleFactory.FetchModule(tokens[i]);
                     if (mi != null)
                     {
                         tokens[i] = AStringUtils.IntToHex((UIntPtr)mi.BaseAddress.ToInt64(), 8);
@@ -404,7 +406,7 @@ namespace SputnikAsm.LSymbolHandler
             var realAddress2 = baseAddress;
             for (var i = 0; i < offsets.Length; i++)
             {
-                var realAddress = (UIntPtr)Process.ReadMem((IntPtr)realAddress2.ToUInt64(), ReadType.UIntPtr);
+                var realAddress = Process.Memory.Read<UIntPtr>(realAddress2.ToIntPtr());
                 if (realAddress != UIntPtr.Zero)
                     realAddress2 = realAddress + offsets[i];
                 else
@@ -431,7 +433,7 @@ namespace SputnikAsm.LSymbolHandler
             UserDefinedSymbols.Last.AddressString = addressString;
             UserDefinedSymbols.Last.Name = name;
             UserDefinedSymbols.Last.AllocSize = 0;
-            UserDefinedSymbols.Last.ProcessId = IntPtr.Zero;
+            UserDefinedSymbols.Last.ProcessId = 0;
         }
         #endregion
         #region DeleteUserDefinedSymbol
@@ -442,10 +444,10 @@ namespace SputnikAsm.LSymbolHandler
             {
                 if (!UserDefinedSymbols[i].IsMatch(name))
                     continue;
-                if ((UserDefinedSymbols[i].AllocSize > 0) && (UserDefinedSymbols[i].ProcessId == Process.GetId()))
+                if ((UserDefinedSymbols[i].AllocSize > 0) && (UserDefinedSymbols[i].ProcessId == Process.Native.Id))
                 {
                     if (UserDefinedSymbols[i].Address != UIntPtr.Zero)
-                        Process.Free((IntPtr)UserDefinedSymbols[i].Address.ToUInt64());
+                        AMemoryHelper.Free(Process.Handle, UserDefinedSymbols[i].Address.ToIntPtr());
                 }
                 //now move up all the others and decrease the list
                 for (var j = i; j < k && j + 1 < k; j++)
@@ -492,30 +494,30 @@ namespace SputnikAsm.LSymbolHandler
             {
                 if (!UserDefinedSymbols[i].IsMatch(name))
                     continue; //it exists, check first
-                if (UserDefinedSymbols[i].AllocSize > 0 && UserDefinedSymbols[i].ProcessId == Process.GetId())
+                if (UserDefinedSymbols[i].AllocSize > 0 && UserDefinedSymbols[i].ProcessId == Process.Native.Id)
                 {
                     if (size != UserDefinedSymbols[i].AllocSize)
                         throw new Exception(UStringUtils.Sprintf(PREV_DEC, UserDefinedSymbols[i].Name, UserDefinedSymbols[i].AllocSize, size));
                 }
-                if (UserDefinedSymbols[i].ProcessId != Process.GetId())
+                if (UserDefinedSymbols[i].ProcessId != Process.Native.Id)
                 {
-                    p = (UIntPtr)Process.Alloc((int)size, MemoryProtectionFlags.ExecuteReadWrite, MemoryAllocationFlags.Commit).ToInt64();
+                    p = AMemoryHelper.Allocate(Process.Handle, (int)size).ToUIntPtr();
                     if (p == UIntPtr.Zero)
                         throw new Exception("Error allocating memory");
                     UserDefinedSymbols[i].Address = p;
                     UserDefinedSymbols[i].AddressString = AStringUtils.IntToHex(p, 8);
                     UserDefinedSymbols[i].AllocSize = size;
-                    UserDefinedSymbols[i].ProcessId = Process.GetId();
+                    UserDefinedSymbols[i].ProcessId = Process.Native.Id;
                 }
                 return; // Redefined the symbol and exit;
             }
             //Still here, symbol Not exists, let's define a new one.
-            p = (UIntPtr)Process.Alloc((int)size, MemoryProtectionFlags.ExecuteReadWrite, MemoryAllocationFlags.Commit).ToInt64();
+            p = AMemoryHelper.Allocate(Process.Handle, (int)size).ToUIntPtr();
             if (p == UIntPtr.Zero)
                 throw new Exception("Error allocating memory");
             AddUserDefinedSymbol(AStringUtils.IntToHex(p, 8), name);
             UserDefinedSymbols[i].AllocSize = size;
-            UserDefinedSymbols[i].ProcessId = Process.GetId();
+            UserDefinedSymbols[i].ProcessId = Process.Native.Id;
         }
         #endregion
     }

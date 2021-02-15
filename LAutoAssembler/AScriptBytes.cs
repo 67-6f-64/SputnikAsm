@@ -1,4 +1,5 @@
 ﻿using System;
+using SputnikAsm.LAutoAssembler.LEnums;
 using SputnikAsm.LCollections;
 
 namespace SputnikAsm.LAutoAssembler
@@ -6,18 +7,18 @@ namespace SputnikAsm.LAutoAssembler
     public class AScriptBytes
     {
         #region Variables
-        public String Type;
+        public AScriptObjectType Type;
         public UIntPtr Address;
         public AByteArray Bytes;
         #endregion
         #region Constructor
         public AScriptBytes()
         {
-            Type = "";
+            Type = AScriptObjectType.None;
             Address = UIntPtr.Zero;
             Bytes = new AByteArray();
         }
-        public AScriptBytes(String type, UIntPtr address, AByteArray bytes)
+        public AScriptBytes(AScriptObjectType type, UIntPtr address, AByteArray bytes)
         {
             Type = type;
             Address = address;

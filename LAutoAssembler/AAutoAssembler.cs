@@ -1,20 +1,22 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Windows.Forms;
-using Sputnik.LBinary;
 using Sputnik.LFileSystem;
 using Sputnik.LString;
 using Sputnik.LUtils;
 using SputnikAsm.LAssembler;
 using SputnikAsm.LAssembler.LEnums;
 using SputnikAsm.LAutoAssembler.LCollections;
+using SputnikAsm.LAutoAssembler.LEnums;
 using SputnikAsm.LCollections;
 using SputnikAsm.LExtensions;
 using SputnikAsm.LGenerics;
+using SputnikAsm.LProcess;
+using SputnikAsm.LProcess.LMemory;
+using SputnikAsm.LProcess.LNative.LTypes;
+using SputnikAsm.LProcess.Utilities;
 using SputnikAsm.LString;
 using SputnikAsm.LSymbolHandler;
 using SputnikAsm.LUtils;
-using SputnikWin.LExtra.LMemorySharp.Native;
 
 namespace SputnikAsm.LAutoAssembler
 {
@@ -287,11 +289,11 @@ namespace SputnikAsm.LAutoAssembler
         public ASymbolHandler SelfSymbolHandler;
         #endregion
         #region Constructor
-        public AAutoAssembler(AAssembler assembler)
+        public AAutoAssembler()
         {
-            Assembler = assembler;
+            Assembler = new AAssembler();
             SelfSymbolHandler = new ASymbolHandler();
-            SelfSymbolHandler.Process = new AProcess((IntPtr)Process.GetCurrentProcess().Id);
+            SelfSymbolHandler.Process = new AProcessSharp(System.Diagnostics.Process.GetCurrentProcess().Id, AMemoryType.Remote);
         }
         #endregion
         #region RemoveComments
@@ -827,7 +829,7 @@ namespace SputnikAsm.LAutoAssembler
         }
         #endregion
         #region AobScans -- todo make this work!!!
-        public Boolean AobScans(AProcess process, ARefStringArray code, Boolean syntaxCheckOnly)
+        public Boolean AobScans(AProcessSharp process, ARefStringArray code, Boolean syntaxCheckOnly)
         {
             return false;
         }
@@ -874,7 +876,7 @@ namespace SputnikAsm.LAutoAssembler
         }
         #endregion
         #region AutoAssemble
-        public Boolean AutoAssemble(AProcess process, ARefStringArray code, Boolean popUpMessages, Boolean enable, Boolean syntaxCheckOnly, Boolean targetSelf, ADisableInfo disableInfo, Boolean createScript, AScriptBytesArray scriptBytes)
+        public Boolean AutoAssemble(AProcessSharp process, ARefStringArray code, Boolean popUpMessages, Boolean enable, Boolean syntaxCheckOnly, Boolean targetSelf, ADisableInfo disableInfo, Boolean createScript, AScriptBytesArray scriptBytes)
         {
             //add line numbers to the code
             for (var i = 0; i < code.Length; i++)
@@ -929,7 +931,7 @@ namespace SputnikAsm.LAutoAssembler
         }
         #endregion
         #region AutoAssemble2
-        public Boolean AutoAssemble2(AProcess process, ARefStringArray code, Boolean popUpMessages, Boolean syntaxCheckOnly, Boolean targetSelf, ADisableInfo disableInfo, Boolean createScript, AScriptBytesArray scriptBytes)
+        public Boolean AutoAssemble2(AProcessSharp process, ARefStringArray code, Boolean popUpMessages, Boolean syntaxCheckOnly, Boolean targetSelf, ADisableInfo disableInfo, Boolean createScript, AScriptBytesArray scriptBytes)
         {
             var i = 0;
             var j = 0;
@@ -1190,7 +1192,7 @@ namespace SputnikAsm.LAutoAssembler
                                         }
                                         if (bytes.Length > 0)
                                         {
-                                            var byteBuf = (Byte[])process.ReadMem((IntPtr)testPtr.ToUInt64(), ReadType.Binary, bytes.Length);
+                                            var byteBuf = process.Memory.Read(testPtr.ToIntPtr(), bytes.Length);
                                             if (byteBuf.Length == bytes.Length)
                                             {
                                                 for (j = 0; j < bytes.Length; j++)
@@ -1408,7 +1410,7 @@ namespace SputnikAsm.LAutoAssembler
                                     Byte[] byteBuf;
                                     if (!syntaxCheckOnly)
                                     {
-                                        byteBuf = (Byte[])process.ReadMem((IntPtr)testPtr.ToUInt64(), ReadType.Binary, a);
+                                        byteBuf = process.Memory.Read(testPtr.ToIntPtr(), a);
                                         if (byteBuf.Length <= 0 | (byteBuf.Length < a))
                                             throw new Exception(UStringUtils.Sprintf(rsTheMemoryAtCouldNotBeFullyRead, s1));
                                     }
@@ -1902,9 +1904,10 @@ namespace SputnikAsm.LAutoAssembler
                                 {
                                     ok1 = Assembler.Assemble(currentline, currentaddress.ToUInt64(), assembled[0].Bytes, AAssemblerPreference.apnone, true);
                                 }
-                                catch
+                                catch (Exception ee)
                                 {
                                     // ignored
+                                    Console.WriteLine(ee.Message);
                                 }
                                 if (!ok1)  //the instruction could not be assembled as it is right now
                                 {
@@ -2281,11 +2284,11 @@ namespace SputnikAsm.LAutoAssembler
                                         if (prefered == UIntPtr.Zero && j > 0)  //if not a preferred address but there is a previous alloc, allocate near there
                                             prefered = allocs[j - 1].Address;
                                         oldprefered = prefered;
-                                        prefered = process.FindFreeBlockForRegion(prefered, (UInt32)x);
+                                        prefered = AMemoryHelper.FindFreeBlockForRegion(process.Handle, prefered.ToIntPtr(), (int)x).ToUIntPtr();
                                         if (prefered == UIntPtr.Zero && oldprefered != UIntPtr.Zero)
                                             prefered = oldprefered;
                                         // todo save old protection!
-                                        allocs[j].Address = process.AllocNear(prefered.ToIntPtr(), (int)allocSz, MemoryProtectionFlags.ExecuteReadWrite, MemoryAllocationFlags.Reserve | MemoryAllocationFlags.Commit).ToUIntPtr();
+                                        allocs[j].Address = AMemoryHelper.Allocate(process.Handle, prefered.ToIntPtr(), (int)allocSz, MemoryProtectionFlags.ExecuteReadWrite, MemoryAllocationFlags.Reserve | MemoryAllocationFlags.Commit).ToUIntPtr();
                                         if (allocs[j].Address == UIntPtr.Zero)
                                         {
                                             OutputDebugString(rsFailureToAllocateMemory + " 1");
@@ -2294,7 +2297,7 @@ namespace SputnikAsm.LAutoAssembler
                                         k -= 1;
                                     }
                                     if (allocs[j].Address == UIntPtr.Zero)
-                                        allocs[j].Address = process.LastChanceAllocPreferred(prefered.ToIntPtr(), (int)x, protection).ToUIntPtr();
+                                        allocs[j].Address = AMemoryHelper.LastChanceAllocPreferred(process.Handle, prefered.ToIntPtr(), (int)x, protection).ToUIntPtr();
                                     if (allocs[j].Address == UIntPtr.Zero)
                                         throw new Exception(UStringUtils.Sprintf(rsFailureAlloc, prefered));
                                     if (allocs[j].Address == UIntPtr.Zero)
@@ -2321,14 +2324,14 @@ namespace SputnikAsm.LAutoAssembler
                         while (k > 0 && allocs[j].Address == UIntPtr.Zero)
                         {
                             i = 0;
-                            prefered = process.FindFreeBlockForRegion(prefered, allocSz);
-                            allocs[j].Address = process.Alloc(prefered.ToIntPtr(), (int)allocSz, MemoryProtectionFlags.ExecuteReadWrite, MemoryAllocationFlags.Reserve | MemoryAllocationFlags.Commit).ToUIntPtr();
+                            prefered = AMemoryHelper.FindFreeBlockForRegion(process.Handle, prefered.ToIntPtr(), (int)allocSz).ToUIntPtr();
+                            allocs[j].Address = AMemoryHelper.Allocate(process.Handle, prefered.ToIntPtr(), (int)allocSz, MemoryProtectionFlags.ExecuteReadWrite, MemoryAllocationFlags.Reserve | MemoryAllocationFlags.Commit).ToUIntPtr();
                             if (allocs[j].Address == UIntPtr.Zero)
                                 OutputDebugString(rsFailureToAllocateMemory + " 3");
                             k -= 1;
                         }
                         if (allocs[j].Address == UIntPtr.Zero)
-                            allocs[j].Address = process.Alloc((int)allocSz, MemoryProtectionFlags.ExecuteReadWrite, MemoryAllocationFlags.Reserve | MemoryAllocationFlags.Commit).ToUIntPtr();
+                            allocs[j].Address = AMemoryHelper.Allocate(process.Handle, (int)allocSz, MemoryProtectionFlags.ExecuteReadWrite, MemoryAllocationFlags.Reserve | MemoryAllocationFlags.Commit).ToUIntPtr();
                         if (allocs[j].Address == UIntPtr.Zero)
                             throw new Exception(rsFailureToAllocateMemory + " 4");
                         for (i = j + 1; i < allocs.Length; i++)
@@ -2591,10 +2594,12 @@ namespace SputnikAsm.LAutoAssembler
                 ok2 = true;
                 //unprotectmemory
                 for (i = 0; i < fullaccess.Length; i++)
+                {
                     if (createScript)
-                        scriptBytes.Add("FullAccess", fullaccess[i].Address, new AByteArray());
+                        scriptBytes.Add(AScriptObjectType.FullAccess, fullaccess[i].Address, new AByteArray());
                     else
-                        process.FullAccess((IntPtr)fullaccess[i].Address.ToUInt64(), (int)fullaccess[i].Size);
+                        AMemoryHelper.FullAccess(process.Handle, fullaccess[i].Address.ToIntPtr(), (int)fullaccess[i].Size);
+                }
                 #region Load Binaries -- todo
                 //load binaries
                 //if (length(loadbinary) > 0)
@@ -2740,15 +2745,14 @@ namespace SputnikAsm.LAutoAssembler
                     testPtr = assembled[i].Address;
                     if (createScript)
                     {
-                        scriptBytes.Add("Poke", testPtr, new AByteArray(UBinaryUtils.Copy(assembled[i].Bytes.Raw)));
+                        scriptBytes.Add(AScriptObjectType.Poke, testPtr, new AByteArray(UBinaryUtils.Copy(assembled[i].Bytes.Raw)));
                         ok1 = true;
                         ok2 = true;
                     }
                     else
                     {
-                        Console.WriteLine("ALine: Poke " + testPtr.ToUInt64().ToString("X") + " " + AStringUtils.BinToHexStr(assembled[i].Bytes.Raw));
-                        ok1 = process.FullAccess((IntPtr)testPtr.ToUInt64(), assembled[i].Bytes.Length);
-                        ok2 = process.WriteMem((IntPtr)testPtr.ToUInt64(), assembled[i].Bytes.Raw) == assembled[i].Bytes.Length;
+                        ok1 = AMemoryHelper.FullAccess(process.Handle, testPtr.ToIntPtr(), assembled[i].Bytes.Length);
+                        ok2 = process.Memory.Write((IntPtr)testPtr.ToUInt64(), assembled[i].Bytes.Raw) == assembled[i].Bytes.Length;
                     }
                     if (!ok1)
                         ok2 = false;
@@ -2827,7 +2831,7 @@ namespace SputnikAsm.LAutoAssembler
                                 baseaddress = (UIntPtr)0xffffffff;
                             for (i = 0; i < disableInfo.Allocs.Length; i++)
                             {
-                                process.Free(dealloc[i].ToIntPtr());
+                                AMemoryHelper.Free(process.Handle, dealloc[i].ToIntPtr());
                                 // todo add back when exceptions added
                                 //if ((targetSelf == false) & AllocsAddToUnexpectedExceptionList)
                                 //    RemoveUnexpectedExceptionRegion(dealloc[i], 0);
@@ -3051,17 +3055,14 @@ namespace SputnikAsm.LAutoAssembler
         }
         #endregion
         #region Assemble
-        public AByteArray Assemble(AProcess process, String asm)
+        public AScriptBytesArray Assemble(AProcessSharp process, ARefStringArray code)
         {
-            var code = new ARefStringArray();
-            code.Assign(UStringUtils.GetLines(asm).ToArray());
-            RemoveComments(code);
             var scr = new AScriptBytesArray();
             var info = new ADisableInfo();
             var ret = AutoAssemble2(process, code, false, false, false, info, true, scr);
             if (!ret || scr.Length < 1)
-                return new AByteArray();
-            return scr[0].Bytes;
+                return new AScriptBytesArray();
+            return scr;
         }
         #endregion
         #region OutputDebugString

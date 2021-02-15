@@ -4,9 +4,9 @@ using Sputnik.LUtils;
 using Sputnik.UParser.LSpk;
 using SputnikAsm.LAssembler.LEnums;
 using SputnikAsm.LCollections;
+using SputnikAsm.LProcess.LNative;
 using SputnikAsm.LSymbolHandler;
 using SputnikAsm.LUtils;
-using SputnikWin;
 
 namespace SputnikAsm.LAssembler
 {
@@ -30,7 +30,7 @@ namespace SputnikAsm.LAssembler
         #region Constructor
         public AAssembler()
         {
-            Is64Bit = UNativeWin.IsProcessId64Bit((IntPtr)Process.GetCurrentProcess().Id) == 1;
+            Is64Bit = ANative.IsProcessId64Bit(System.Diagnostics.Process.GetCurrentProcess().Id) == 1;
             OpCodes = AOpCodes.GetOpCodes();
             Parameter1 = 0;
             Parameter2 = 0;

@@ -9,7 +9,7 @@ namespace SputnikAsm.LSymbolHandler
         public UIntPtr Address;
         public String AddressString;
         public UInt32 AllocSize; //if it is a global alloc, allocsize>0
-        public IntPtr ProcessId; //the processid this memory was allocated to (in case of processswitches)
+        public int ProcessId; //the processid this memory was allocated to (in case of processswitches)
         #endregion
         #region Constructor
         public AUserDefinedSymbol()
@@ -17,7 +17,7 @@ namespace SputnikAsm.LSymbolHandler
             Name = "";
             Address = UIntPtr.Zero;
             AllocSize = 0;
-            ProcessId = IntPtr.Zero;
+            ProcessId = 0;
         }
         #endregion
         #region IsMatch

@@ -1147,7 +1147,7 @@ namespace SputnikAsm.LAssembler
                                     {
                                         //wildcard
                                         v = 0;
-                                        b = (Byte)Assembler.SymHandler.Process.ReadMem((IntPtr)(address + (UInt64)i - 1), ReadType.Byte, 1);
+                                        b = (Byte)Assembler.SymHandler.Process.Memory.Read<Byte>(((IntPtr)(address + (UInt64)i - 1)));
                                         Assembler.Add(bytes, b);
                                     }
                                     else
@@ -1342,7 +1342,7 @@ namespace SputnikAsm.LAssembler
                     }
                     i *= AStringUtils.StrToInt(tokens[1]);
                     bytes.SetLength(i);
-                    var bt = (Byte[])Assembler.SymHandler.Process.ReadMem((IntPtr)address, ReadType.Binary, i);
+                    var bt = (Byte[])Assembler.SymHandler.Process.Memory.Read((IntPtr)address, i);
                     if (bt.Length == bytes.Length)
                     {
                         for (i = 0; i < bt.Length; i++)

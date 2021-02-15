@@ -1,5 +1,5 @@
 ﻿using System;
-using SputnikWin.LExtra.LMemorySharp.Native;
+using SputnikAsm.LProcess.LNative.LTypes;
 
 namespace SputnikAsm.LAutoAssembler
 {
