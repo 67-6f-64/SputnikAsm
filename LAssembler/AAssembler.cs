@@ -11,6 +11,9 @@ namespace SputnikAsm.LAssembler
 {
     public class AAssembler
     {
+        #region Constants
+        private const int LetterCount = 26;
+        #endregion
         #region Variables
         public AOpCode[] OpCodes;
         public int Parameter1, Parameter2, Parameter3;
@@ -32,7 +35,7 @@ namespace SputnikAsm.LAssembler
             Parameter2 = 0;
             Parameter3 = 0;
             OpCodeNr = 0;
-            AssemblerIndex = new AIndexArray(25);
+            AssemblerIndex = new AIndexArray(LetterCount);
             var lastEntry = 0;
             AIndex lastIndex = null;
             for (var i = 0; i < AssemblerIndex.Length; i++)
@@ -65,7 +68,7 @@ namespace SputnikAsm.LAssembler
                 if (AssemblerIndex[i].StartEntry == -1)
                     continue;
                 //initialize subindex
-                AssemblerIndex[i].SubIndex = new AIndexArray(25);
+                AssemblerIndex[i].SubIndex = new AIndexArray(LetterCount);
                 for (var j = 0; j < AssemblerIndex.Length; j++)
                 {
                     AssemblerIndex[i].SubIndex[j].StartEntry = -1;
@@ -79,7 +82,7 @@ namespace SputnikAsm.LAssembler
                 {
                     for (var k = AssemblerIndex[i].StartEntry; k < AssemblerIndex[i].NextEntry - 1; k++)
                     {
-                        if (OpCodes[k].Mnemonic[0] == 'A' + j)
+                        if (OpCodes[k].Mnemonic[1] == 'A' + j)
                         {
                             if (lastIndex != null)
                                 lastIndex.NextEntry = k;
@@ -105,15 +108,15 @@ namespace SputnikAsm.LAssembler
             if (opCode.Length <= 0)
                 return result;
             index1 = opCode[0] - 'A';
-            if ((index1 < 0) || (index1 >= 25))
+            if ((index1 < 0) || (index1 >= LetterCount))
                 return result; //not alphabetical
             bestindex = AssemblerIndex[index1];
             if (bestindex.StartEntry == -1)
                 return result;
             if ((AssemblerIndex[index1].SubIndex != null) && (opCode.Length > 1))
             {
-                index2 = opCode[0] - 'A';
-                if ((index2 < 0) || (index2 >= 25))
+                index2 = opCode[1] - 'A';
+                if ((index2 < 0) || (index2 >= LetterCount))
                     return result; //not alphabetical
                 bestindex = AssemblerIndex[index1].SubIndex[index2];
                 if (bestindex.StartEntry == -1)

@@ -992,7 +992,7 @@ namespace SputnikAsm.LAssembler
             Assembler.Tokenize(opCode, tokens);
             nroftokens = tokens.Length;
             if (nroftokens == 0)
-                return result;
+                return false;
             if (tokens[0] == "DB")
             {
                 for (i = 1; i <= nroftokens - 1; i++)
@@ -1416,8 +1416,8 @@ namespace SputnikAsm.LAssembler
                                     {
                                         var k = AStringUtils.Pos("[", parameter1);
                                         var l = AStringUtils.Pos("]", parameter1);
-                                        AStringUtils.Val("$" + AStringUtils.Copy(parameter1, k + 1, l - k - 1), out v, out k);
-                                        if (k == -1)
+                                        AStringUtils.Val("0x" + AStringUtils.Copy(parameter1, k + 1, l - k - 1), out v, out k);
+                                        if (k == 0)
                                         {
                                             //verified, it doesn't have a registerbase in it
                                             AddOpCode(bytes, j);
@@ -1438,8 +1438,8 @@ namespace SputnikAsm.LAssembler
                                     {
                                         var k = AStringUtils.Pos("[", parameter1);
                                         var l = AStringUtils.Pos("]", parameter1);
-                                        AStringUtils.Val("$" + AStringUtils.Copy(parameter1, k + 1, l - k - 1), out v, out k);
-                                        if (k == -1)
+                                        AStringUtils.Val("0x" + AStringUtils.Copy(parameter1, k + 1, l - k - 1), out v, out k);
+                                        if (k == 0)
                                         {
                                             //verified, it doesn't have a registerbase in it
                                             AddOpCode(bytes, j);
@@ -1460,8 +1460,8 @@ namespace SputnikAsm.LAssembler
                                     {
                                         var k = AStringUtils.Pos("[", parameter1);
                                         var l = AStringUtils.Pos("]", parameter1);
-                                        AStringUtils.Val("$" + AStringUtils.Copy(parameter1, k + l, l - k - 1), out v, out k);
-                                        if (k == -1)
+                                        AStringUtils.Val("0x" + AStringUtils.Copy(parameter1, k + l, l - k - 1), out v, out k);
+                                        if (k == 0)
                                         {
                                             //verified, it doesn't have a registerbase in it
                                             AddOpCode(bytes, j);
@@ -1514,8 +1514,8 @@ namespace SputnikAsm.LAssembler
                                     {
                                         var k = AStringUtils.Pos("[", parameter2);
                                         var l = AStringUtils.Pos("]", parameter2);
-                                        AStringUtils.Val("$" + AStringUtils.Copy(parameter2, k + l, l - k - 1), out v, out k);
-                                        if (k == -1)
+                                        AStringUtils.Val("0x" + AStringUtils.Copy(parameter2, k + l, l - k - 1), out v, out k);
+                                        if (k == 0)
                                         {
                                             //verified, it doesn't have a registerbase in it
                                             AddOpCode(bytes, j);
@@ -1585,8 +1585,8 @@ namespace SputnikAsm.LAssembler
                                     {
                                         var k = AStringUtils.Pos("[", parameter2);
                                         var l = AStringUtils.Pos("]", parameter2);
-                                        AStringUtils.Val("$" + AStringUtils.Copy(parameter2, k + l, l - k - 1), out v, out k);
-                                        if (k == -1)
+                                        AStringUtils.Val("0x" + AStringUtils.Copy(parameter2, k + l, l - k - 1), out v, out k);
+                                        if (k == 0)
                                         {
                                             //verified, it doesn't have a registerbase in it
                                             AddOpCode(bytes, j);
@@ -1682,8 +1682,8 @@ namespace SputnikAsm.LAssembler
                                     {
                                         var k = AStringUtils.Pos("[", parameter2);
                                         var l = AStringUtils.Pos("]", parameter2);
-                                        AStringUtils.Val("$" + AStringUtils.Copy(parameter2, k + 1, l - k - 1), out v, out k);
-                                        if (k == -1)
+                                        AStringUtils.Val("0x" + AStringUtils.Copy(parameter2, k + 1, l - k - 1), out v, out k);
+                                        if (k == 0)
                                         {
                                             //verified, it doesn't have a registerbase in it
                                             AddOpCode(bytes, j);
@@ -2099,14 +2099,14 @@ namespace SputnikAsm.LAssembler
                                         return result;
                                     }
                                 }
-                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_mm_m64) && (Assembler.IsRmm64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
+                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_mm_m64) && (Assembler.IsRmm64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[0] == '['))))
                                 {
                                     //r32,mm/m64
                                     AddOpCode(bytes, j);
                                     result = CreateModRm(bytes, GetReg(parameter1), parameter2);
                                     return result;
                                 }
-                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_xmm_m64) && (Assembler.IsXmm64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
+                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_xmm_m64) && (Assembler.IsXmm64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[0] == '['))))
                                 {
                                     if ((Assembler.OpCodes[j].ParamType3 == AParam.par_noparam) && (parameter3 == ""))
                                     {
@@ -2115,7 +2115,7 @@ namespace SputnikAsm.LAssembler
                                         return result;
                                     }
                                 }
-                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_xmm_m128) && (Assembler.IsXmm64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
+                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_xmm_m128) && (Assembler.IsXmm64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[0] == '['))))
                                 {
                                     if ((Assembler.OpCodes[j].ParamType3 == AParam.par_noparam) && (parameter3 == ""))
                                     {
@@ -2642,21 +2642,21 @@ namespace SputnikAsm.LAssembler
                                     result = CreateModRm(bytes, GetReg(parameter1), parameter2);
                                     return result;
                                 }
-                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_mm_m64) && (Assembler.IsRmm64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
+                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_mm_m64) && (Assembler.IsRmm64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[0] == '['))))
                                 {
                                     //mm,mm/m64
                                     AddOpCode(bytes, j);
                                     result = CreateModRm(bytes, GetReg(parameter1), parameter2);
                                     return result;
                                 }
-                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_xmm_m64) && (Assembler.IsXmm64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
+                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_xmm_m64) && (Assembler.IsXmm64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[0] == '['))))
                                 {
                                     //mm,xmm/m64
                                     AddOpCode(bytes, j);
                                     result = CreateModRm(bytes, GetReg(parameter1), parameter2);
                                     return result;
                                 }
-                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_xmm_m128) && (Assembler.IsXmm128(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
+                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_xmm_m128) && (Assembler.IsXmm128(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[0] == '['))))
                                 {
                                     //mm,xmm/m128
                                     AddOpCode(bytes, j);
@@ -2666,7 +2666,7 @@ namespace SputnikAsm.LAssembler
                             }
                             break;
                         case AParam.par_mm_m64:
-                            if (Assembler.IsRmm64(paramtype1) | ((paramtype1 == ATokenType.ttmemorylocation32) && (parameter1[1] == '[')))
+                            if (Assembler.IsRmm64(paramtype1) | ((paramtype1 == ATokenType.ttmemorylocation32) && (parameter1[0] == '[')))
                             {
                                 if ((Assembler.OpCodes[j].ParamType2 == AParam.par_mm) && (paramtype2 == ATokenType.ttregistermm))
                                 {
@@ -2678,7 +2678,7 @@ namespace SputnikAsm.LAssembler
                             }
                             break;
                         case AParam.par_xmm_m64:
-                            if (Assembler.IsXmm64(paramtype1) | ((paramtype1 == ATokenType.ttmemorylocation32) && (parameter1[1] == '[')))
+                            if (Assembler.IsXmm64(paramtype1) | ((paramtype1 == ATokenType.ttmemorylocation32) && (parameter1[0] == '[')))
                             {
                                 //xmm/m64,
                                 if ((Assembler.OpCodes[j].ParamType2 == AParam.par_xmm) && (paramtype2 == ATokenType.ttregisterxmm))
@@ -2691,7 +2691,7 @@ namespace SputnikAsm.LAssembler
                             }
                             break;
                         case AParam.par_xmm_m128:
-                            if (Assembler.IsXmm128(paramtype1) | ((paramtype1 == ATokenType.ttmemorylocation32) && (parameter1[1] == '[')))
+                            if (Assembler.IsXmm128(paramtype1) | ((paramtype1 == ATokenType.ttmemorylocation32) && (parameter1[0] == '[')))
                             {
                                 //xmm/m128,
                                 if ((Assembler.OpCodes[j].ParamType2 == AParam.par_xmm) && (paramtype2 == ATokenType.ttregisterxmm))
@@ -2747,7 +2747,7 @@ namespace SputnikAsm.LAssembler
                                         return result;
                                     }
                                 }
-                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_mm_m64) && (Assembler.IsRmm64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
+                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_mm_m64) && (Assembler.IsRmm64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[0] == '['))))
                                 {
                                     //xmm,mm/m64
                                     if ((Assembler.OpCodes[j].ParamType3 == AParam.par_noparam) && (parameter3 == ""))
@@ -2777,7 +2777,7 @@ namespace SputnikAsm.LAssembler
                                         return result;
                                     }
                                 }
-                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_xmm_m64) && (Assembler.IsXmm64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
+                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_xmm_m64) && (Assembler.IsXmm64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[0] == '['))))
                                 {
                                     //even if the user didn't intend for it to be xmm,m64 it will be, that'll teach the lazy user to forget opperand size
                                     if ((Assembler.OpCodes[j].ParamType3 == AParam.par_noparam) && (parameter3 == ""))
@@ -2796,7 +2796,7 @@ namespace SputnikAsm.LAssembler
                                         return result;
                                     }
                                 }
-                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_xmm_m128) && (Assembler.IsXmm128(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
+                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_xmm_m128) && (Assembler.IsXmm128(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[0] == '['))))
                                 {
                                     if ((Assembler.OpCodes[j].ParamType3 == AParam.par_noparam) && (parameter3 == ""))
                                     {
@@ -2906,7 +2906,7 @@ namespace SputnikAsm.LAssembler
                             }
                             break;
                         case AParam.par_m80:
-                            if ((paramtype1 == ATokenType.ttmemorylocation80) || ((paramtype1 == ATokenType.ttmemorylocation32) && (parameter1[1] == '[')))
+                            if ((paramtype1 == ATokenType.ttmemorylocation80) || ((paramtype1 == ATokenType.ttmemorylocation32) && (parameter1[0] == '[')))
                             {
                                 if ((Assembler.OpCodes[j].ParamType2 == AParam.par_noparam) && (parameter2 == ""))
                                 {
@@ -2936,7 +2936,7 @@ namespace SputnikAsm.LAssembler
                                 if ((Assembler.OpCodes[j].ParamType2 == AParam.par_noparam) && (parameter2 == ""))
                                 {
                                     //rel8
-                                    if (AArrayUtils.InArray(parameter1[1], '-', '+'))
+                                    if (AArrayUtils.InArray(parameter1[0], '-', '+'))
                                     {
                                         if (((!overrideshort) & (vtype > 8)) | (overridelong))
                                         {
@@ -2999,7 +2999,7 @@ namespace SputnikAsm.LAssembler
                             {
                                 if ((Assembler.OpCodes[j].ParamType2 == AParam.par_noparam) && (parameter2 == ""))
                                 {
-                                    if (AArrayUtils.InArray(parameter1[1], '-', '+'))
+                                    if (AArrayUtils.InArray(parameter1[0], '-', '+'))
                                     {
                                         //opcode rel32
                                         AddOpCode(bytes, j);
