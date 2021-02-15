@@ -506,8 +506,14 @@ namespace SputnikAsm.LAutoAssembler
         {
             tokens.Clear();
             var a = -1;
+            var inQuote = false;
+            var inQuote2 = false;
             for (var i = 0; i < input.Length; i++)
             {
+                if (inQuote & (input[i] != '\''))
+                    continue;
+                if (inQuote2 & (input[i] != '"'))
+                    continue;
                 if (ACharUtils.InRange(input[i], 'a', 'z') ||
                     ACharUtils.InRange(input[i], 'A', 'Z') ||
                     ACharUtils.InRange(input[i], '0', '9') ||
@@ -515,13 +521,45 @@ namespace SputnikAsm.LAutoAssembler
                     input[i] == '_' ||
                     input[i] == '#' ||
                     input[i] == '@'
-                    )
+                )
                 {
                     if (a == -1)
                         a = i;
                 }
                 else
                 {
+                    if (input[i] == '\'')
+                    {
+                        if (inQuote)
+                        {
+                            if (a != -1)
+                                tokens.Add(AStringUtils.Copy(input, a, i - a), a);
+                            a = -1;
+                            inQuote = false;
+                        }
+                        else
+                        {
+                            inQuote = true;
+                            a = i;
+                        }
+                        continue;
+                    }
+                    if (input[i] == '"')
+                    {
+                        if (inQuote2)
+                        {
+                            if (a != -1)
+                                tokens.Add(AStringUtils.Copy(input, a, i - a), a);
+                            a = -1;
+                            inQuote2 = false;
+                        }
+                        else
+                        {
+                            inQuote2 = true;
+                            a = i;
+                        }
+                        continue;
+                    }
                     if (a != -1)
                         tokens.Add(AStringUtils.Copy(input, a, i - a), a);
                     a = -1;
