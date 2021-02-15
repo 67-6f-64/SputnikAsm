@@ -9,6 +9,7 @@ using SputnikAsm.LAssembler.LEnums;
 using SputnikAsm.LAutoAssembler.LCollections;
 using SputnikAsm.LAutoAssembler.LEnums;
 using SputnikAsm.LCollections;
+using SputnikAsm.LDisassembler;
 using SputnikAsm.LExtensions;
 using SputnikAsm.LGenerics;
 using SputnikAsm.LProcess;
@@ -614,44 +615,34 @@ namespace SputnikAsm.LAutoAssembler
         }
         #endregion
         #region ReplaceStructWithDefines
-        public void ReplaceStructWithDefines(ARefStringArray code, int linenr)
+        public void ReplaceStructWithDefines(ARefStringArray code, int lineNr)
         {
-            int currentOffset;
-            string structname;
-            string elementname;
-            int i, j, k;
-            ARefStringArray tokens;
-            ARefStringArray elements;
-            int starttoken;
-            var bytesize = 0;
-            Boolean endfound;
-            int lastlinenr;
-            lastlinenr = linenr;
-            endfound = false;
-            structname = AStringUtils.Copy(code[linenr].Value, 7, code[linenr].Length).Trim();
-            currentOffset = 0;
-            tokens = new ARefStringArray();
-            elements = new ARefStringArray();
-            for (i = linenr + 1; i < code.Length; i++)
+            var lastLineNr = lineNr;
+            var endFound = false;
+            var structName = AStringUtils.Copy(code[lineNr].Value, 7, code[lineNr].Length).Trim();
+            var currentOffset = 0;
+            var tokens = new ARefStringArray();
+            var elements = new ARefStringArray();
+            for (var i = lineNr + 1; i < code.Length; i++)
             {
-                lastlinenr = i;
+                lastLineNr = i;
                 TokenizeStruct(code[i].Value, tokens);
-                j = 0;
+                var j = 0;
                 if (tokens.Length > 0 && !String.IsNullOrEmpty(tokens[0].Value))
                 {
                     //first check if it's a label definition
                     if (tokens[0].Value[tokens[0].Length - 1] == ':')
                     {
-                        elementname = AStringUtils.Copy(tokens[0].Value, 0, tokens[0].Length - 1);
-                        if (Assembler.GetOpCodesIndex(elementname) != -1)
-                            StructError(UStringUtils.Sprintf(rsAAIsAReservedWord, elementname), structname, lastlinenr + 1);
-                        elements.Add(elementname, currentOffset);
+                        var elementName = AStringUtils.Copy(tokens[0].Value, 0, tokens[0].Length - 1);
+                        if (Assembler.GetOpCodesIndex(elementName) != -1)
+                            StructError(UStringUtils.Sprintf(rsAAIsAReservedWord, elementName), structName, lastLineNr + 1);
+                        elements.Add(elementName, currentOffset);
                         j = 1;
                     }
                     //then check if it's the end of the struct
                     if (tokens[0].Value.ToUpper() == "ENDSTRUCT" || tokens[0].Value.ToUpper() == "ENDS")
                     {
-                        endfound = true;
+                        endFound = true;
                         break; //all done
                     }
                 }
@@ -666,32 +657,33 @@ namespace SputnikAsm.LAutoAssembler
                                 //could be res*
                                 if ((tokens[j].Length == 4) && (AStringUtils.Copy(tokens[j].Value, 0, 3) == "RES"))
                                 {
+                                    var byteSize = 0;
                                     switch (tokens[j].Value[3])
                                     {
                                         case 'B':
-                                            bytesize = 1;
+                                            byteSize = 1;
                                             break;
                                         case 'W':
-                                            bytesize = 2;
+                                            byteSize = 2;
                                             break;
                                         case 'D':
-                                            bytesize = 4;
+                                            byteSize = 4;
                                             break;
                                         case 'Q':
-                                            bytesize = 8;
+                                            byteSize = 8;
                                             break;
                                         default:
-                                            StructError(null, structname, lastlinenr + 1);
+                                            StructError(null, structName, lastLineNr + 1);
                                             break;
                                     }
                                     //now get the count
                                     j += 1;
                                     if (j >= tokens.Length)
-                                        StructError(null, structname, lastlinenr + 1);
-                                    currentOffset += bytesize * AStringUtils.StrToInt(tokens[j].Value);
+                                        StructError(null, structName, lastLineNr + 1);
+                                    currentOffset += byteSize * AStringUtils.StrToInt(tokens[j].Value);
                                 }
                                 else
-                                    StructError(null, structname, lastlinenr + 1);
+                                    StructError(null, structName, lastLineNr + 1);
                             }
                             break;
                         case 'D':
@@ -699,72 +691,72 @@ namespace SputnikAsm.LAutoAssembler
                                 //could be d* ?
                                 if (tokens[j].Length == 2)
                                 {
+                                    var byteSize = 0;
                                     switch (tokens[j].Value[1])
                                     {
                                         case 'B':
-                                            bytesize = 1;
+                                            byteSize = 1;
                                             break;
                                         case 'W':
-                                            bytesize = 2;
+                                            byteSize = 2;
                                             break;
                                         case 'D':
-                                            bytesize = 4;
+                                            byteSize = 4;
                                             break;
                                         case 'Q':
-                                            bytesize = 8;
+                                            byteSize = 8;
                                             break;
                                         default:
-                                            StructError(null, structname, lastlinenr + 1);
+                                            StructError(null, structName, lastLineNr + 1);
                                             break;
                                     }
                                     j += 1;
                                     if (j >= tokens.Length)
-                                        StructError(null, structname, lastlinenr + 1);
-                                    currentOffset += bytesize;
+                                        StructError(null, structName, lastLineNr + 1);
+                                    currentOffset += byteSize;
                                     //check if there are more ?'s after this (in case of dw ? ? ?)
                                     while (j < tokens.Length - 1)
                                     {
                                         if (tokens[j + 1].Value == "?")   //check from the spot in front
                                         {
-                                            currentOffset += bytesize;
+                                            currentOffset += byteSize;
                                             j += 1;
                                         }
                                         else
                                             break; //nope
                                     }
-
                                 }
                                 else
-                                    StructError(null, structname, lastlinenr + 1);
+                                    StructError(null, structName, lastLineNr + 1);
                             }
                             break;
                         default:
-                            //we already dealth with labels, so this is wrong
-                            StructError(UStringUtils.Sprintf(rsAANoIdeaWhatXis, tokens[j].Value), structname, lastlinenr + 1);
+                            //we already dealt with labels, so this is wrong
+                            StructError(UStringUtils.Sprintf(rsAANoIdeaWhatXis, tokens[j].Value), structName, lastLineNr + 1);
                             break;
                     }
                     j += 1; //next token
                 }
             }
-            if (endfound == false)
-                StructError(rsAANoEndFound, structname, lastlinenr + 1);
+            if (endFound == false)
+                StructError(rsAANoEndFound, structName, lastLineNr + 1);
             // the elements have been filled in, delete the structure (between linenr and lastlinenr)
             // and inject define(element,offset)
-            // and define(structname.element,offset)
-            for (i = lastlinenr; i >= linenr; i--)
+            // and define(structName.element,offset)
+            for (var i = lastLineNr; i >= lineNr; i--)
                 code.RemoveAt(i);
-            for (i = 0; i < elements.Length; i++)
+            for (var i = 0; i < elements.Length; i++)
             {
-                code.Insert(linenr, "define(" + elements[i].Value + ',' + AStringUtils.IntToHex(elements[i].Position, 1) + ')');
-                code.Insert(linenr, "define(" + structname + '.' + elements[i].Value + ',' + AStringUtils.IntToHex(elements[i].Position, 1) + ')');
+                code.Insert(lineNr, "define(" + elements[i].Value + ',' + AStringUtils.IntToHex(elements[i].Position, 1) + ')');
+                code.Insert(lineNr, "define(" + structName + '.' + elements[i].Value + ',' + AStringUtils.IntToHex(elements[i].Position, 1) + ')');
             }
-            code.Insert(linenr, "define(" + structname + "_size," + AStringUtils.IntToHex(currentOffset, 1) + ')');
+            code.Insert(lineNr, "define(" + structName + "_size," + AStringUtils.IntToHex(currentOffset, 1) + ')');
         }
         #endregion
         #region StructError
-        private void StructError(String reason, String structName, int lineNumber)
+        private void StructError(String reason, String structName, int lineNr)
         {
-            var error = UStringUtils.Sprintf(rsAAErrorInTheStructureDefinitionOf, structName, lineNumber);
+            var error = UStringUtils.Sprintf(rsAAErrorInTheStructureDefinitionOf, structName, lineNr);
             if (!String.IsNullOrEmpty(reason))
                 error = error + " :" + reason;
             else
@@ -975,7 +967,7 @@ namespace SputnikAsm.LAutoAssembler
             if (targetSelf)
                 strip32BitCode = Assembler.Is64Bit;
             if (strip32BitCode)
-                StripCpuSpecificCode(tempStrings, strip32BitCode);
+                StripCpuSpecificCode(tempStrings, true);
             var result = AutoAssemble2(process, tempStrings, popUpMessages, syntaxCheckOnly, targetSelf, disableInfo, createScript, scriptBytes);
             return result;
         }
@@ -1101,8 +1093,10 @@ namespace SputnikAsm.LAutoAssembler
                 //still here
                 //one more time getting rid of {$ASM} lines that have been added while they shouldn't be required
                 for (i = 0; i < code.Length; i++)
+                {
                     if (code[i].Value.Trim().ToUpper() == "{$ASM}")
                         code[i].Value = "";
+                }
                 strictmode = false;
                 for (i = 0; i < code.Length; i++)
                 {
@@ -1467,39 +1461,38 @@ namespace SputnikAsm.LAutoAssembler
                                 continue;
                             }
                             #endregion
-                            #region Command REASSEMBLE() -- todo
-                            /*
-                            if (uppercase(copy(currentline, 1, 11)) == "REASSEMBLE(")
+                            #region Command REASSEMBLE()
+                            if (AStringUtils.Copy(currentline, 0, 11).ToUpper() == "REASSEMBLE(")
                             {
-                                a = pos("(", currentline);
-                                b = pos(")", currentline);
+                                a = AStringUtils.Pos("(", currentline);
+                                b = AStringUtils.Pos(")", currentline);
 
-                                if ((a != -1) && (b != -1))
+                                if (a != -1 && b != -1)
                                 {
-                                    s1 = trim(copy(currentline, a + 1, b - a - 1));
-
-                                    //try
-                                    testptr = symhandler.getaddressfromname(s1);
-                                    //except
-                                    create(format(rsxcouldnotbefound, set::of(s1, eos)));
-                                    //end;
-
-                                    disassembler = tdisassembler.create;
-                                    disassembler.dataonly = true;
-                                    disassembler.disassemble(testptr, s1);
-
-                                    if (syntaxcheckonly) currentline = "nop";
-                                    else
-                                        currentline = disassembler.lastdisassembledata.prefix + ' ' + disassembler.lastdisassembledata.opcode + ' ' + disassembler.lastdisassembledata.parameters; ;
-
-                                    assemblerlines[length(assemblerlines) - 1].linenr = currentlinenr;
-                                    assemblerlines[length(assemblerlines) - 1].line = currentline;
-                                    disassembler.free;
+                                    s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
+                                    try
+                                    {
+                                        testPtr = Assembler.SymHandler.GetAddressFromName(s1);
+                                    }
+                                    catch
+                                    {
+                                        throw new Exception(UStringUtils.Sprintf(rsXCouldNotBeFound, s1));
+                                    }
+                                    using (var disassembler = new ADisassembler(Assembler.SymHandler))
+                                    {
+                                        disassembler.IsDataOnly = true;
+                                        disassembler.Disassemble(ref testPtr, ref s1);
+                                        if (syntaxCheckOnly)
+                                            currentline = "nop";
+                                        else
+                                            currentline = disassembler.LastDisassembleData.Prefix + ' ' + disassembler.LastDisassembleData.OpCode + ' ' + disassembler.LastDisassembleData.Parameters;
+                                        assemblerlines.Last.LineNr = currentlinenr;
+                                        assemblerlines.Last.Line = currentline;
+                                    }
                                 }
-                                else create(rswrongsyntaxreassemble);
-
+                                else
+                                    throw new Exception(rsWrongSyntaxReAssemble);
                             }
-                            */
                             #endregion
                             #region Command LOADBINARY() -- todo
                             /*
@@ -1940,7 +1933,7 @@ namespace SputnikAsm.LAutoAssembler
                                 ok1 = false;
                                 try
                                 {
-                                    ok1 = Assembler.Assemble(currentline, currentaddress.ToUInt64(), assembled[0].Bytes, AAssemblerPreference.apnone, true);
+                                    ok1 = Assembler.Assemble(currentline, currentaddress.ToUInt64(), assembled[0].Bytes, AAssemblerPreference.None, true);
                                 }
                                 catch
                                 {
@@ -1958,7 +1951,7 @@ namespace SputnikAsm.LAutoAssembler
                                             currentline = ReplaceToken(currentline, potentiallabels[j], "00000000");
                                         try
                                         {
-                                            ok1 = Assembler.Assemble(currentline, currentaddress.ToUInt64(), assembled[0].Bytes, AAssemblerPreference.apnone, true);
+                                            ok1 = Assembler.Assemble(currentline, currentaddress.ToUInt64(), assembled[0].Bytes, AAssemblerPreference.None, true);
                                             if (ok1)
                                             {
                                                 //define this potential label as a full label
@@ -2538,9 +2531,9 @@ namespace SputnikAsm.LAutoAssembler
                                     assembled.Inc();
                                     assembled.Last.CreateThreadAndWait = createthreadandwaitid;
                                     assembled.Last.Address = currentaddress;
-                                    Assembler.Assemble(currentline, currentaddress.ToUInt64(), assembled.Last.Bytes, AAssemblerPreference.apnone, true);
+                                    Assembler.Assemble(currentline, currentaddress.ToUInt64(), assembled.Last.Bytes, AAssemblerPreference.None, true);
                                     a = assembled.Last.Bytes.Length;
-                                    Assembler.Assemble(s1, currentaddress.ToUInt64(), assembled.Last.Bytes, AAssemblerPreference.apnone, true);
+                                    Assembler.Assemble(s1, currentaddress.ToUInt64(), assembled.Last.Bytes, AAssemblerPreference.None, true);
                                     b = assembled.Last.Bytes.Length;
                                     if (a > b)  //pick the biggest one
                                         Assembler.Assemble(currentline, currentaddress.ToUInt64(), assembled.Last.Bytes);
@@ -2581,13 +2574,13 @@ namespace SputnikAsm.LAutoAssembler
                                     if (process.IsX64)
                                         Assembler.Assemble(s1, assembled[labels[j].References[k]].Address.ToUInt64(), assembled[labels[j].References[k]].Bytes);
                                     else
-                                        Assembler.Assemble(s1, assembled[labels[j].References[k]].Address.ToUInt64(), assembled[labels[j].References[k]].Bytes, AAssemblerPreference.apnone);
+                                        Assembler.Assemble(s1, assembled[labels[j].References[k]].Address.ToUInt64(), assembled[labels[j].References[k]].Bytes, AAssemblerPreference.None);
                                     b = assembled[labels[j].References[k]].Bytes.Length; //new size
                                     assembled[labels[j].References[k]].Bytes.SetLength(a); //original size (original size is always bigger or equal than newsize)
                                     if (b < a && a < 12)  //try to grow the instruction as some people cry about nops (unless it was a megajmp/call as those are less efficient)
                                     {
                                         //try a bigger one
-                                        Assembler.Assemble(s1, assembled[labels[j].References[k]].Address.ToUInt64(), nops, AAssemblerPreference.aplong);
+                                        Assembler.Assemble(s1, assembled[labels[j].References[k]].Address.ToUInt64(), nops, AAssemblerPreference.Long);
                                         if (nops.Length == a)  //found a match size
                                         {
                                             AArrayUtils.CopyMemory(assembled[labels[j].References[k]].Bytes, nops, a);

@@ -37,8 +37,9 @@ namespace SputnikAsm
             var a = new AAssembler();
             var b1 = new AByteArray();
             var m = new AProcessSharp(System.Diagnostics.Process.GetProcessesByName("pacwin")[0], AMemoryType.Remote);
-            var m2 = new AProcessSharp(System.Diagnostics.Process.GetCurrentProcess(), AMemoryType.Remote);
+            //var m2 = new AProcessSharp(System.Diagnostics.Process.GetCurrentProcess(), AMemoryType.Remote);
             a.SymHandler.Process = m;
+            var aa = new AAutoAssembler();
             //var result = a.Assemble("mov eax, [edx+esi+66]", 0x400300, b1); // E9 FB 01 00 00
             //var result = a.Assemble("mov rax,[1122334455778899]", 0x400300, b1); // E9 FB 01 00 00
             //Console.WriteLine("Result: " + result);
@@ -46,7 +47,7 @@ namespace SputnikAsm
             //Console.WriteLine(UBinaryUtils.Expand(b1.TakeAll()));
             //
             //
-            var d = new ADisassembler();
+            var d = new ADisassembler(a.SymHandler);
             //var sd = "";
             //using (var pt = new UBytePtr(b1.TakeAll()))
             //{
@@ -54,31 +55,30 @@ namespace SputnikAsm
             //    d.Disassemble(ref ptt, ref sd);
             //}
             //Console.WriteLine(d.LastDisassembleData.Prefix + ' ' + d.LastDisassembleData.OpCode + ' ' + d.LastDisassembleData.Parameters);
-            //
+            
             //Console.ReadKey();
             //Environment.Exit(1);
 
-            var aa = new AAutoAssembler();
-            aa.Assembler.SymHandler.Process = m;
-            var cd = @"
-400300:
-mov rax, [411c88]
-mov rax, dword ptr[11223344556677]
-            ".Trim();
-            var codex = new ARefStringArray();
-            codex.Assign(UStringUtils.GetLines(cd).ToArray());
-            aa.RemoveComments(codex);
-
-            var b = aa.Assemble(aa.SelfSymbolHandler.Process, codex);
+            // aa.Assembler.SymHandler.Process = m;
+            // var cd = @"
+            // 400300:
+            // mov rax, [411c88]
+            // mov rax, dword ptr[11223344556677]
+            // ".Trim();
+            // var codex = new ARefStringArray();
+            // codex.Assign(UStringUtils.GetLines(cd).ToArray());
+            // aa.RemoveComments(codex);
+            // 
+            // var b = aa.Assemble(aa.SelfSymbolHandler.Process, codex);
             d.IsDataOnly = false;
-            d.Is64Bit = true;
-            d.SymbolHandler.Process = m;
+            // d.Is64Bit = true;
+            // d.SymbolHandler.Process = m;
             var s1 = "";
-            var bytes = new UBytePtr(b[0].Bytes.TakeAll());
-            //var ptr = bytes.ToIntPtr().ToUIntPtr();
-
+            // var bytes = new UBytePtr(b[0].Bytes.TakeAll());
+            // //var ptr = bytes.ToIntPtr().ToUIntPtr();
+            // 
             var ptr = (UIntPtr)0x40230F;
-            var i = 30;
+            var i = 10;
             while (i-- > 0)
             {
                 try
@@ -92,8 +92,8 @@ mov rax, dword ptr[11223344556677]
                     break;
                 }
             }
-            //Console.ReadKey();
-            //Environment.Exit(1);
+            // Console.ReadKey();
+            // Environment.Exit(1);
 
 
 
@@ -103,6 +103,13 @@ mov rax, dword ptr[11223344556677]
 [ENABLE]
 400300:
 mov edx, dword ptr[411c88]
+reassemble(40230f);
+reassemble(pacwin.exe+2379);
+reassemble(pacwin.exe+237C);
+call messageboxa
+
+
+400314:
 [DISABLE]
             ".Trim();
            var code = new ARefStringArray();

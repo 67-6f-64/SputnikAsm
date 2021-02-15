@@ -1,23 +1,21 @@
 ﻿using System;
 using System.Windows.Forms;
-using Process.NET.Marshaling;
 using Sputnik.LBinary;
+using Sputnik.LInterfaces;
 using Sputnik.LString;
 using Sputnik.LUtils;
 using SputnikAsm.LBinary;
 using SputnikAsm.LDisassembler.LEnums;
 using SputnikAsm.LExtensions;
 using SputnikAsm.LProcess;
-using SputnikAsm.LProcess.LMemory;
 using SputnikAsm.LProcess.LNative;
-using SputnikAsm.LProcess.LNative.LTypes;
 using SputnikAsm.LProcess.Utilities;
 using SputnikAsm.LSymbolHandler;
 using SputnikAsm.LUtils;
 
 namespace SputnikAsm.LDisassembler
 {
-    public partial class ADisassembler
+    public partial class ADisassembler : IUDisposable
     {
         #region Constants
         const int BIT_REX_W = 8;
@@ -31,6 +29,7 @@ namespace SputnikAsm.LDisassembler
         public Boolean RexR => _opCodeFlags.R;
         public Boolean RexW => _opCodeFlags.W;
         public AProcessSharp Proc => SymbolHandler.Process;
+        public Boolean IsDisposed { get; set; }
         #endregion
         #region Variables
         private UBytePtr _memory;
@@ -61,10 +60,10 @@ namespace SputnikAsm.LDisassembler
         public Boolean SupportCloak;
         #endregion
         #region Constructor
-        public ADisassembler()
+        public ADisassembler(ASymbolHandler symbolHandler)
         {
-            SymbolHandler = new ASymbolHandler();
-            SymbolHandler.Process = new AProcessSharp(System.Diagnostics.Process.GetCurrentProcess().Id, AMemoryType.Remote);
+            IsDisposed = false;
+            SymbolHandler = symbolHandler;
             _rexPrefix = 0;
             _colorHex = "";
             _colorReg = "";
@@ -91,6 +90,14 @@ namespace SputnikAsm.LDisassembler
             MarkIpRelativeInstructions = false;
             SyntaxHighlighting = false;
             SupportCloak = false;
+        }
+        #endregion
+        #region Dispose
+        public void Dispose()
+        {
+            if (IsDisposed)
+                return;
+            IsDisposed = true;
         }
         #endregion
         #region RegNrToStr
@@ -1972,9 +1979,9 @@ namespace SputnikAsm.LDisassembler
         //    {
         //        ts = "";
         //        special = "";
-        //        if ((hasaddress(opcode, tempaddress, context)) | ((opcode.Length > 3) && (opcode[0] == 'l') && (opcode[1] == 'e') && (opcode[2] == 'a')))
+        //        if ((HasAddress(opcode, tempaddress, context)) | ((opcode.Length > 3) && (opcode[0] == 'l') && (opcode[1] == 'e') && (opcode[2] == 'a')))
         //        {
-        //            if (isaddress(tempaddress))
+        //            if (AMemoryHelper.IsAddress(SymbolHandler.Process.Handle, tempaddress))
         //            {
         //                try
         //                {
@@ -2000,7 +2007,7 @@ namespace SputnikAsm.LDisassembler
         //                    isjumper = true; //loop
         //                if ((opcode[1] == 'c') && (opcode[2] == 'a'))
         //                    isjumper = true; //call
-        //                valuetype = opcodetovaluetype(opcode);
+        //                valuetype = OpCodeToValueType(opcode);
         //                i = pos("[", disassembled);
         //                if (i > 0)
         //                {
@@ -2062,10 +2069,18 @@ namespace SputnikAsm.LDisassembler
         //                        variabletype = findtypeofdata(tempaddress, &tempbuf[0], 16);
         //                        switch (variabletype)
         //                        {
-        //                            case vtsingle: valuetype = 3; break;
-        //                            case vtdouble: valuetype = 4; break;
-        //                            case vtstring: valuetype = 5; break;
-        //                            case vtunicodestring: valuetype = 6; break;
+        //                            case vtsingle:
+        //                                valuetype = 3;
+        //                                break;
+        //                            case vtdouble:
+        //                                valuetype = 4;
+        //                                break;
+        //                            case vtstring:
+        //                                valuetype = 5;
+        //                                break;
+        //                            case vtunicodestring:
+        //                                valuetype = 6;
+        //                                break;
         //                        }
         //                    }
         //                }
@@ -2076,8 +2091,12 @@ namespace SputnikAsm.LDisassembler
         //                fvalue2 = 0;
         //                switch (valuetype)
         //                {
-        //                    case 0: if (readprocessmemory(processhandle, (pointer)(tempaddress), &value, 1, actualread)) ts = AStringUtils.IntToHex(value, 2); break;
-        //                    case 1: if (readprocessmemory(processhandle, (pointer)(tempaddress), &value, 2, actualread)) ts = AStringUtils.IntToHex(value, 4); break;
+        //                    case 0:
+        //                        if (readprocessmemory(processhandle, (pointer)(tempaddress), &value, 1, actualread)) ts = AStringUtils.IntToHex(value, 2);
+        //                        break;
+        //                    case 1:
+        //                        if (readprocessmemory(processhandle, (pointer)(tempaddress), &value, 2, actualread)) ts = AStringUtils.IntToHex(value, 4);
+        //                        break;
         //                    case 2:
         //                        if (readprocessmemory(processhandle, (pointer)(tempaddress), &value, 4, actualread))
         //                        {

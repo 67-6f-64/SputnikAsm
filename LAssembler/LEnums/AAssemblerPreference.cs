@@ -2,9 +2,9 @@
 {
     public enum AAssemblerPreference
     {
-        apnone,
-        apshort,
-        aplong,
-        apfar
+        None,
+        Short,
+        Long,
+        Far
     }
 }

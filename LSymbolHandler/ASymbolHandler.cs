@@ -753,7 +753,7 @@ namespace SputnikAsm.LSymbolHandler
         }
         #endregion
         #region GetNameFromAddress
-        public String GetNameFromAddress(UIntPtr value, Boolean showsymbols, Boolean showmodules, Boolean showsections, Object p, out Boolean found, int chars, Boolean v)
+        public String GetNameFromAddress(UIntPtr value, Boolean showSymbols, Boolean showModules, Boolean showSections, Object p, out Boolean found, int chars, Boolean v)
         {
             found = false;
             return "";

@@ -27,12 +27,12 @@ namespace SputnikAsm.LAssembler
         public AOpCode()
         {
             Mnemonic = "";
-            OpCode1 = AExtraOpCode.eo_none;
-            OpCode2 = AExtraOpCode.eo_none;
-            ParamType1 = AParam.par_noparam;
-            ParamType2 = AParam.par_noparam;
-            ParamType3 = AParam.par_noparam;
-            ParamType4 = AParam.par_noparam;
+            OpCode1 = AExtraOpCode.None;
+            OpCode2 = AExtraOpCode.None;
+            ParamType1 = AParam.None;
+            ParamType2 = AParam.None;
+            ParamType3 = AParam.None;
+            ParamType4 = AParam.None;
             Bytes = 0;
             Bt1 = 0;
             Bt2 = 0;
@@ -47,8 +47,8 @@ namespace SputnikAsm.LAssembler
             DefaultType = false;
             HasVex = false;
             VexL = 0x00;
-            VexOpCodeExtension = AVexOpCodeExtension.oe_none;
-            VexLeadingOpCode = AVexLeadingOpCode.lo_none;
+            VexOpCodeExtension = AVexOpCodeExtension.None;
+            VexLeadingOpCode = AVexLeadingOpCode.None;
             VexExtraParam = 0;
         }
     }

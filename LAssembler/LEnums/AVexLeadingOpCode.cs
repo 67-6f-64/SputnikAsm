@@ -2,9 +2,9 @@
 {
     public enum AVexLeadingOpCode
     {
-        lo_none = 0,
-        lo_0f = 1,
-        lo_0f_38 = 2,
-        lo_0f_3a = 3
+        None = 0,
+        N0F = 1,
+        N0F38 = 2,
+        N0F3A = 3
     }
 }

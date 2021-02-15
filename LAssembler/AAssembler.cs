@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using Sputnik.LUtils;
 using Sputnik.UParser.LSpk;
 using SputnikAsm.LAssembler.LEnums;
@@ -13,7 +12,7 @@ namespace SputnikAsm.LAssembler
     public class AAssembler
     {
         #region Constants
-        private const int LetterCount = 26;
+        private const int LETTER_COUNT = 26;
         #endregion
         #region Variables
         public AOpCode[] OpCodes;
@@ -36,7 +35,7 @@ namespace SputnikAsm.LAssembler
             Parameter2 = 0;
             Parameter3 = 0;
             OpCodeNr = 0;
-            AssemblerIndex = new AIndexArray(LetterCount);
+            AssemblerIndex = new AIndexArray(LETTER_COUNT);
             var lastEntry = 0;
             AIndex lastIndex = null;
             for (var i = 0; i < AssemblerIndex.Length; i++)
@@ -48,12 +47,12 @@ namespace SputnikAsm.LAssembler
                 {
                     if (OpCodes[j].Mnemonic[0] == 'A' + i)
                     {
-                        //found the first entry with this as first character
+                        // found the first entry with this as first character
                         if (lastIndex != null)
                             lastIndex.NextEntry = j;
                         lastIndex = AssemblerIndex[i];
                         AssemblerIndex[i].StartEntry = j;
-                        AssemblerIndex[i].SubIndex = null; //default initialization
+                        AssemblerIndex[i].SubIndex = null; // default initialization
                         lastEntry = j;
                         break;
                     }
@@ -63,13 +62,13 @@ namespace SputnikAsm.LAssembler
             }
             if (AssemblerIndex.Last.StartEntry != -1)
                 AssemblerIndex.Last.NextEntry = OpCodeCount;
-            //fill in the subindexes
+            // fill in the subIndexes
             for (var i = 0; i < AssemblerIndex.Length; i++)
             {
                 if (AssemblerIndex[i].StartEntry == -1)
                     continue;
-                //initialize subindex
-                AssemblerIndex[i].SubIndex = new AIndexArray(LetterCount);
+                // initialize subIndex
+                AssemblerIndex[i].SubIndex = new AIndexArray(LETTER_COUNT);
                 for (var j = 0; j < AssemblerIndex.Length; j++)
                 {
                     AssemblerIndex[i].SubIndex[j].StartEntry = -1;
@@ -77,7 +76,7 @@ namespace SputnikAsm.LAssembler
                     AssemblerIndex[i].SubIndex[j].SubIndex = null;
                 }
                 lastIndex = null;
-                if (AssemblerIndex[i].NextEntry == -1)  //last one in the list didn't get a assignment
+                if (AssemblerIndex[i].NextEntry == -1)  // last one in the list didn't get a assignment
                     AssemblerIndex[i].NextEntry = OpCodeCount + 1;
                 for (var j = 0; j < AssemblerIndex.Length; j++)
                 {
@@ -101,40 +100,37 @@ namespace SputnikAsm.LAssembler
         public int GetOpCodesIndex(String opCode)
         {
             int i;
-            int index1, index2;
-            AIndex bestindex;
-            int minindex, maxindex;
             opCode = opCode.ToUpper();
             var result = -1;
             if (opCode.Length <= 0)
                 return result;
-            index1 = opCode[0] - 'A';
-            if ((index1 < 0) || (index1 >= LetterCount))
+            var index1 = opCode[0] - 'A';
+            if ((index1 < 0) || (index1 >= LETTER_COUNT))
                 return result; //not alphabetical
-            bestindex = AssemblerIndex[index1];
-            if (bestindex.StartEntry == -1)
+            var bestIndex = AssemblerIndex[index1];
+            if (bestIndex.StartEntry == -1)
                 return result;
             if (AssemblerIndex[index1].SubIndex != null && opCode.Length > 1)
             {
-                index2 = opCode[1] - 'A';
-                if (index2 >= 0 && index2 < LetterCount)
+                var index2 = opCode[1] - 'A';
+                if (index2 >= 0 && index2 < LETTER_COUNT)
                 {
-                    bestindex = AssemblerIndex[index1].SubIndex[index2];
-                    if (bestindex.StartEntry == -1)
-                        return result; //no subitem2
+                    bestIndex = AssemblerIndex[index1].SubIndex[index2];
+                    if (bestIndex.StartEntry == -1)
+                        return result; //no subItem2
                 }  //else not alphabetical
             }
-            minindex = bestindex.StartEntry;
-            maxindex = bestindex.NextEntry;
-            if (maxindex == -1)
+            var minIndex = bestIndex.StartEntry;
+            var maxIndex = bestIndex.NextEntry;
+            if (maxIndex == -1)
                 if (AssemblerIndex[index1].NextEntry != -1)
-                    maxindex = AssemblerIndex[index1].NextEntry;
+                    maxIndex = AssemblerIndex[index1].NextEntry;
                 else
-                    maxindex = OpCodeCount;
-            if (maxindex > OpCodeCount)
-                maxindex = OpCodeCount;
-            //now scan from minindex to maxindex for opcode
-            for (i = minindex; i <= maxindex; i++)
+                    maxIndex = OpCodeCount;
+            if (maxIndex > OpCodeCount)
+                maxIndex = OpCodeCount;
+            //now scan from minIndex to maxIndex for opCode
+            for (i = minIndex; i <= maxIndex; i++)
             {
                 if (OpCodes[i].Mnemonic == opCode)
                 {
@@ -241,12 +237,12 @@ namespace SputnikAsm.LAssembler
             }
             if (result == 32)
             {
-                //still
+                // still
                 var vup = v >> 32;
                 var msb = (v >> 31) & 1;
 
                 if (((msb == 1) && (vup != 0xffffffff)) || ((msb == 0) && (vup != 0)))
-                    result = 64; //can not be encoded using a 32 bit value
+                    result = 64; // can not be encoded using a 32 bit value
             }
             return result;
         }
@@ -440,7 +436,7 @@ namespace SputnikAsm.LAssembler
         #region TokenToRegisterBit
         public ATokenType TokenToRegisterBit(String token)
         {
-            var result = ATokenType.ttregister32bit;
+            var result = ATokenType.Register32Bit;
             if (token.Length < 2)
                 return result;
             switch (token[1])
@@ -457,7 +453,7 @@ namespace SputnikAsm.LAssembler
                         case "XMM5":
                         case "XMM6":
                         case "XMM7":
-                            return ATokenType.ttregisterxmm;
+                            return ATokenType.RegisterXmm;
                         default:
                         {
                             if (SymHandler.Process.IsX64)
@@ -472,13 +468,13 @@ namespace SputnikAsm.LAssembler
                                     case "XMM13":
                                     case "XMM14":
                                     case "XMM15":
-                                        return ATokenType.ttregisterxmm;
+                                        return ATokenType.RegisterXmm;
                                 }
                             }
                             break;
                         }
                     }
-                    return ATokenType.ttinvalidtoken; //no other registers start with X
+                    return ATokenType.Invalid; //no other registers start with X
                 }
                 case 'Y':
                 {
@@ -500,9 +496,9 @@ namespace SputnikAsm.LAssembler
                         case "YMM13":
                         case "YMM14":
                         case "YMM15":
-                            return ATokenType.ttregisterymm;
+                            return ATokenType.RegisterYmm;
                         default:
-                            return ATokenType.ttinvalidtoken;
+                            return ATokenType.Invalid;
                     }
                 }
             }
@@ -516,7 +512,7 @@ namespace SputnikAsm.LAssembler
                 case "CH":
                 case "DH":
                 case "BH":
-                    result = ATokenType.ttregister8bit;
+                    result = ATokenType.Register8Bit;
                     break;
                 case "AX":
                 case "CX":
@@ -526,7 +522,7 @@ namespace SputnikAsm.LAssembler
                 case "BP":
                 case "SI":
                 case "DI":
-                    result = ATokenType.ttregister16bit;
+                    result = ATokenType.Register16Bit;
                     break;
                 case "EAX":
                 case "ECX":
@@ -536,7 +532,7 @@ namespace SputnikAsm.LAssembler
                 case "EBP":
                 case "ESI":
                 case "EDI":
-                    result = ATokenType.ttregister32bit;
+                    result = ATokenType.Register32Bit;
                     break;
                 case "MM0":
                 case "MM1":
@@ -546,7 +542,7 @@ namespace SputnikAsm.LAssembler
                 case "MM5":
                 case "MM6":
                 case "MM7":
-                    result = ATokenType.ttregistermm;
+                    result = ATokenType.RegisterMm;
                     break;
                 case "XMM0":
                 case "XMM1":
@@ -556,7 +552,7 @@ namespace SputnikAsm.LAssembler
                 case "XMM5":
                 case "XMM6":
                 case "XMM7":
-                    result = ATokenType.ttregisterxmm;
+                    result = ATokenType.RegisterXmm;
                     break;
                 case "ST":
                 case "ST(0)":
@@ -567,7 +563,7 @@ namespace SputnikAsm.LAssembler
                 case "ST(5)":
                 case "ST(6)":
                 case "ST(7)":
-                    result = ATokenType.ttregisterst;
+                    result = ATokenType.RegisterSt;
                     break;
                 case "ES":
                 case "CS":
@@ -577,7 +573,7 @@ namespace SputnikAsm.LAssembler
                 case "GS":
                 case "HS":
                 case "IS":
-                    result = ATokenType.ttregistersreg;
+                    result = ATokenType.RegisterSReg;
                     break;
                 case "CR0":
                 case "CR1":
@@ -587,7 +583,7 @@ namespace SputnikAsm.LAssembler
                 case "CR5":
                 case "CR6":
                 case "CR7":
-                    result = ATokenType.ttregistercr;
+                    result = ATokenType.RegisterCr;
                     break;
                 case "DR0":
                 case "DR1":
@@ -597,7 +593,7 @@ namespace SputnikAsm.LAssembler
                 case "DR5":
                 case "DR6":
                 case "DR7":
-                    result = ATokenType.ttregisterdr;
+                    result = ATokenType.RegisterDr;
                     break;
                 default:
                 {
@@ -621,13 +617,13 @@ namespace SputnikAsm.LAssembler
                             case "R13":
                             case "R14":
                             case "R15":
-                                result = ATokenType.ttregister64bit;
+                                result = ATokenType.Register64Bit;
                                 break;
                             case "SPL":
                             case "BPL":
                             case "SIL":
                             case "DIL":
-                                result = ATokenType.ttregister8bitwithprefix;
+                                result = ATokenType.Register8BitWithPrefix;
                                 break;
                             case "R8L":
                             case "R9L":
@@ -637,7 +633,7 @@ namespace SputnikAsm.LAssembler
                             case "R13L":
                             case "R14L":
                             case "R15L":
-                                result = ATokenType.ttregister8bit;
+                                result = ATokenType.Register8Bit;
                                 break;
                             case "R8W":
                             case "R9W":
@@ -647,7 +643,7 @@ namespace SputnikAsm.LAssembler
                             case "R13W":
                             case "R14W":
                             case "R15W":
-                                result = ATokenType.ttregister16bit;
+                                result = ATokenType.Register16Bit;
                                 break;
                             case "R8D":
                             case "R9D":
@@ -657,7 +653,7 @@ namespace SputnikAsm.LAssembler
                             case "R13D":
                             case "R14D":
                             case "R15D":
-                                result = ATokenType.ttregister32bit;
+                                result = ATokenType.Register32Bit;
                                 break;
                             case "XMM8":
                             case "XMM9":
@@ -667,7 +663,7 @@ namespace SputnikAsm.LAssembler
                             case "XMM13":
                             case "XMM14":
                             case "XMM15":
-                                result = ATokenType.ttregisterxmm;
+                                result = ATokenType.RegisterXmm;
                                 break;
                             case "CR8":
                             case "CR9":
@@ -677,7 +673,7 @@ namespace SputnikAsm.LAssembler
                             case "CR13":
                             case "CR14":
                             case "CR15":
-                                result = ATokenType.ttregistercr;
+                                result = ATokenType.RegisterCr;
                                 break;
                         }
                     }
@@ -690,67 +686,67 @@ namespace SputnikAsm.LAssembler
         #region IsMem8
         public Boolean IsMem8(ATokenType p)
         {
-            return p == ATokenType.ttmemorylocation8 || p == ATokenType.ttregister8bit;
+            return p == ATokenType.MemoryLocation8 || p == ATokenType.Register8Bit;
         }
         #endregion
         #region IsMem16
         public Boolean IsMem16(ATokenType p)
         {
-            return p == ATokenType.ttmemorylocation16 || p == ATokenType.ttregister16bit;
+            return p == ATokenType.MemoryLocation16 || p == ATokenType.Register16Bit;
         }
         #endregion
         #region IsMem32
         public Boolean IsMem32(ATokenType p)
         {
-            return p == ATokenType.ttmemorylocation32 || p == ATokenType.ttregister32bit;
+            return p == ATokenType.MemoryLocation32 || p == ATokenType.Register32Bit;
         }
         #endregion
         #region IsRmm32
         public Boolean IsRmm32(ATokenType p)
         {
-            return p == ATokenType.ttregistermm || p == ATokenType.ttmemorylocation32;
+            return p == ATokenType.RegisterMm || p == ATokenType.MemoryLocation32;
         }
         #endregion
         #region IsRmm64
         public Boolean IsRmm64(ATokenType p)
         {
-            return p == ATokenType.ttregistermm || p == ATokenType.ttmemorylocation64;
+            return p == ATokenType.RegisterMm || p == ATokenType.MemoryLocation64;
         }
         #endregion
         #region IsXmm8
         public Boolean IsXmm8(ATokenType p, String pars)
         {
-            return (p == ATokenType.ttregisterxmm) || (p == ATokenType.ttmemorylocation8) | ((p == ATokenType.ttmemorylocation32) & IsMemoryLocationDefault(pars));
+            return (p == ATokenType.RegisterXmm) || (p == ATokenType.MemoryLocation8) | ((p == ATokenType.MemoryLocation32) & IsMemoryLocationDefault(pars));
         }
         #endregion
         #region IsXmm16
         public Boolean IsXmm16(ATokenType p, String pars)
         {
-            return (p == ATokenType.ttregisterxmm) || (p == ATokenType.ttmemorylocation16) | ((p == ATokenType.ttmemorylocation32) & IsMemoryLocationDefault(pars));
+            return (p == ATokenType.RegisterXmm) || (p == ATokenType.MemoryLocation16) | ((p == ATokenType.MemoryLocation32) & IsMemoryLocationDefault(pars));
         }
         #endregion
         #region IsXmm32
         public Boolean IsXmm32(ATokenType p)
         {
-            return p == ATokenType.ttregisterxmm || p == ATokenType.ttmemorylocation32;
+            return p == ATokenType.RegisterXmm || p == ATokenType.MemoryLocation32;
         }
         #endregion
         #region IsXmm64
         public Boolean IsXmm64(ATokenType p)
         {
-            return p == ATokenType.ttregisterxmm || p == ATokenType.ttmemorylocation64;
+            return p == ATokenType.RegisterXmm || p == ATokenType.MemoryLocation64;
         }
         #endregion
         #region IsXmm128
         public Boolean IsXmm128(ATokenType p)
         {
-            return p == ATokenType.ttregisterxmm || p == ATokenType.ttmemorylocation128;
+            return p == ATokenType.RegisterXmm || p == ATokenType.MemoryLocation128;
         }
         #endregion
         #region IsYmm256
         public Boolean IsYmm256(ATokenType p)
         {
-            return (p == ATokenType.ttregisterymm) || (p == ATokenType.ttmemorylocation256);
+            return p == ATokenType.RegisterYmm || p == ATokenType.MemoryLocation256;
         }
         #endregion
         #region EoToReg
@@ -759,28 +755,28 @@ namespace SputnikAsm.LAssembler
             var result = -1;
             switch (eo)
             {
-                case AExtraOpCode.eo_reg0:
+                case AExtraOpCode.Reg0:
                     result = 0;
                     break;
-                case AExtraOpCode.eo_reg1:
+                case AExtraOpCode.Reg1:
                     result = 1;
                     break;
-                case AExtraOpCode.eo_reg2:
+                case AExtraOpCode.Reg2:
                     result = 2;
                     break;
-                case AExtraOpCode.eo_reg3:
+                case AExtraOpCode.Reg3:
                     result = 3;
                     break;
-                case AExtraOpCode.eo_reg4:
+                case AExtraOpCode.Reg4:
                     result = 4;
                     break;
-                case AExtraOpCode.eo_reg5:
+                case AExtraOpCode.Reg5:
                     result = 5;
                     break;
-                case AExtraOpCode.eo_reg6:
+                case AExtraOpCode.Reg6:
                     result = 6;
                     break;
-                case AExtraOpCode.eo_reg7:
+                case AExtraOpCode.Reg7:
                     result = 7;
                     break;
             }
@@ -788,21 +784,21 @@ namespace SputnikAsm.LAssembler
         }
         #endregion
         #region SetMod
-        public void SetMod(AByteArray modrm, int index, Byte i)
+        public void SetMod(AByteArray modRm, int index, Byte i)
         {
-            var tmp = modrm[index];
+            var tmp = modRm[index];
             SetMod(ref tmp, i);
-            modrm[index] = tmp;
+            modRm[index] = tmp;
         }
-        public void SetMod(ref Byte modrm, Byte i)
+        public void SetMod(ref Byte modRm, Byte i)
         {
-            modrm = (Byte)((modrm & 0x3f) | (i << 6));
+            modRm = (Byte)((modRm & 0x3f) | (i << 6));
         }
         #endregion
         #region GetMod
-        public Byte GetMod(Byte modrm)
+        public Byte GetMod(Byte modRm)
         {
-            return (Byte)(modrm >> 6);
+            return (Byte)(modRm >> 6);
         }
         #endregion
         #region SetSibScale
@@ -812,19 +808,19 @@ namespace SputnikAsm.LAssembler
             SetSibScale(ref tmp, i);
             sib[index] = tmp;
         }
-        public Byte SetSibScale(ref Byte sib, Byte i)
+        public void SetSibScale(ref Byte sib, Byte i)
         {
-            return (Byte)((sib & 0x3f) | (i << 6));
+            sib = (Byte)((sib & 0x3f) | (i << 6));
         }
         #endregion
         #region GetTokenType
         public ATokenType GetTokenType(ref String token, String token2)
         {
-            var result = ATokenType.ttinvalidtoken;
+            var result = ATokenType.Invalid;
             if (token.Length == 0)
                 return result;
             result = TokenToRegisterBit(token);
-            //filter these 2 words
+            // filter these 2 words
             token = UStringUtils.Replace(token, "LONG ", "", true);
             token = UStringUtils.Replace(token, "SHORT ", "", true);
             token = UStringUtils.Replace(token, "FAR ", "", true);
@@ -832,56 +828,56 @@ namespace SputnikAsm.LAssembler
             AStringUtils.Val(temp, out UInt64 _, out var err);
             if (err == 0)
             {
-                result = ATokenType.ttvalue;
+                result = ATokenType.Value;
                 token = temp;
             }
             var brp = AStringUtils.Pos("[", token);
             if (brp != -1)
             {
                 if (UStringUtils.IndexOf(token, "YMMWORD", 0, brp) != -1)
-                    result = ATokenType.ttmemorylocation256;
+                    result = ATokenType.MemoryLocation256;
                 else if (UStringUtils.IndexOf(token, "XMMWORD", 0, brp) != -1)
-                    result = ATokenType.ttmemorylocation128;
+                    result = ATokenType.MemoryLocation128;
                 else if (UStringUtils.IndexOf(token, "DQWORD", 0, brp) != -1)
-                    result = ATokenType.ttmemorylocation128;
+                    result = ATokenType.MemoryLocation128;
                 else if (UStringUtils.IndexOf(token, "TBYTE", 0, brp) != -1)
-                    result = ATokenType.ttmemorylocation80;
+                    result = ATokenType.MemoryLocation80;
                 else if (UStringUtils.IndexOf(token, "TWORD", 0, brp) != -1)
-                    result = ATokenType.ttmemorylocation80;
+                    result = ATokenType.MemoryLocation80;
                 else if (UStringUtils.IndexOf(token, "QWORD", 0, brp) != -1)
-                    result = ATokenType.ttmemorylocation64;
+                    result = ATokenType.MemoryLocation64;
                 else if (UStringUtils.IndexOf(token, "DWORD", 0, brp) != -1)
-                    result = ATokenType.ttmemorylocation32;
+                    result = ATokenType.MemoryLocation32;
                 else if (UStringUtils.IndexOf(token, "WORD", 0, brp) != -1)
-                    result = ATokenType.ttmemorylocation16;
+                    result = ATokenType.MemoryLocation16;
                 else if (UStringUtils.IndexOf(token, "BYTE", 0, brp) != -1)
-                    result = ATokenType.ttmemorylocation8;
+                    result = ATokenType.MemoryLocation8;
                 else
-                    result = ATokenType.ttmemorylocation;
+                    result = ATokenType.MemoryLocation;
             }
-            if (result == ATokenType.ttmemorylocation)
+            if (result == ATokenType.MemoryLocation)
             {
                 if (token2 == "")
                 {
-                    result = ATokenType.ttmemorylocation32;
+                    result = ATokenType.MemoryLocation32;
                     return result;
                 }
-                //I need the helper param to figure it out
+                // I need the helper param to figure it out
                 switch (TokenToRegisterBit(token2))
                 {
-                    case ATokenType.ttregister8bit:
-                    case ATokenType.ttregister8bitwithprefix:
-                        result = ATokenType.ttmemorylocation8;
+                    case ATokenType.Register8Bit:
+                    case ATokenType.Register8BitWithPrefix:
+                        result = ATokenType.MemoryLocation8;
                         break;
-                    case ATokenType.ttregistersreg:
-                    case ATokenType.ttregister16bit:
-                        result = ATokenType.ttmemorylocation16;
+                    case ATokenType.RegisterSReg:
+                    case ATokenType.Register16Bit:
+                        result = ATokenType.MemoryLocation16;
                         break;
-                    case ATokenType.ttregister64bit:
-                        result = ATokenType.ttmemorylocation64;
+                    case ATokenType.Register64Bit:
+                        result = ATokenType.MemoryLocation64;
                         break;
                     default:
-                        result = ATokenType.ttmemorylocation32;
+                        result = ATokenType.MemoryLocation32;
                         break;
                 }
             }
@@ -891,17 +887,13 @@ namespace SputnikAsm.LAssembler
         #region Tokenize
         public Boolean Tokenize(String opCode, AStringArray tokens)
         {
-            int i, j, last;
-            Boolean quoted;
-            Char quotechar;
-            String t;
-            Boolean ispartial;
-            quotechar = '\0';
+            var quoteChar = '\0';
             tokens.SetLength(0);
             if (opCode.Length > 0)
                 opCode = opCode.TrimEnd(' ', ',');
-            last = 0;
-            quoted = false;
+            var last = 0;
+            var quoted = false;
+            int i, j;
             for (i = 0; i <= opCode.Length; i++)
             {
                 //check if this is a quote char
@@ -909,13 +901,13 @@ namespace SputnikAsm.LAssembler
                 {
                     if (quoted)  //check if it's the end quote
                     {
-                        if (opCode[i] == quotechar)
+                        if (opCode[i] == quoteChar)
                             quoted = false;
                     }
                     else
                     {
                         quoted = true;
-                        quotechar = opCode[i];
+                        quoteChar = opCode[i];
                     }
                 }
                 //check if we encounter a token seperator. (space or , )
@@ -940,8 +932,8 @@ namespace SputnikAsm.LAssembler
                             tokens.Last = tokens.Last.ToUpper();
                     }
                     //6.1: Optimized this lookup. Instead of a 18 compares a full string lookup on each token it now only compares up to 4 times
-                    t = tokens.Last;
-                    ispartial = false;
+                    var t = tokens.Last;
+                    var isPartial = false;
                     if (t.Length >= 3)  //3 characters are good enough to get the general idea, then do a string compare to verify
                     {
                         switch (t[0])
@@ -949,7 +941,7 @@ namespace SputnikAsm.LAssembler
                             case 'B': //BYTE, BYTE PTR
                                 {
                                     if ((t[1] == 'Y') && (t[2] == 'T'))  //could be BYTE
-                                        ispartial = (t == "BYTE") || (t == "BYTE PTR");
+                                        isPartial = (t == "BYTE") || (t == "BYTE PTR");
                                 }
                                 break;
                             case 'D': //DQWORD, DWORD, DQWORD PTR, DWORD PTR
@@ -959,14 +951,14 @@ namespace SputnikAsm.LAssembler
                                         case 'Q': //DQWORD or DQWORD PTR
                                             {
                                                 if (t[2] == 'W')
-                                                    ispartial = (t == "DQWORD") || (t == "DQWORD PTR");
+                                                    isPartial = (t == "DQWORD") || (t == "DQWORD PTR");
                                             }
                                             break;
 
                                         case 'W': //DWORD or DWORD PTR
                                             {
                                                 if (t[2] == 'O')
-                                                    ispartial = (t == "DWORD") || (t == "DWORD PTR");
+                                                    isPartial = (t == "DWORD") || (t == "DWORD PTR");
                                             }
                                             break;
                                     }
@@ -975,25 +967,25 @@ namespace SputnikAsm.LAssembler
                             case 'F': //FAR
                                 {
                                     if ((t[1] == 'A') && (t[2] == 'R'))
-                                        ispartial = (t == "FAR");
+                                        isPartial = (t == "FAR");
                                 }
                                 break;
                             case 'L': //LONG
                                 {
                                     if ((t[1] == 'O') && (t[2] == 'N'))
-                                        ispartial = (t == "LONG");
+                                        isPartial = (t == "LONG");
                                 }
                                 break;
                             case 'Q': //QWORD, QWORD PTR
                                 {
                                     if ((t[1] == 'W') && (t[2] == 'O'))  //could be QWORD
-                                        ispartial = (t == "QWORD") || (t == "QWORD PTR");
+                                        isPartial = (t == "QWORD") || (t == "QWORD PTR");
                                 }
                                 break;
                             case 'S': //SHORT
                                 {
                                     if ((t[1] == 'H') && (t[2] == 'O'))
-                                        ispartial = (t == "SHORT");
+                                        isPartial = (t == "SHORT");
                                 }
                                 break;
                             case 'T': //TBYTE, TWORD, TBYTE PTR, TWORD PTR,
@@ -1003,14 +995,14 @@ namespace SputnikAsm.LAssembler
                                         case 'B': //TBYTE or TBYTE PTR
                                             {
                                                 if (t[2] == 'Y')
-                                                    ispartial = (t == "TBYTE") || (t == "TBYTE PTR");
+                                                    isPartial = (t == "TBYTE") || (t == "TBYTE PTR");
                                             }
                                             break;
 
                                         case 'W': //TWORD or TWORD PTR
                                             {
                                                 if (t[2] == 'O')
-                                                    ispartial = (t == "TWORD") || (t == "TWORD PTR");
+                                                    isPartial = (t == "TWORD") || (t == "TWORD PTR");
                                             }
                                             break;
                                     }
@@ -1019,12 +1011,12 @@ namespace SputnikAsm.LAssembler
                             case 'W': //WORD, WORD PTR
                                 {
                                     if ((t[1] == 'O') && (t[3] == 'R'))  //could be WORD
-                                        ispartial = (t == "WORD") || (t == "WORD PTR");
+                                        isPartial = (t == "WORD") || (t == "WORD PTR");
                                 }
                                 break;
                         }
                     }
-                    if (ispartial)
+                    if (isPartial)
                         tokens.SetLength(tokens.Length - 1);
                     else
                     {
@@ -1076,27 +1068,26 @@ namespace SputnikAsm.LAssembler
             /* 5.4 ^^^ */
             temp = "";
             var i = 0;
-            var inquote = false;
+            var inQuote = false;
             while (i < token.Length)
             {
                 if (AArrayUtils.InArray(token[i], '\'', '"'))
                 {
-                    if (inquote)
+                    if (inQuote)
                     {
                         if (token[i] == quoteChar)
-                            inquote = false;
+                            inQuote = false;
                     }
                     else
                     {
                         //start of a quote
                         quoteChar = token[i];
-                        inquote = true;
+                        inQuote = true;
                     }
                 }
-                if (!inquote)
+                if (!inQuote)
                 {
-                    // todo * is not there in CE so why do we need it?
-                    if (AArrayUtils.InArray(token[i], '[', ']', '+', '-', ' ', '*')) //6.8.4 (added ' ' for FAR, LONG, SHORT)
+                    if (AArrayUtils.InArray(token[i], '[', ']', '+', '-', ' ')) //6.8.4 (added ' ' for FAR, LONG, SHORT)
                     {
                         if (temp != "")
                         {
@@ -1143,6 +1134,12 @@ namespace SputnikAsm.LAssembler
                                 i++;
                                 continue;
                             }
+                            var j = AStringUtils.Pos("*", tokens[i]);
+                            if (j != -1)  //getreg failed, but could be it's the 'other' one
+                            {
+                                if (tokens[i].Length > j && (AArrayUtils.InArray(AStringUtils.Copy(tokens[i], j + 1, 1)[0], '2', '4', '8')))
+                                    continue; //reg*2 / *3, /*4
+                            }
                             if (i < tokens.Length - 1)
                             {
                                 //perhaps it can be concatenated with the next one
@@ -1168,7 +1165,8 @@ namespace SputnikAsm.LAssembler
                     {
                         a *= b;
                         tokens[i - 1] = AStringUtils.IntToHex(a, 8);
-                        tokens.Remove(i, 2);
+                        tokens[i] = "";
+                        tokens[i+1] = "";
                         i -= 2;
                     }
                 }
@@ -1212,6 +1210,7 @@ namespace SputnikAsm.LAssembler
                 }
             }
             token = "";
+            //remove useless tokens
             for (i = 0; i < tokens.Length; i++)
                 token += tokens[i];
             tokens.SetLength(0);
@@ -1219,7 +1218,7 @@ namespace SputnikAsm.LAssembler
         }
         #endregion
         #region Assemble
-        public Boolean Assemble(String opCode, UInt64 address, AByteArray bytes, AAssemblerPreference aPref = AAssemblerPreference.apnone, Boolean skipRangeCheck = false)
+        public Boolean Assemble(String opCode, UInt64 address, AByteArray bytes, AAssemblerPreference aPref = AAssemblerPreference.None, Boolean skipRangeCheck = false)
         {
             var result = Assembler.Assemble(opCode, address, bytes, aPref, skipRangeCheck);
             return result;
