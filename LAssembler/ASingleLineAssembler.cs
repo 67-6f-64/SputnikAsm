@@ -122,12 +122,6 @@ namespace SputnikAsm.LAssembler
         }
         #endregion
         #region createsibscaleindex
-        public void createsibscaleindex(byte[] sib, int index, string reg)
-        {
-            var tmp = sib[index];
-            createsibscaleindex(ref tmp, reg);
-            sib[index] = tmp;
-        }
         public void createsibscaleindex(AByteArray sib, int index, string reg)
         {
             var tmp = sib[index];
@@ -204,12 +198,6 @@ namespace SputnikAsm.LAssembler
         }
         #endregion
         #region setsibbase
-        public void setsibbase(byte[] sib, int index, byte i)
-        {
-            var tmp = sib[index];
-            setsibbase(ref tmp, i);
-            sib[index] = tmp;
-        }
         public void setsibbase(AByteArray sib, int index, byte i)
         {
             var tmp = sib[index];
@@ -224,12 +212,6 @@ namespace SputnikAsm.LAssembler
         }
         #endregion
         #region setrm
-        public void setrm(byte[] sib, int index, byte i)
-        {
-            var tmp = sib[index];
-            setrm(ref tmp, i);
-            sib[index] = tmp;
-        }
         public void setrm(AByteArray sib, int index, byte i)
         {
             var tmp = sib[index];
@@ -1081,7 +1063,7 @@ namespace SputnikAsm.LAssembler
             endoflist -= 1;
             try
             {
-                while (j <= Assembler.opcodecount)
+                while (j < Assembler.opcodecount)
                 {
                     if (Assembler.opcodes[j].mnemonic != tokens[mnemonic])
                         return result;
@@ -1132,7 +1114,6 @@ namespace SputnikAsm.LAssembler
                                     result = true;
                                     return result;
                                 }
-
                                 if ((Assembler.opcodes[j].paramtype2 == AParam.par_eax) && ((parameter2 == "EAX") || (parameter2 == "RAX")))
                                 {
                                     //imm8,eax

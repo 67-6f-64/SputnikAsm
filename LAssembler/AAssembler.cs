@@ -719,12 +719,6 @@ namespace SputnikAsm.LAssembler
         }
         #endregion
         #region setmod
-        public void setmod(byte[] modrm, int index, byte i)
-        {
-            var tmp = modrm[index];
-            setmod(ref tmp, i);
-            modrm[index] = tmp;
-        }
         public void setmod(AByteArray modrm, int index, byte i)
         {
             var tmp = modrm[index];
@@ -743,12 +737,6 @@ namespace SputnikAsm.LAssembler
         }
         #endregion
         #region setsibscale
-        public void setsibscale(byte[] sib, int index, byte i)
-        {
-            var tmp = sib[index];
-            setsibscale(ref tmp, i);
-            sib[index] = tmp;
-        }
         public void setsibscale(AByteArray sib, int index, byte i)
         {
             var tmp = sib[index];
