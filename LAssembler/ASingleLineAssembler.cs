@@ -1212,7 +1212,7 @@ namespace SputnikAsm.LAssembler
             // 
             //     result = length(bytes) > 0;
             //     if (result)
-            //         return findfreeblockforregion_result;
+            //         return result;
             // }
             // if (processhandler.systemarchitecture == archarm)
             // {
@@ -1221,7 +1221,7 @@ namespace SputnikAsm.LAssembler
             //     //   tempstring:=tempstring+tokens[i]+' ';   //seperators like "," are gone, but the armassembler doesn't really care about that  (only tokens matter)
             // 
             //     result = armassemble(address, opcode, bytes);
-            //     return findfreeblockforregion_result;
+            //     return result;
             // }
             mnemonic = -1;
             for (i = 0; i < tokens.Length; i++)
@@ -2562,24 +2562,6 @@ namespace SputnikAsm.LAssembler
                                     //r32,imm32
                                     if ((Assembler.OpCodes[j].ParamType3 == AParam.par_noparam) && (parameter3 == ""))
                                     {
-                                        if (signedvtype == 8)
-                                        {
-                                            //check if there isn't a rm32,imm8 , since that's less bytes
-                                            var k = startoflist;
-                                            while ((k < Assembler.OpCodeCount) && (Assembler.OpCodes[k].Mnemonic == tokens[mnemonic]))
-                                            {
-                                                if ((Assembler.OpCodes[k].ParamType1 == AParam.par_rm32) &&
-                                                   (Assembler.OpCodes[k].ParamType2 == AParam.par_imm8))
-                                                {
-                                                    //yes, there is
-                                                    AddOpCode(bytes, k);
-                                                    result = CreateModRm(bytes, Assembler.EoToReg(Assembler.OpCodes[k].OpCode1), parameter1);
-                                                    Assembler.Add(bytes, (Byte)v);
-                                                    return result;
-                                                }
-                                                k += 1;
-                                            }
-                                        }
                                         if (Assembler.OpCodes[j].OpCode1 == AExtraOpCode.eo_prd)
                                         {
                                             AddOpCode(bytes, j);
@@ -2597,16 +2579,54 @@ namespace SputnikAsm.LAssembler
                                             result = true;
                                             return result;
                                         }
+                                        if (Assembler.OpCodes[j].OpCode1 == AExtraOpCode.eo_reg)   //probably imul reg,imm32
+                                        {
+                                            if (signedvtype == 8)
+                                            {
+                                                var k = startoflist;
+                                                while ((k <= endoflist) && (Assembler.OpCodes[k].Mnemonic == tokens[mnemonic]))  //check for an reg,imm8
+                                                {
+                                                    if ((Assembler.OpCodes[k].ParamType1 == AParam.par_r32) &&
+                                                        (Assembler.OpCodes[k].ParamType2 == AParam.par_imm8))
+                                                    {
+                                                        AddOpCode(bytes, k);
+                                                        CreateModRm(bytes, GetReg(parameter1), parameter1);
+                                                        Assembler.Add(bytes, (byte)(v));
+                                                        result = true;
+                                                        return result;
+                                                    }
+                                                    k += 1;
+                                                }
+                                            }
+                                            if ((signedvtype == 64) & RexW)
+                                                Invalid64BitValueFor32BitField(v);
+                                            AddOpCode(bytes, j);
+                                            CreateModRm(bytes, GetReg(parameter1), parameter1);
+                                            Assembler.AddDWord(bytes, (UInt32)v);
+                                            result = true;
+                                            return result;
+                                        }
                                     }
                                 }
                                 if ((Assembler.OpCodes[j].ParamType2 == AParam.par_imm8) && (paramtype2 == ATokenType.ttvalue))
                                 {
                                     //r32, imm8
-                                    AddOpCode(bytes, j);
-                                    CreateModRm(bytes, Assembler.EoToReg(Assembler.OpCodes[j].OpCode1), parameter1);
-                                    Assembler.Add(bytes, (Byte)v);
-                                    result = true;
-                                    return result;
+                                    if (Assembler.OpCodes[j].OpCode1 == AExtraOpCode.eo_prd)
+                                    {
+                                        AddOpCode(bytes, j);
+                                        CreateModRm(bytes, Assembler.EoToReg(Assembler.OpCodes[j].OpCode1), parameter1);
+                                        Assembler.Add(bytes, (Byte)v);
+                                        result = true;
+                                        return result;
+                                    }
+                                    if (Assembler.OpCodes[j].OpCode1 == AExtraOpCode.eo_reg)   //probably imul r32,imm8
+                                    {
+                                        AddOpCode(bytes, j);
+                                        CreateModRm(bytes, GetReg(parameter1), parameter1);
+                                        Assembler.Add(bytes, (Byte)v);
+                                        result = true;
+                                        return result;
+                                    }
                                 }
                             }
                             break;
@@ -2651,7 +2671,8 @@ namespace SputnikAsm.LAssembler
                             }
                             break;
                         case AParam.par_rm8:
-                            if (Assembler.IsMem8(paramtype1))
+
+                            if (Assembler.IsMem8(paramtype1) | (Assembler.IsMemoryLocationDefault(parameter1) & Assembler.OpCodes[j].DefaultType))
                             {
                                 //r/m8,
                                 if ((Assembler.OpCodes[j].ParamType2 == AParam.par_noparam) && (parameter2 == ""))
@@ -2689,6 +2710,16 @@ namespace SputnikAsm.LAssembler
                                 if ((Assembler.OpCodes[j].ParamType2 == AParam.par_r8) && (paramtype2 == ATokenType.ttregister8bit))
                                 {
                                     // r/m8,r8
+                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        AddOpCode(bytes, j);
+                                        result = CreateModRm(bytes, GetReg(parameter2), parameter1);
+                                        return result;
+                                    }
+                                }
+                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_xmm) && (paramtype2 == ATokenType.ttregisterxmm))
+                                {
+                                    // r/m8,xmm
                                     if ((Assembler.OpCodes[j].ParamType3 == AParam.par_noparam) && (parameter3 == ""))
                                     {
                                         AddOpCode(bytes, j);
@@ -2825,7 +2856,7 @@ namespace SputnikAsm.LAssembler
                             }
                             break;
                         case AParam.par_rm32:
-                            if (Assembler.IsMem32(paramtype1))
+                            if (Assembler.IsMem32(paramtype1) | Assembler.IsMem32(oldParamtype1))
                             {
                                 //r/m32,
                                 if ((Assembler.OpCodes[j].ParamType2 == AParam.par_noparam) && (parameter2 == ""))
@@ -2857,6 +2888,8 @@ namespace SputnikAsm.LAssembler
                                                 if (((Assembler.OpCodes[k].ParamType1 == AParam.par_rm32) && (Assembler.OpCodes[k].ParamType2 == AParam.par_imm32)) && ((Assembler.OpCodes[k].ParamType3 == AParam.par_noparam) && (parameter3 == "")))
                                                 {
                                                     //yes, there is
+                                                    if ((signedvtype == 64) & RexW)
+                                                        Invalid64BitValueFor32BitField(v);
                                                     AddOpCode(bytes, k);
                                                     CreateModRm(bytes, Assembler.EoToReg(Assembler.OpCodes[k].OpCode1), parameter1);
                                                     Assembler.AddDWord(bytes, (UInt32)v);
@@ -2901,6 +2934,11 @@ namespace SputnikAsm.LAssembler
                                             }
                                         }
                                         //no there's none
+                                        if ((signedvtype == 64) & RexW)
+                                        {
+                                            //perhaps it's an old user and assumes it can be sign extended automagically
+                                            Invalid64BitValueFor32BitField(v);
+                                        }
                                         AddOpCode(bytes, j);
                                         CreateModRm(bytes, Assembler.EoToReg(Assembler.OpCodes[j].OpCode1), parameter1);
                                         Assembler.AddDWord(bytes, (UInt32)v);
@@ -2946,6 +2984,7 @@ namespace SputnikAsm.LAssembler
                                         //r32/m32,mm
                                         AddOpCode(bytes, j);
                                         result = CreateModRm(bytes, GetReg(parameter2), parameter1);
+                                        return result;
                                     }
                                 }
                                 if ((Assembler.OpCodes[j].ParamType2 == AParam.par_xmm) && (paramtype2 == ATokenType.ttregisterxmm))
@@ -2956,6 +2995,14 @@ namespace SputnikAsm.LAssembler
                                         //r32/m32,xmm
                                         AddOpCode(bytes, j);
                                         result = CreateModRm(bytes, GetReg(parameter2), parameter1);
+                                        return result;
+                                    }
+                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.par_imm8) && (paramtype3 == ATokenType.ttvalue))
+                                    {
+                                        AddOpCode(bytes, j);
+                                        result = CreateModRm(bytes, GetReg(parameter2), parameter1);
+                                        Assembler.Add(bytes, (Byte)v);
+                                        return result;
                                     }
                                 }
                             }
@@ -2964,6 +3011,17 @@ namespace SputnikAsm.LAssembler
                             if (paramtype1 == ATokenType.ttregistermm)
                             {
                                 //mm,xxxxx
+                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_imm8) && (paramtype2 == ATokenType.ttvalue))
+                                {
+                                    //mm,imm8
+                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        AddOpCode(bytes, j);
+                                        result = CreateModRm(bytes, Assembler.EoToReg(Assembler.OpCodes[j].OpCode1), parameter1);
+                                        Assembler.Add(bytes, (Byte)v);
+                                        return result;
+                                    }
+                                }
                                 if ((Assembler.OpCodes[j].ParamType2 == AParam.par_mm) && (paramtype2 == ATokenType.ttregistermm))
                                 {
                                     AddOpCode(bytes, j);
@@ -2993,7 +3051,7 @@ namespace SputnikAsm.LAssembler
                                     //mm,rm32
                                     if ((Assembler.OpCodes[j].ParamType3 == AParam.par_noparam) && (parameter3 == ""))
                                     {
-                                        //xmm,rm32
+                                        //mm,rm32
                                         AddOpCode(bytes, j);
                                         result = CreateModRm(bytes, GetReg(parameter1), parameter2);
                                         return result;
@@ -3009,9 +3067,22 @@ namespace SputnikAsm.LAssembler
                                 if ((Assembler.OpCodes[j].ParamType2 == AParam.par_mm_m64) && (Assembler.IsRmm64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[0] == '['))))
                                 {
                                     //mm,mm/m64
-                                    AddOpCode(bytes, j);
-                                    result = CreateModRm(bytes, GetReg(parameter1), parameter2);
-                                    return result;
+                                    if (Assembler.OpCodes[j].ParamType3 == AParam.par_noparam)
+                                    {
+                                        AddOpCode(bytes, j);
+                                        result = CreateModRm(bytes, GetReg(parameter1), parameter2);
+                                        return result;
+                                    }
+
+                                    if (Assembler.OpCodes[j].ParamType3 == AParam.par_imm8)
+                                    {
+                                        AddOpCode(bytes, j);
+                                        result = CreateModRm(bytes, GetReg(parameter1), parameter2);
+                                        Assembler.Add(bytes, (Byte)v);
+                                        return result;
+                                    }
+
+
                                 }
                                 if ((Assembler.OpCodes[j].ParamType2 == AParam.par_xmm_m64) && (Assembler.IsXmm64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[0] == '['))))
                                 {
@@ -3035,6 +3106,19 @@ namespace SputnikAsm.LAssembler
                                 if ((Assembler.OpCodes[j].ParamType2 == AParam.par_mm) && (paramtype2 == ATokenType.ttregistermm))
                                 {
                                     //mm/m64, mm
+                                    AddOpCode(bytes, j);
+                                    result = CreateModRm(bytes, GetReg(parameter2), parameter1);
+                                    return result;
+                                }
+                            }
+                            break;
+                        case AParam.par_xmm_m32:
+                            if (Assembler.IsXmm32(paramtype1) | ((paramtype1 == ATokenType.ttmemorylocation32) && (parameter1[0] == '[')))
+                            {
+                                //xmm/m32,
+                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_xmm) && (paramtype2 == ATokenType.ttregisterxmm))
+                                {
+                                    //xmm/m32, xmm
                                     AddOpCode(bytes, j);
                                     result = CreateModRm(bytes, GetReg(parameter2), parameter1);
                                     return result;
@@ -3067,11 +3151,178 @@ namespace SputnikAsm.LAssembler
                                 }
                             }
                             break;
+                        case AParam.par_ymm_m256:
+                            if (Assembler.IsYmm256(paramtype1) | ((paramtype1 == ATokenType.ttmemorylocation32) && (parameter1[1] == '[')))
+                            {
+                                //ymm_m256,
+                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_ymm) && (paramtype2 == ATokenType.ttregisterymm))
+                                {
+                                    //ymm_m256, ymm
+                                    AddOpCode(bytes, j);
+                                    result = CreateModRm(bytes, GetReg(parameter2), parameter1);
+                                    return result;
+                                }
+                            }
+                            break;
+                        case AParam.par_ymm:
+                            if (paramtype1 == ATokenType.ttregisterymm)
+                            {
+                                //ymm,
+                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_xmm_m16) & (Assembler.IsXmm16(paramtype2, parameter2)))
+                                {
+                                    //ymm,xmm/m16
+                                    if (Assembler.OpCodes[j].ParamType3 == AParam.par_noparam)
+                                    {
+                                        AddOpCode(bytes, j);
+                                        result = CreateModRm(bytes, GetReg(parameter1), parameter2);
+                                        return result;
+                                    }
+                                }
+                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_xmm_m32) && (Assembler.IsXmm32(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[0] == '['))))
+                                {
+                                    //ymm,xmm/m32
+                                    if (Assembler.OpCodes[j].ParamType3 == AParam.par_noparam)
+                                    {
+                                        AddOpCode(bytes, j);
+                                        result = CreateModRm(bytes, GetReg(parameter1), parameter2);
+                                        return result;
+                                    }
+                                }
+                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_xmm_m64) && (Assembler.IsXmm64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[0] == '['))))
+                                {
+                                    //ymm,xmm/m64
+                                    if (Assembler.OpCodes[j].ParamType3 == AParam.par_noparam)
+                                    {
+                                        AddOpCode(bytes, j);
+                                        result = CreateModRm(bytes, GetReg(parameter1), parameter2);
+                                        return result;
+                                    }
+                                }
+                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_xmm_m128) && (Assembler.IsXmm128(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[0] == '['))))
+                                {
+                                    //ymm,xmm/m128
+                                    if (Assembler.OpCodes[j].ParamType3 == AParam.par_noparam)
+                                    {
+                                        AddOpCode(bytes, j);
+                                        result = CreateModRm(bytes, GetReg(parameter1), parameter2);
+                                        return result;
+                                    }
+                                }
+                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_ymm) && (paramtype2 == ATokenType.ttregisterymm))
+                                {
+                                    //ymm,ymm,
+                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.par_imm8) && (paramtype3 == ATokenType.ttvalue))
+                                    {
+                                        //ymm,ymm,imm8
+                                        if (Assembler.OpCodes[j].VexExtraParam == 1)
+                                        {
+                                            AddOpCode(bytes, j);
+                                            vexvvvv = (~GetReg(parameter1)) & 0xf;
+                                            result = CreateModRm(bytes, Assembler.EoToReg(Assembler.OpCodes[j].OpCode1), parameter2);
+                                            Assembler.Add(bytes, (Byte)v);
+                                            return result;
+                                        }
+                                        else
+                                        {
+                                            AddOpCode(bytes, j);
+                                            result = CreateModRm(bytes, GetReg(parameter1), parameter2);
+                                            Assembler.Add(bytes, (Byte)v);
+                                            return result;
+                                        }
+                                    }
+                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.par_m128) & ((paramtype3 == ATokenType.ttmemorylocation128) | (Assembler.IsMemoryLocationDefault(parameter3))))
+                                    {
+                                        //ymm,ymm,m128,
+                                        if (Assembler.OpCodes[j].ParamType4 == AParam.par_noparam)
+                                        {
+                                            //ymm,ymm,m128
+                                            if (Assembler.OpCodes[j].VexExtraParam == 2)
+                                            {
+                                                AddOpCode(bytes, j);
+                                                vexvvvv = (~GetReg(parameter2)) & 0xf;
+                                                result = CreateModRm(bytes, GetReg(parameter1), parameter3);
+                                                return result;
+                                            }
+                                        }
+                                    }
+                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.par_m256) & ((paramtype3 == ATokenType.ttmemorylocation256) | (Assembler.IsMemoryLocationDefault(parameter3))))
+                                    {
+                                        //ymm,ymm,m256,
+                                        if (Assembler.OpCodes[j].ParamType4 == AParam.par_noparam)
+                                        {
+                                            //ymm,ymm,m256
+                                            if (Assembler.OpCodes[j].VexExtraParam == 2)
+                                            {
+                                                AddOpCode(bytes, j);
+                                                vexvvvv = (~GetReg(parameter2)) & 0xf;
+                                                result = CreateModRm(bytes, GetReg(parameter1), parameter3);
+                                                return result;
+                                            }
+                                        }
+                                    }
+                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.par_ymm_m256) && (Assembler.IsYmm256(paramtype3) | ((paramtype3 == ATokenType.ttmemorylocation32) && (parameter3[1] == '['))))
+                                    {
+                                        //ymm,ymm,ymm/m256
+                                        if (Assembler.OpCodes[j].ParamType4 == AParam.par_noparam)
+                                        {
+                                            if (Assembler.OpCodes[j].VexExtraParam == 2)
+                                            {
+                                                AddOpCode(bytes, j);
+                                                vexvvvv = (~GetReg(parameter2)) & 0xf;
+                                                result = CreateModRm(bytes, GetReg(parameter1), parameter3);
+                                                return result;
+                                            }
+                                        }
+                                        if (Assembler.OpCodes[j].ParamType4 == AParam.par_imm8)
+                                        {
+                                            //ymm,ymm,ymm/m256,imm8
+                                            AddOpCode(bytes, j);
+                                            vexvvvv = (~GetReg(parameter2)) & 0xf;
+                                            result = CreateModRm(bytes, GetReg(parameter1), parameter3);
+                                            Assembler.Add(bytes, (Byte)AStringUtils.StrToInt(parameter4));
+                                            return result;
+                                        }
+                                        if ((Assembler.OpCodes[j].ParamType4 == AParam.par_ymm) && (paramtype4 == ATokenType.ttregisterymm))
+                                        {
+                                            //ymm,ymm,ymm/m128,ymm
+                                            AddOpCode(bytes, j);
+                                            vexvvvv = (~GetReg(parameter2)) & 0xf;
+                                            result = CreateModRm(bytes, GetReg(parameter1), parameter3);
+                                            Assembler.Add(bytes, (Byte)(GetReg(parameter4) << 4));
+                                            return result;
+                                        }
+                                    }
+                                }
+                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_m128) & ((paramtype2 == ATokenType.ttmemorylocation128) | (Assembler.IsMemoryLocationDefault(parameter2))))
+                                {
+                                    //ymm,m128,
+                                    if (Assembler.OpCodes[j].ParamType3 == AParam.par_noparam)
+                                    {
+                                        //ymm,m128
+                                        AddOpCode(bytes, j);
+                                        result = CreateModRm(bytes, GetReg(parameter1), parameter2);
+                                        return result;
+                                    }
+                                }
+                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_m256) & ((paramtype2 == ATokenType.ttmemorylocation256) | (Assembler.IsMemoryLocationDefault(parameter2))))
+                                {
+                                    //ymm,m256,
+                                    if (Assembler.OpCodes[j].ParamType3 == AParam.par_noparam)
+                                    {
+                                        //ymm,m256
+                                        AddOpCode(bytes, j);
+                                        result = CreateModRm(bytes, GetReg(parameter1), parameter2);
+                                        return result;
+                                    }
+                                }
+                            }
+                            break;
                         case AParam.par_xmm:
                             if (paramtype1 == ATokenType.ttregisterxmm)
                             {
                                 if ((Assembler.OpCodes[j].ParamType2 == AParam.par_imm8) && (paramtype2 == ATokenType.ttvalue))
                                 {
+                                    //xmm,imm8
                                     if ((Assembler.OpCodes[j].ParamType3 == AParam.par_noparam) && (parameter3 == ""))
                                     {
                                         AddOpCode(bytes, j);
@@ -3082,23 +3333,266 @@ namespace SputnikAsm.LAssembler
                                 }
                                 if ((Assembler.OpCodes[j].ParamType2 == AParam.par_mm) && (paramtype2 == ATokenType.ttregistermm))
                                 {
-                                    //xmm,xmm
+                                    //xmm,mm
                                     AddOpCode(bytes, j);
                                     result = CreateModRm(bytes, GetReg(parameter1), parameter2);
                                     return result;
                                 }
                                 if ((Assembler.OpCodes[j].ParamType2 == AParam.par_xmm) && (paramtype2 == ATokenType.ttregisterxmm))
                                 {
-                                    //xmm,xmm
+                                    //xmm,xmm,
+                                    if (Assembler.OpCodes[j].ParamType3 == AParam.par_noparam)
+                                    {
+                                        //xmm,xmm
+                                        AddOpCode(bytes, j);
+                                        result = CreateModRm(bytes, GetReg(parameter1), parameter2);
+                                        return result;
+                                    }
+                                    if (Assembler.OpCodes[j].ParamType3 == AParam.par_imm8)
+                                    {
+                                        //xmm,xmm,imm8
+                                        if (Assembler.OpCodes[j].VexExtraParam == 1)
+                                        {
+                                            vexvvvv = (~GetReg(parameter1)) & 0xf;
+                                            result = CreateModRm(bytes, Assembler.EoToReg(Assembler.OpCodes[j].OpCode1), parameter2);
+                                            Assembler.Add(bytes, (Byte)v);
+                                            return result;
+                                        }
+                                        else
+                                        {
+                                            AddOpCode(bytes, j);
+                                            result = CreateModRm(bytes, GetReg(parameter1), parameter2);
+                                            Assembler.Add(bytes, (Byte)v);
+                                            return result;
+                                        }
+                                    }
+                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.par_xmm) && (paramtype3 ==ATokenType.ttregisterxmm))
+                                    {
+                                        //xmm,xmm,xmm
+                                        if (Assembler.OpCodes[j].VexExtraParam == 2)
+                                        {
+                                            AddOpCode(bytes, j);
+                                            vexvvvv = (~GetReg(parameter2)) & 0xf;
+                                            result = CreateModRm(bytes, GetReg(parameter1), parameter3);
+                                            return result;
+                                        }
+                                    }
+                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.par_r32_m8) & ((paramtype3 ==ATokenType.ttregister32bit) || (paramtype3 ==ATokenType.ttmemorylocation8) | (Assembler.IsMemoryLocationDefault(parameter2))))
+                                    {
+                                        //xmm,xmm,r32/m8,
+                                        if (Assembler.OpCodes[j].ParamType4 == AParam.par_noparam)
+                                        {
+                                            if (Assembler.OpCodes[j].VexExtraParam == 2)
+                                            {
+                                                AddOpCode(bytes, j);
+                                                vexvvvv = (~GetReg(parameter2)) & 0xf;
+                                                result = CreateModRm(bytes, GetReg(parameter1), parameter3);
+                                                return result;
+                                            }
+                                        }
+                                        if (Assembler.OpCodes[j].ParamType4 == AParam.par_imm8)
+                                        {
+                                            //xmm,xmm,r32/m8,imm8
+                                            AddOpCode(bytes, j);
+                                            vexvvvv = (~GetReg(parameter2)) & 0xf;
+                                            result = CreateModRm(bytes, GetReg(parameter1), parameter3);
+                                            Assembler.Add(bytes, (Byte)AStringUtils.StrToInt(parameter4));
+                                            return result;
+                                        }
+                                    }
+                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.par_rm32) && (Assembler.IsMem32(paramtype3) | ((paramtype3 ==ATokenType.ttmemorylocation32) && (parameter3[1] == '['))))
+                                    {
+                                        //xmm,xmm,rm32
+                                        if (Assembler.OpCodes[j].ParamType4 == AParam.par_noparam)
+                                        {
+                                            if (Assembler.OpCodes[j].VexExtraParam == 2)
+                                            {
+                                                AddOpCode(bytes, j);
+                                                vexvvvv = (~GetReg(parameter2)) & 0xf;
+                                                result = CreateModRm(bytes, GetReg(parameter1), parameter3);
+                                                return result;
+                                            }
+                                        }
+                                        if (Assembler.OpCodes[j].ParamType4 == AParam.par_imm8)
+                                        {
+                                            //xmm,xmm,rm32,imm8
+                                            AddOpCode(bytes, j);
+                                            vexvvvv = (~GetReg(parameter2)) & 0xf;
+                                            result = CreateModRm(bytes, GetReg(parameter1), parameter3);
+                                            Assembler.Add(bytes, (Byte)AStringUtils.StrToInt(parameter4));
+                                            return result;
+                                        }
+                                    }
+                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.par_xmm_m32) && (Assembler.IsXmm32(paramtype3) | ((paramtype3 ==ATokenType.ttmemorylocation32) && (parameter3[1] == '['))))
+                                    {
+                                        //xmm,xmm,xmm/m32,
+                                        if (Assembler.OpCodes[j].ParamType4 == AParam.par_noparam)
+                                        {
+                                            if (Assembler.OpCodes[j].VexExtraParam == 2)
+                                            {
+                                                AddOpCode(bytes, j);
+                                                vexvvvv = (~GetReg(parameter2)) & 0xf;
+                                                result = CreateModRm(bytes, GetReg(parameter1), parameter3);
+                                                return result;
+                                            }
+                                        }
+                                        if (Assembler.OpCodes[j].ParamType4 == AParam.par_imm8)
+                                        {
+                                            //xmm,xmm,xmm/m32,imm8
+                                            AddOpCode(bytes, j);
+                                            vexvvvv = (~GetReg(parameter2)) & 0xf;
+                                            result = CreateModRm(bytes, GetReg(parameter1), parameter3);
+                                            Assembler.Add(bytes, (Byte)AStringUtils.StrToInt(parameter4));
+                                            return result;
+                                        }
+                                    }
+
+                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.par_m64) & ((paramtype3 ==ATokenType.ttmemorylocation64) | (Assembler.IsMemoryLocationDefault(parameter3))))
+                                    {
+                                        //xmm,xmm,m64,
+                                        if (Assembler.OpCodes[j].VexExtraParam == 2)
+                                        {
+                                            AddOpCode(bytes, j);
+                                            vexvvvv = (~GetReg(parameter2)) & 0xf;
+                                            result = CreateModRm(bytes, GetReg(parameter1), parameter3);
+                                            return result;
+                                        }
+                                    }
+
+                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.par_m128) & ((paramtype3 ==ATokenType.ttmemorylocation128) | (Assembler.IsMemoryLocationDefault(parameter3))))
+                                    {
+                                        //xmm,xmm,m128,
+                                        if (Assembler.OpCodes[j].VexExtraParam == 2)
+                                        {
+                                            AddOpCode(bytes, j);
+                                            vexvvvv = (~GetReg(parameter2)) & 0xf;
+                                            result = CreateModRm(bytes, GetReg(parameter1), parameter3);
+                                            return result;
+                                        }
+                                    }
+
+                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.par_xmm_m64) && (Assembler.IsXmm64(paramtype3) | ((paramtype3 ==ATokenType.ttmemorylocation32) && (parameter3[1] == '['))))
+                                    {
+                                        //xmm,xmm,xmm/m64
+                                        if (Assembler.OpCodes[j].ParamType4 == AParam.par_noparam)
+                                        {
+                                            if (Assembler.OpCodes[j].VexExtraParam == 2)
+                                            {
+                                                AddOpCode(bytes, j);
+                                                vexvvvv = (~GetReg(parameter2)) & 0xf;
+                                                result = CreateModRm(bytes, GetReg(parameter1), parameter3);
+                                                return result;
+                                            }
+                                        }
+
+                                        if (Assembler.OpCodes[j].ParamType4 == AParam.par_imm8)
+                                        {
+                                            //xmm,xmm,xmm/m64,imm8
+                                            if (Assembler.OpCodes[j].VexExtraParam == 2)
+                                            {
+                                                AddOpCode(bytes, j);
+                                                vexvvvv = (~GetReg(parameter2)) & 0xf;
+                                                result = CreateModRm(bytes, GetReg(parameter1), parameter3);
+                                                Assembler.Add(bytes, (Byte)AStringUtils.StrToInt(parameter4));
+                                                return result;
+                                            }
+                                        }
+                                    }
+
+                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.par_xmm_m128) && (Assembler.IsXmm128(paramtype3) | ((paramtype3 ==ATokenType.ttmemorylocation32) && (parameter3[1] == '['))))
+                                    {
+                                        //xmm,xmm,xmm/m128,
+                                        if (Assembler.OpCodes[j].ParamType4 == AParam.par_noparam)
+                                        {
+                                            //xmm,xmm,xmm/m128
+                                            if (Assembler.OpCodes[j].VexExtraParam == 2)
+                                            {
+                                                AddOpCode(bytes, j);
+                                                vexvvvv = (~GetReg(parameter2)) & 0xf;
+                                                result = CreateModRm(bytes, GetReg(parameter1), parameter3);
+                                                return result;
+                                            }
+                                        }
+
+                                        if ((Assembler.OpCodes[j].ParamType4 == AParam.par_xmm) && (paramtype4 ==ATokenType.ttregisterxmm))
+                                        {
+                                            //xmm,xmm,xmm/128,xmm  (vblendvpd/vps)
+                                            if (Assembler.OpCodes[j].VexExtraParam == 2)
+                                            {
+                                                AddOpCode(bytes, j);
+                                                vexvvvv = (~GetReg(parameter2)) & 0xf;
+                                                result = CreateModRm(bytes, GetReg(parameter1), parameter3);
+                                                Assembler.Add(bytes, (Byte)(GetReg(parameter4) << 4));
+                                                return result;
+                                            }
+                                        }
+
+                                        if (Assembler.OpCodes[j].ParamType4 == AParam.par_imm8)
+                                        {
+                                            //xmm,xmm,xmm/m128,imm8
+                                            if (Assembler.OpCodes[j].VexExtraParam == 2)
+                                            {
+                                                AddOpCode(bytes, j);
+                                                vexvvvv = (~GetReg(parameter2)) & 0xf;
+                                                result = CreateModRm(bytes, GetReg(parameter1), parameter3);
+                                                Assembler.Add(bytes, (Byte)AStringUtils.StrToInt(parameter4));
+                                                return result;
+                                            }
+                                        }
+                                    }
+                                }
+                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_ymm_m256) && (Assembler.IsYmm256(paramtype2) | ((paramtype2 ==ATokenType.ttmemorylocation32) && (parameter2[1] == '['))))
+                                {
+                                    //xmm,ymm/m256
+                                    AddOpCode(bytes, j);
+                                    result = CreateModRm(bytes, GetReg(parameter1), parameter2);
+                                    return result;
+                                }
+                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_m32) & ((paramtype2 ==ATokenType.ttmemorylocation32) | (Assembler.IsMemoryLocationDefault(parameter2))))
+                                {
+                                    //xmm,m32
                                     AddOpCode(bytes, j);
                                     result = CreateModRm(bytes, GetReg(parameter1), parameter2);
                                     return result;
                                 }
                                 if ((Assembler.OpCodes[j].ParamType2 == AParam.par_m64) & ((paramtype2 == ATokenType.ttmemorylocation64) | (Assembler.IsMemoryLocationDefault(parameter2))))
                                 {
+                                    //xmm,m64
                                     AddOpCode(bytes, j);
                                     result = CreateModRm(bytes, GetReg(parameter1), parameter2);
                                     return result;
+                                }
+                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_m128) & ((paramtype2 ==ATokenType.ttmemorylocation128) | (Assembler.IsMemoryLocationDefault(parameter2))))
+                                {
+                                    //xmm,m128,
+                                    if (Assembler.OpCodes[j].ParamType3 == AParam.par_noparam)
+                                    {
+                                        AddOpCode(bytes, j);
+                                        result = CreateModRm(bytes, GetReg(parameter1), parameter2);
+                                        return result;
+                                    }
+
+                                    if (Assembler.OpCodes[i].ParamType3 == AParam.par_imm8)
+                                    {
+                                        AddOpCode(bytes, j);
+                                        result = CreateModRm(bytes, GetReg(parameter1), parameter2);
+                                        Assembler.Add(bytes, (Byte)v);
+                                        return result;
+                                    }
+
+                                }
+
+                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_r32_m8) & ((paramtype2 ==ATokenType.ttregister32bit) || (paramtype2 ==ATokenType.ttmemorylocation8) | (Assembler.IsMemoryLocationDefault(parameter2))))
+                                {
+                                    //xmm,r32/m8,
+                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.par_imm8) && (paramtype3 ==ATokenType.ttvalue))
+                                    {
+                                        AddOpCode(bytes, j);
+                                        CreateModRm(bytes, GetReg(parameter1), parameter2);
+                                        Assembler.Add(bytes, (Byte)v);
+                                        result = true;
+                                        return result;
+                                    }
                                 }
                                 if ((Assembler.OpCodes[j].ParamType2 == AParam.par_rm32) & (Assembler.IsMem32(paramtype2)))
                                 {
@@ -3122,8 +3616,32 @@ namespace SputnikAsm.LAssembler
                                         return result;
                                     }
                                 }
+                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_xmm_m8) & Assembler.IsXmm8(paramtype2, parameter2))
+                                {
+                                    //xmm,xmm/m8,
+                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        //xmm,xmm/m8
+                                        AddOpCode(bytes, j);
+                                        result = CreateModRm(bytes, GetReg(parameter1), parameter2);
+                                        return result;
+                                    }
+                                }
+
+                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_xmm_m16) & Assembler.IsXmm16(paramtype2, parameter2))
+                                {
+                                    //xmm,xmm/m16,
+                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        //xmm,xmm/m16
+                                        AddOpCode(bytes, j);
+                                        result = CreateModRm(bytes, GetReg(parameter1), parameter2);
+                                        return result;
+                                    }
+                                }
                                 if ((Assembler.OpCodes[j].ParamType2 == AParam.par_xmm_m32) & Assembler.IsXmm32(paramtype2))
                                 {
+                                    //xmm,xmm/m32,
                                     //even if the user didn't intend for it to be xmm,m64 it will be, that'll teach the lazy user to forget opperand size
                                     if ((Assembler.OpCodes[j].ParamType3 == AParam.par_noparam) && (parameter3 == ""))
                                     {
@@ -3162,6 +3680,7 @@ namespace SputnikAsm.LAssembler
                                 }
                                 if ((Assembler.OpCodes[j].ParamType2 == AParam.par_xmm_m128) && (Assembler.IsXmm128(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[0] == '['))))
                                 {
+                                    //xmm,xmm/m128,
                                     if ((Assembler.OpCodes[j].ParamType3 == AParam.par_noparam) && (parameter3 == ""))
                                     {
                                         //xmm,xmm/m128
@@ -3171,6 +3690,7 @@ namespace SputnikAsm.LAssembler
                                     }
                                     if ((Assembler.OpCodes[j].ParamType3 == AParam.par_imm8) && (paramtype3 == ATokenType.ttvalue))
                                     {
+                                        //xmm,xmm/m128,imm8
                                         AddOpCode(bytes, j);
                                         CreateModRm(bytes, GetReg(parameter1), parameter2);
                                         Assembler.Add(bytes, (Byte)v);
@@ -3196,7 +3716,8 @@ namespace SputnikAsm.LAssembler
                             }
                             break;
                         case AParam.par_m16:
-                            if ((paramtype1 == ATokenType.ttmemorylocation16) | Assembler.IsMemoryLocationDefault(parameter1))
+                            if ((paramtype1 ==ATokenType.ttmemorylocation16) | Assembler.IsMemoryLocationDefault(parameter1))
+                            {
                                 if ((Assembler.OpCodes[j].ParamType2 == AParam.par_noparam) && (parameter2 == ""))
                                 {
                                     //opcode+rd
@@ -3204,6 +3725,7 @@ namespace SputnikAsm.LAssembler
                                     result = CreateModRm(bytes, Assembler.EoToReg(Assembler.OpCodes[j].OpCode1), parameter1);
                                     return result;
                                 }
+                            }
                             break;
                         case AParam.par_m32:
                             if (paramtype1 == ATokenType.ttmemorylocation32)
@@ -3241,7 +3763,7 @@ namespace SputnikAsm.LAssembler
                                 if ((Assembler.OpCodes[j].ParamType2 == AParam.par_noparam) && (parameter2 == ""))
                                 {
                                     //m64
-                                    if (Assembler.GetTokenType(ref parameter1, parameter2) == ATokenType.ttmemorylocation64)
+                                    if ((Assembler.GetTokenType(ref parameter1, parameter2) == ATokenType.ttmemorylocation64) | Assembler.IsMemoryLocationDefault(parameter1))
                                     {
                                         //verified, it is a 64 bit location, and if it was detected as 32 it was due to defaulting to 32
                                         AddOpCode(bytes, j);
@@ -3249,17 +3771,9 @@ namespace SputnikAsm.LAssembler
                                         return result;
                                     }
                                 }
-                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_xmm) & ((paramtype2 == ATokenType.ttregisterxmm) | Assembler.IsMemoryLocationDefault(parameter2)))
+                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_xmm) && (paramtype2 == ATokenType.ttregisterxmm))
                                 {
-                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.par_noparam) || (parameter3 == ""))
-                                    {
-                                        AddOpCode(bytes, j);
-                                        result = CreateModRm(bytes, GetReg(parameter2), parameter1);
-                                        return result;
-                                    }
-                                }
-                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_xmm) & ((paramtype2 == ATokenType.ttregisterxmm) | Assembler.IsMemoryLocationDefault(parameter2)))
-                                {
+                                    //m64,xmm
                                     if ((Assembler.OpCodes[j].ParamType3 == AParam.par_noparam) || (parameter3 == ""))
                                     {
                                         AddOpCode(bytes, j);
@@ -3283,13 +3797,59 @@ namespace SputnikAsm.LAssembler
                         case AParam.par_m128:
                             if ((paramtype1 == ATokenType.ttmemorylocation128) | (Assembler.IsMemoryLocationDefault(parameter1)))
                             {
+                                //m128,
                                 if ((Assembler.OpCodes[j].ParamType2 == AParam.par_xmm) && (paramtype2 == ATokenType.ttregisterxmm))
                                 {
+                                    //m128,xmm
                                     if ((Assembler.OpCodes[j].ParamType3 == AParam.par_noparam) && (parameter3 == ""))
                                     {
                                         AddOpCode(bytes, j);
                                         result = CreateModRm(bytes, GetReg(parameter2), parameter1);
                                         return result;
+                                    }
+                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.par_xmm) && (paramtype3 ==ATokenType.ttregisterxmm))
+                                    {
+                                        //m128,xmm,xmm
+                                        if ((Assembler.OpCodes[j].ParamType4 == AParam.par_noparam) && (parameter4 == ""))
+                                        {
+                                            if (Assembler.OpCodes[j].VexExtraParam == 2)
+                                            {
+                                                AddOpCode(bytes, j);
+                                                vexvvvv = (~GetReg(parameter2)) & 0xf;
+                                                result = CreateModRm(bytes, GetReg(parameter3), parameter1);
+                                                return result;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            break;
+                        case AParam.par_m256:
+                            if ((paramtype1 ==ATokenType.ttmemorylocation256) | (Assembler.IsMemoryLocationDefault(parameter1)))
+                            {
+                                //m256,
+                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_ymm) && (paramtype2 ==ATokenType.ttregisterymm))
+                                {
+                                    //m256,ymm,
+                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        AddOpCode(bytes, j);
+                                        result = CreateModRm(bytes, GetReg(parameter2), parameter1);
+                                        return result;
+                                    }
+                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.par_ymm) && (paramtype3 ==ATokenType.ttregisterymm))
+                                    {
+                                        //m256,ymm,ymm
+                                        if ((Assembler.OpCodes[j].ParamType4 == AParam.par_noparam) && (parameter4 == ""))
+                                        {
+                                            if (Assembler.OpCodes[j].VexExtraParam == 2)
+                                            {
+                                                AddOpCode(bytes, j);
+                                                vexvvvv = (~GetReg(parameter2)) & 0xf;
+                                                result = CreateModRm(bytes, GetReg(parameter3), parameter1);
+                                                return result;
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -3304,7 +3864,7 @@ namespace SputnikAsm.LAssembler
                                     {
                                         if (((!overrideshort) & (vtype > 8)) | (overridelong))
                                         {
-                                            //see if there is a 32 bit equivalent opcode (notice I dont do rel 16 because that'll completly screw up eip)
+                                            //see if there is a 32 bit equivalent opcode (notice I dont do rel 16 because that'll completely screw up eip)
                                             var k = startoflist;
                                             while ((k < Assembler.OpCodeCount) && (Assembler.OpCodes[k].Mnemonic == tokens[mnemonic]))
                                             {
@@ -3327,7 +3887,6 @@ namespace SputnikAsm.LAssembler
                                     else
                                     {
                                         //user typed in a direct address
-                                        //        if (not overrideShort) and ((OverrideLong) or (valueTotype(      v-address-       (Assembler.opcodes[j].bytes+1) )>8) ) then
                                         if ((!overrideshort) & ((overridelong) | (Assembler.ValueToType((IntPtr)(v - address - (UInt64)(Assembler.OpCodes[j].Bytes + 1))) > 8)))
                                         {
                                             //the user tried to find a relative address out of it's reach
@@ -3350,7 +3909,9 @@ namespace SputnikAsm.LAssembler
                                         {
                                             //8 bit version
                                             AddOpCode(bytes, j);
-                                            Assembler.Add(bytes, (Byte)(v - address - (UInt32)(Assembler.OpCodes[j].Bytes + 1)));
+                                            b = (Byte)((UInt32)(v - address - (UInt32)(Assembler.OpCodes[j].Bytes + 1)) & 0xff);
+                                            // b:=b and $ff;
+                                            Assembler.Add(bytes, b);
                                             result = true;
                                             return result;
                                         }
@@ -3451,6 +4012,8 @@ namespace SputnikAsm.LAssembler
                             }
                             break;
                         }
+                    paramtype1 = oldParamtype1;
+                    paramtype2 = oldParamtype2;
                     j += 1;
                 }
             }
@@ -3463,6 +4026,48 @@ namespace SputnikAsm.LAssembler
                     {
                         if (Assembler.OpCodes[j].W0)
                             RexW = false;
+                        if (Assembler.OpCodes[j].W1)
+                            RexW = true;
+                        // if (Assembler.OpCodes[j].HasVex)
+                        // {
+                        //     //setup a vex prefix. Check if a 2 byte or 3 byte prefix is needed
+                        //     //3 byte is needed when mmmmmm(vexLeadingOpcode>1) or rex.X/B or W are used
+                        //     //vexOpcodeExtension: oe_F2; vexLeadingOpcode: lo_0f
+                        //     bigvex = (Assembler.OpCodes[j].VexLeadingOpCode > AVexLeadingOpCode.lo_0f) | RexB | RexX | RexW;
+                        //     if (bigvex == false)
+                        //     {
+                        //         //2byte vex
+                        //         bytes.SetLength(bytes.Length + 2);
+                        //         for (i = bytes.Length - 1; i >= RexPrefixLocation + 2; i--)
+                        //             bytes[i] = bytes[i - 2];
+                        //         bytes[RexPrefixLocation] = 0xc5; //2 byte VEX
+                        //         pvex2byte(&bytes[RexPrefixLocation + 1])->pp = (int)(Assembler.OpCodes[j].VexLeadingOpCode);
+                        //         pvex2byte(&bytes[RexPrefixLocation + 1])->l = Assembler.OpCodes[j].VexL;
+                        //         pvex2byte(&bytes[RexPrefixLocation + 1])->vvvv = vexvvvv;
+                        //         pvex2byte(&bytes[RexPrefixLocation + 1])->r = RexR ? 0 : 1;
+                        //         if (RelativeAddressLocation != -1)
+                        //             RelativeAddressLocation += 2;
+                        //     }
+                        //     else
+                        //     {
+                        //         //3byte vex
+                        //         bytes.SetLength(bytes.Length + 3);
+                        //         for (i = bytes.Length - 1; i >= RexPrefixLocation + 3; i--)
+                        //             bytes[i] = bytes[i - 3];
+                        //         bytes[RexPrefixLocation] = 0xc4; //3 byte VEX
+                        //         pvex3byte(&bytes[RexPrefixLocation + 1])->mmmmm = (int)(Assembler.OpCodes[j].VexLeadingOpCode);
+                        //         pvex3byte(&bytes[RexPrefixLocation + 1])->b = RexB ? 0 : 1;
+                        //         pvex3byte(&bytes[RexPrefixLocation + 1])->x = RexX ? 0 : 1;
+                        //         pvex3byte(&bytes[RexPrefixLocation + 1])->r = RexR ? 0 : 1;
+                        //         pvex3byte(&bytes[RexPrefixLocation + 1])->pp = (int)(Assembler.OpCodes[j].VexLeadingOpCode);
+                        //         pvex3byte(&bytes[RexPrefixLocation + 1])->l = Assembler.OpCodes[j].VexL;
+                        //         pvex3byte(&bytes[RexPrefixLocation + 1])->vvvv = vexvvvv;
+                        //         pvex3byte(&bytes[RexPrefixLocation + 1])->w = RexW ? 1 : 0; //not inverted
+                        //         if (RelativeAddressLocation != -1)
+                        //             RelativeAddressLocation += 3;
+                        //     }
+                        //     RexPrefix = 0;  //vex and rex can not co-exist
+                        // }
                         if (RexPrefix != 0)
                         {
                             if (RexPrefixLocation == -1)
@@ -3500,6 +4105,19 @@ namespace SputnikAsm.LAssembler
                                 }
                             }
                         }
+                    }
+                    if (NeedsAddressSwitchPrefix)  //add it
+                    {
+                        if (candoaddressswitch)
+                        {
+                            //put 0x67 in front
+                            bytes.SetLength(bytes.Length + 1);
+                            for (i = bytes.Length - 1; i >= 1; i--)
+                                bytes[i] = bytes[i - 1];
+                            bytes[0] = 0x67;
+                        }
+                        else
+                            throw new Exception("Invalid address");
                     }
                 }
             }

@@ -32,7 +32,6 @@ label(cat);
 400300:
 mov eax, dword ptr[400500]
 jmp cat
-
 db  90 90 90 90 90
 cat:
 push 43

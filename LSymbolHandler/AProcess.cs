@@ -683,9 +683,9 @@ namespace SputnikAsm.LSymbolHandler
             if (!IsValid())
                 return null;
             var mainModule = _process.GetMainModule();
-            if (mainModule.ModuleName == moduleName)
+            if (String.Equals(mainModule.ModuleName, moduleName, StringComparison.CurrentCultureIgnoreCase))
                 return mainModule;
-            var ret = _process.GetModules().FirstOrDefault(m => m.ModuleName == moduleName);
+            var ret = _process.GetModules().FirstOrDefault(m => String.Equals(m.ModuleName, moduleName, StringComparison.CurrentCultureIgnoreCase));
             return ret;
         }
         #endregion
