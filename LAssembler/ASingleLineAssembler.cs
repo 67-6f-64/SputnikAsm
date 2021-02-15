@@ -1,5 +1,5 @@
 ﻿using System;
-using Sputnik.LEngine;
+using Sputnik.LGenerics;
 using Sputnik.LUtils;
 using SputnikAsm.LAssembler.LEnums;
 using SputnikAsm.LCollections;
@@ -584,7 +584,7 @@ namespace SputnikAsm.LAssembler
         #region SetModRm
         public void SetModRm(AByteArray modrm, String address, int offset)
         {
-            var reg = new UAv();
+            var reg = new USafeDictionary<int, String>();
             var splitup = new AStringArray();
             var regs = "";
             var reg1 = "";
@@ -697,8 +697,8 @@ namespace SputnikAsm.LAssembler
                 reg1 = regs;
                 k = 1;
             }
-            reg[-1] = new USv(reg1);
-            reg[1] = new USv(reg2);
+            reg[-1] = reg1;
+            reg[1] = reg2;
             k = 1;
             if ((reg1 != "") && (reg2 == "") && (AStringUtils.Pos("*", reg1) != -1))
             {
@@ -2352,19 +2352,29 @@ namespace SputnikAsm.LAssembler
                                 }
                                 if ((Assembler.OpCodes[j].ParamType2 == AParam.par_mm) && (paramtype2 == ATokenType.ttregistermm))
                                 {
+                                    //r32, mm,
                                     if ((Assembler.OpCodes[j].ParamType3 == AParam.par_noparam) && (parameter3 == ""))
                                     {
                                         AddOpCode(bytes, j);
                                         result = CreateModRm(bytes, GetReg(parameter1), parameter2);
                                         return result;
                                     }
-
-                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.par_imm8) && (parameter3 == ""))
+                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.par_imm8) && (paramtype3 == ATokenType.ttvalue))
                                     {
-                                        //32, mm,imm8
+                                        //r32, mm,imm8
                                         AddOpCode(bytes, j);
                                         result = CreateModRm(bytes, GetReg(parameter1), parameter2);
                                         Assembler.Add(bytes, (Byte)v);
+                                        return result;
+                                    }
+                                }
+                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_ymm) && (paramtype2 == ATokenType.ttregisterymm))
+                                {
+                                    //r32,ymm,
+                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        AddOpCode(bytes, j);
+                                        result = CreateModRm(bytes, GetReg(parameter1), parameter2);
                                         return result;
                                     }
                                 }
@@ -2374,14 +2384,14 @@ namespace SputnikAsm.LAssembler
                                     if ((Assembler.OpCodes[j].ParamType3 == AParam.par_noparam) && (parameter3 == ""))
                                     {
                                         AddOpCode(bytes, j);
-                                        result = CreateModRm(bytes, GetReg(parameter2), parameter1);
+                                        result = CreateModRm(bytes, GetReg(parameter1), parameter2);
                                         return result;
                                     }
 
-                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.par_imm8) && (parameter3 == ""))
+                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.par_imm8) && (paramtype3 == ATokenType.ttvalue))
                                     {
                                         AddOpCode(bytes, j);
-                                        result = CreateModRm(bytes, GetReg(parameter2), parameter1);
+                                        result = CreateModRm(bytes, GetReg(parameter1), parameter2);
                                         Assembler.Add(bytes, (Byte)v);
                                         return result;
                                     }
@@ -2424,6 +2434,7 @@ namespace SputnikAsm.LAssembler
                                 }
                                 if ((Assembler.OpCodes[j].ParamType2 == AParam.par_xmm_m64) && (Assembler.IsXmm64(paramtype2) | ((paramtype2 == ATokenType.ttmemorylocation32) && (parameter2[0] == '['))))
                                 {
+                                    //r32,xmm/m64
                                     if ((Assembler.OpCodes[j].ParamType3 == AParam.par_noparam) && (parameter3 == ""))
                                     {
                                         AddOpCode(bytes, j);
@@ -2446,6 +2457,17 @@ namespace SputnikAsm.LAssembler
                                     if ((Assembler.OpCodes[j].ParamType3 == AParam.par_noparam) && (parameter3 == ""))
                                     {
                                         //r32,m32
+                                        AddOpCode(bytes, j);
+                                        result = CreateModRm(bytes, GetReg(parameter1), parameter2);
+                                        return result;
+                                    }
+                                }
+                                if ((Assembler.OpCodes[j].ParamType2 == AParam.par_m128) & ((paramtype2 == ATokenType.ttmemorylocation128) | (Assembler.IsMemoryLocationDefault(parameter2))))
+                                {
+                                    //r32,m128,
+                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.par_noparam) && (parameter3 == ""))
+                                    {
+                                        //r32,m128
                                         AddOpCode(bytes, j);
                                         result = CreateModRm(bytes, GetReg(parameter1), parameter2);
                                         return result;
@@ -2476,9 +2498,22 @@ namespace SputnikAsm.LAssembler
                                     //r32,r/m32
                                     if ((Assembler.OpCodes[j].ParamType3 == AParam.par_noparam) && (parameter3 == ""))
                                     {
-                                        AddOpCode(bytes, j);
-                                        result = CreateModRm(bytes, GetReg(parameter1), parameter2);
-                                        return result;
+                                        if (Assembler.OpCodes[j].OpCode1 == AExtraOpCode.eo_reg)
+                                        {
+                                            AddOpCode(bytes, j);
+                                            result = CreateModRm(bytes, GetReg(parameter1), parameter2);
+                                            return result;
+                                        }
+                                        else
+                                        {
+                                            if (Assembler.OpCodes[j].VexExtraParam == 1)
+                                            {
+                                                AddOpCode(bytes, j);
+                                                vexvvvv = (~GetReg(parameter1)) & 0xf;
+                                                result = CreateModRm(bytes, Assembler.EoToReg(Assembler.OpCodes[j].OpCode1), parameter1);
+                                                return result;
+                                            }
+                                        }
                                     }
                                     if ((Assembler.OpCodes[j].ParamType3 == AParam.par_imm8) && (paramtype3 == ATokenType.ttvalue))
                                     {
@@ -2493,6 +2528,8 @@ namespace SputnikAsm.LAssembler
                                                        (Assembler.OpCodes[k].ParamType2 == AParam.par_rm32) &&
                                                        (Assembler.OpCodes[k].ParamType3 == AParam.par_imm32))
                                                     {
+                                                        if ((signedvtype == 64) & RexW)
+                                                            Invalid64BitValueFor32BitField(v);
                                                         AddOpCode(bytes, k);
                                                         result = CreateModRm(bytes, GetReg(parameter1), parameter2);
                                                         Assembler.AddDWord(bytes, (UInt32)v);
@@ -2505,6 +2542,17 @@ namespace SputnikAsm.LAssembler
                                             AddOpCode(bytes, j);
                                             result = CreateModRm(bytes, GetReg(parameter1), parameter2);
                                             Assembler.Add(bytes, (Byte)v);
+                                            return result;
+                                        }
+                                    }
+                                    if (Assembler.OpCodes[j].ParamType3 == AParam.par_r32)
+                                    {
+                                        //r32,rm32,r32
+                                        if (Assembler.OpCodes[j].VexExtraParam == 3)
+                                        {
+                                            AddOpCode(bytes, j);
+                                            vexvvvv = (~GetReg(parameter2)) & 0xf;
+                                            result = CreateModRm(bytes, GetReg(parameter1), parameter2);
                                             return result;
                                         }
                                     }

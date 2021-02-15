@@ -28,10 +28,14 @@ namespace SputnikAsm
 
             var cc = @"
             [ENABLE]
+label(cat);
 400300:
 mov eax, dword ptr[400500]
+jmp cat
 
-400311:
+db  90 90 90 90 90
+cat:
+push 43
 
 [DISABLE]
             ".Trim();
