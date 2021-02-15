@@ -308,7 +308,7 @@ namespace SputnikAsm.LProcess.LNative
         ///     with ERROR_INVALID_PARAMETER.
         /// </param>
         /// <param name="lpBuffer">
-        ///     [Out] A pointer to a <see cref="MemoryBasicInformation" /> structure in which information about
+        ///     [Out] A pointer to a <see cref="MemoryBasicInformation32" /> structure in which information about
         ///     the specified page range is returned.
         /// </param>
         /// <param name="dwLength">The size of the buffer pointed to by the lpBuffer parameter, in bytes.</param>
@@ -318,8 +318,38 @@ namespace SputnikAsm.LProcess.LNative
         ///     <see cref="Marshal.GetLastWin32Error" />.
         /// </returns>
         [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern int VirtualQueryEx(ASafeMemoryHandle hProcess, IntPtr lpAddress,
-            out MemoryBasicInformation lpBuffer, int dwLength);
+        public static extern IntPtr VirtualQueryEx(ASafeMemoryHandle hProcess, IntPtr lpAddress,
+            out MemoryBasicInformation32 lpBuffer, IntPtr dwLength);
+
+        /// <summary>
+        ///     Retrieves information about a range of pages within the virtual address space of a specified process.
+        /// </summary>
+        /// <param name="hProcess">
+        ///     A handle to the process whose memory information is queried.
+        ///     The handle must have been opened with the PROCESS_QUERY_INFORMATION access right, which enables using the handle to
+        ///     read information from the process object.
+        ///     For more information, see Process Security and Access Rights.
+        /// </param>
+        /// <param name="lpAddress">
+        ///     A pointer to the base address of the region of pages to be queried.
+        ///     This value is rounded down to the next page boundary.
+        ///     To determine the size of a page on the host computer, use the GetSystemInfo function.
+        ///     If lpAddress specifies an address above the highest memory address accessible to the process, the function fails
+        ///     with ERROR_INVALID_PARAMETER.
+        /// </param>
+        /// <param name="lpBuffer">
+        ///     [Out] A pointer to a <see cref="MemoryBasicInformation32" /> structure in which information about
+        ///     the specified page range is returned.
+        /// </param>
+        /// <param name="dwLength">The size of the buffer pointed to by the lpBuffer parameter, in bytes.</param>
+        /// <returns>
+        ///     The return value is the actual number of bytes returned in the information buffer.
+        ///     If the function fails, the return value is zero. To get extended error information, call
+        ///     <see cref="Marshal.GetLastWin32Error" />.
+        /// </returns>
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern IntPtr VirtualQueryEx(ASafeMemoryHandle hProcess, IntPtr lpAddress,
+            out MemoryBasicInformation64 lpBuffer, IntPtr dwLength);
 
         /// <summary>
         ///     Waits until the specified object is in the signaled state or the time-out interval elapses.

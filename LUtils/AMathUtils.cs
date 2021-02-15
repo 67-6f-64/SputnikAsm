@@ -4,20 +4,28 @@ namespace SputnikAsm.LUtils
 {
     public static class AMathUtils
     {
-        #region InRangeX
-        public static Boolean InRangeX(Byte value, Byte min, Byte max)
+        #region InRange
+        public static Boolean InRange(Byte value, Byte min, Byte max)
         {
             return value >= min && value <= max;
         }
-        public static Boolean InRangeX(UInt32 value, UInt32 min, UInt32 max)
+        public static Boolean InRange(UInt32 value, UInt32 min, UInt32 max)
         {
             return value >= min && value <= max;
         }
-        public static Boolean InRangeX(UInt64 value, UInt64 min, UInt64 max)
+        public static Boolean InRange(UInt64 value, UInt64 min, UInt64 max)
         {
             return value >= min && value <= max;
         }
-        public static Boolean InRangeX(UIntPtr value, UIntPtr min, UIntPtr max)
+        public static Boolean InRange(Single value, Single min, Single max)
+        {
+            return value >= min && value <= max;
+        }
+        public static Boolean InRange(Double value, Double min, Double max)
+        {
+            return value >= min && value <= max;
+        }
+        public static Boolean InRange(UIntPtr value, UIntPtr min, UIntPtr max)
         {
             var v = value.ToUInt64();
             var mn = min.ToUInt64();

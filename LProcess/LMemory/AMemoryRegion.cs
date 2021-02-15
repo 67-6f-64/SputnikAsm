@@ -43,7 +43,8 @@ namespace SputnikAsm.LProcess.LMemory
         public AMemoryProtection ChangeProtection(
             MemoryProtectionFlags protection = MemoryProtectionFlags.ExecuteReadWrite, bool mustBeDisposed = true)
         {
-            return new AMemoryProtection(Process.Handle, BaseAddress, Information.RegionSize, protection, mustBeDisposed);
+            // todo how to handle the regionsize?
+            return new AMemoryProtection(Process.Handle, BaseAddress, (int)Information.RegionSize, protection, mustBeDisposed);
         }
 
         /// <summary>

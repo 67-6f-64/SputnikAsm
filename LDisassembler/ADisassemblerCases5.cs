@@ -1124,7 +1124,7 @@ namespace SputnikAsm.LDisassembler
                 case 0xd9:
                     {
                         LastDisassembleData.IsFloat = true;
-                        if (AMathUtils.InRangeX(memory[1], 0x00, 0xbf))
+                        if (AMathUtils.InRange(memory[1], 0x00, 0xbf))
                         {
                             switch (GetReg(memory[1]))
                             {
@@ -1199,21 +1199,21 @@ namespace SputnikAsm.LDisassembler
                                     break;
                             }
                         }
-                        else if (AMathUtils.InRangeX(memory[1], 0xc0, 0xc7))
+                        else if (AMathUtils.InRange(memory[1], 0xc0, 0xc7))
                         {
                             description = "push st(i) onto the fpu register stack";
                             LastDisassembleData.OpCode = "fld";
                             LastDisassembleData.Parameters = "st(" + (memory[1] - 0xc0) + ')';
                             offset += 1;
                         }
-                        else if (AMathUtils.InRangeX(memory[1], 0xc8, 0xcf))
+                        else if (AMathUtils.InRange(memory[1], 0xc8, 0xcf))
                         {
                             description = "exchange register contents";
                             LastDisassembleData.OpCode = "fxch";
                             LastDisassembleData.Parameters = "st(" + (memory[1] - 0xc8) + ')';
                             offset += 1;
                         }
-                        else if (AMathUtils.InRangeX(memory[1], 0xd9, 0xdf))
+                        else if (AMathUtils.InRange(memory[1], 0xd9, 0xdf))
                         {
                             description = "exchange register contents";
                             LastDisassembleData.OpCode = "fxch";
@@ -1605,7 +1605,7 @@ namespace SputnikAsm.LDisassembler
 
                 case 0xdb:
                     {
-                        if (AMathUtils.InRangeX(memory[1], 0x00, 0xbf))
+                        if (AMathUtils.InRange(memory[1], 0x00, 0xbf))
                         {
                             switch (GetReg(memory[1]))
                             {
@@ -1673,28 +1673,28 @@ namespace SputnikAsm.LDisassembler
 
                             }
                         }
-                        else if (AMathUtils.InRangeX(memory[1], 0xc0, 0xc7))
+                        else if (AMathUtils.InRange(memory[1], 0xc0, 0xc7))
                         {
                             description = "floating-point: move if not below";
                             LastDisassembleData.OpCode = "fcmovnb";
                             LastDisassembleData.Parameters = "st(0),st(" + (memory[1] - 0xc0) + ')';
                             offset += 1;
                         }
-                        else if (AMathUtils.InRangeX(memory[1], 0xc8, 0xcf))
+                        else if (AMathUtils.InRange(memory[1], 0xc8, 0xcf))
                         {
                             description = "floating-point: move if not equal";
                             LastDisassembleData.OpCode = "fcmovne";
                             LastDisassembleData.Parameters = "st(0),st(" + (memory[1] - 0xc8) + ')';
                             offset += 1;
                         }
-                        else if (AMathUtils.InRangeX(memory[1], 0xd0, 0xd7))
+                        else if (AMathUtils.InRange(memory[1], 0xd0, 0xd7))
                         {
                             description = "floating-point: move if not below or equal";
                             LastDisassembleData.OpCode = "fcmovnbe";
                             LastDisassembleData.Parameters = "st(0),st(" + (memory[1] - 0xd0) + ')';
                             offset += 1;
                         }
-                        else if (AMathUtils.InRangeX(memory[1], 0xd8, 0xdf))
+                        else if (AMathUtils.InRange(memory[1], 0xd8, 0xdf))
                         {
                             description = "floating-point: move if not unordered";
                             LastDisassembleData.OpCode = "fcmovnu";
@@ -1907,7 +1907,7 @@ namespace SputnikAsm.LDisassembler
 
                 case 0xdd:
                     {
-                        if (AMathUtils.InRangeX(memory[1], 0x00, 0xbf))
+                        if (AMathUtils.InRange(memory[1], 0x00, 0xbf))
                         {
                             switch (GetReg(memory[1]))
                             {
@@ -1986,35 +1986,35 @@ namespace SputnikAsm.LDisassembler
 
                             }
                         }
-                        else if (AMathUtils.InRangeX(memory[1], 0xc0, 0xc7))
+                        else if (AMathUtils.InRange(memory[1], 0xc0, 0xc7))
                         {
                             description = "free floating-point register";
                             LastDisassembleData.OpCode = "ffree";
                             LastDisassembleData.Parameters = "st(" + (memory[1] - 0xc0) + ')';
                             offset += 1;
                         }
-                        else if (AMathUtils.InRangeX(memory[1], 0xd0, 0xd7))
+                        else if (AMathUtils.InRange(memory[1], 0xd0, 0xd7))
                         {
                             description = "store real";
                             LastDisassembleData.OpCode = "fst";
                             LastDisassembleData.Parameters = "st(" + (memory[1] - 0xd0) + ')';
                             offset += 1;
                         }
-                        else if (AMathUtils.InRangeX(memory[1], 0xd8, 0xdf))
+                        else if (AMathUtils.InRange(memory[1], 0xd8, 0xdf))
                         {
                             description = "store real";
                             LastDisassembleData.OpCode = "fstp";
                             LastDisassembleData.Parameters = "st(" + (memory[1] - 0xd8) + ')';
                             offset += 1;
                         }
-                        else if (AMathUtils.InRangeX(memory[1], 0xe0, 0xe7))
+                        else if (AMathUtils.InRange(memory[1], 0xe0, 0xe7))
                         {
                             description = "unordered compare real";
                             LastDisassembleData.OpCode = "fucom";
                             LastDisassembleData.Parameters = "st(" + (memory[1] - 0xe0) + ')';
                             offset += 1;
                         }
-                        else if (AMathUtils.InRangeX(memory[1], 0xe8, 0xef))
+                        else if (AMathUtils.InRange(memory[1], 0xe8, 0xef))
                         {
                             description = "unordered compare real";
                             LastDisassembleData.OpCode = "fucomp";
@@ -2195,7 +2195,7 @@ namespace SputnikAsm.LDisassembler
 
                 case 0xdf:
                     {
-                        if (AMathUtils.InRangeX(memory[1], 0xc0, 0xc7))
+                        if (AMathUtils.InRange(memory[1], 0xc0, 0xc7))
                         {
                             description = "free floating-point register and pop (might not work)";
                             LastDisassembleData.OpCode = "ffreep";

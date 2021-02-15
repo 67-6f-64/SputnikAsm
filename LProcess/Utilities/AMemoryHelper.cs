@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Runtime.InteropServices;
 using Process.NET.Marshaling;
 using Sputnik.LDateTime;
 using SputnikAsm.LExtensions;
@@ -191,22 +192,146 @@ namespace SputnikAsm.LProcess.Utilities
         /// <param name="processHandle">A handle to the process whose memory information is queried.</param>
         /// <param name="baseAddress">A pointer to the base address of the region of pages to be queried.</param>
         /// <returns>
-        ///     A <see cref="MemoryBasicInformation" /> structures in which information about the specified page range is
+        ///     A <see cref="MemoryBasicInformation32" /> structures in which information about the specified page range is
+        ///     returned.
+        /// </returns>
+        public static MemoryBasicInformation32 Query32(ASafeMemoryHandle processHandle, IntPtr baseAddress)
+        {
+            // Query the memory region
+            var sz = MarshalType<MemoryBasicInformation32>.Size;
+            if (Kernel32.VirtualQueryEx(processHandle, baseAddress, out MemoryBasicInformation32 memoryInfo, (IntPtr)sz) != IntPtr.Zero)
+                return memoryInfo;
+            return new MemoryBasicInformation32();
+        }
+
+        /// <summary>
+        ///     Retrieves information about a range of pages within the virtual address space of a specified process.
+        /// </summary>
+        /// <param name="processHandle">A handle to the process whose memory information is queried.</param>
+        /// <param name="baseAddress">A pointer to the base address of the region of pages to be queried.</param>
+        /// <param name="query">The original return value from the native API</param>
+        /// <returns>
+        ///     A <see cref="MemoryBasicInformation32" /> structures in which information about the specified page range is
+        ///     returned.
+        /// </returns>
+        public static MemoryBasicInformation32 Query32(ASafeMemoryHandle processHandle, IntPtr baseAddress, out IntPtr query)
+        {
+            // Query the memory region
+            var sz = MarshalType<MemoryBasicInformation32>.Size;
+            query = Kernel32.VirtualQueryEx(processHandle, baseAddress, out MemoryBasicInformation32 memoryInfo, (IntPtr)sz);
+            if (query != IntPtr.Zero)
+                return memoryInfo;
+            return new MemoryBasicInformation32();
+        }
+
+        private static MemoryBasicInformation64 Query64(ASafeMemoryHandle processHandle, IntPtr baseAddress)
+        {
+            var sz = MarshalType<MemoryBasicInformation64>.Size;
+            if (Kernel32.VirtualQueryEx(processHandle, baseAddress, out MemoryBasicInformation64 memoryInfo, (IntPtr)sz) != IntPtr.Zero)
+                return memoryInfo;
+            return new MemoryBasicInformation64();
+        }
+        private static MemoryBasicInformation64 Query64(ASafeMemoryHandle processHandle, IntPtr baseAddress, out IntPtr query)
+        {
+            var sz = MarshalType<MemoryBasicInformation64>.Size;
+            query = Kernel32.VirtualQueryEx(processHandle, baseAddress, out MemoryBasicInformation64 memoryInfo, (IntPtr)sz);
+            if (query != IntPtr.Zero)
+                return memoryInfo;
+            return new MemoryBasicInformation64();
+        }
+
+
+
+
+        /// <summary>
+        ///     Retrieves information about a range of pages within the virtual address space of a specified process.
+        /// </summary>
+        /// <param name="processHandle">A handle to the process whose memory information is queried.</param>
+        /// <param name="baseAddress">A pointer to the base address of the region of pages to be queried.</param>
+        /// <returns>
+        ///     A <see cref="MemoryBasicInformation64" /> structures in which information about the specified page range is
         ///     returned.
         /// </returns>
         public static MemoryBasicInformation Query(ASafeMemoryHandle processHandle, IntPtr baseAddress)
         {
-            // Allocate the structure to store information of memory
-            MemoryBasicInformation memoryInfo;
+            var ret = new MemoryBasicInformation();
+            if (Environment.Is64BitProcess)
+            {
+                var sz = MarshalType<MemoryBasicInformation64>.Size;
+                var query = Kernel32.VirtualQueryEx(processHandle, baseAddress, out MemoryBasicInformation64 memoryInfo,
+                    (IntPtr)sz);
+                if (query == IntPtr.Zero)
+                    return ret;
+                ret.BaseAddress = memoryInfo.BaseAddress;
+                ret.AllocationBase = memoryInfo.AllocationBase;
+                ret.AllocationProtect = memoryInfo.AllocationProtect;
+                ret.Protect = memoryInfo.Protect;
+                ret.RegionSize = (Int64)memoryInfo.RegionSize;
+                ret.State = memoryInfo.State;
+                ret.Type = memoryInfo.Type;
+            }
+            else
+            {
+                var sz = MarshalType<MemoryBasicInformation32>.Size;
+                var query = Kernel32.VirtualQueryEx(processHandle, baseAddress, out MemoryBasicInformation32 memoryInfo,
+                    (IntPtr)sz);
+                if (query == IntPtr.Zero)
+                    return ret;
+                ret.BaseAddress = memoryInfo.BaseAddress;
+                ret.AllocationBase = memoryInfo.AllocationBase;
+                ret.AllocationProtect = memoryInfo.AllocationProtect;
+                ret.Protect = memoryInfo.Protect;
+                ret.RegionSize = memoryInfo.RegionSize;
+                ret.State = memoryInfo.State;
+                ret.Type = memoryInfo.Type;
+            }
+            return ret;
+        }
 
-            // Query the memory region
-            if (
-                Kernel32.VirtualQueryEx(processHandle, baseAddress, out memoryInfo,
-                    MarshalType<MemoryBasicInformation>.Size) != 0)
-                return memoryInfo;
-
-            // Else the information couldn't be got
-            throw new Win32Exception($"Couldn't query information about the memory region 0x{baseAddress.ToString("X")}");
+        /// <summary>
+        ///     Retrieves information about a range of pages within the virtual address space of a specified process.
+        /// </summary>
+        /// <param name="processHandle">A handle to the process whose memory information is queried.</param>
+        /// <param name="baseAddress">A pointer to the base address of the region of pages to be queried.</param>
+        /// <param name="query">The original return value from the native API</param>
+        /// <returns>
+        ///     A <see cref="MemoryBasicInformation64" /> structures in which information about the specified page range is
+        ///     returned.
+        /// </returns>
+        public static MemoryBasicInformation Query(ASafeMemoryHandle processHandle, IntPtr baseAddress, out IntPtr query)
+        {
+            var ret = new MemoryBasicInformation();
+            if (Environment.Is64BitProcess)
+            {
+                var sz = MarshalType<MemoryBasicInformation64>.Size;
+                query = Kernel32.VirtualQueryEx(processHandle, baseAddress, out MemoryBasicInformation64 memoryInfo,
+                    (IntPtr)sz);
+                if (query == IntPtr.Zero)
+                    return ret;
+                ret.BaseAddress = memoryInfo.BaseAddress;
+                ret.AllocationBase = memoryInfo.AllocationBase;
+                ret.AllocationProtect = memoryInfo.AllocationProtect;
+                ret.Protect = memoryInfo.Protect;
+                ret.RegionSize = (Int64)memoryInfo.RegionSize;
+                ret.State = memoryInfo.State;
+                ret.Type = memoryInfo.Type;
+            }
+            else
+            {
+                var sz = MarshalType<MemoryBasicInformation32>.Size;
+                query = Kernel32.VirtualQueryEx(processHandle, baseAddress, out MemoryBasicInformation32 memoryInfo,
+                    (IntPtr)sz);
+                if (query == IntPtr.Zero)
+                    return ret;
+                ret.BaseAddress = memoryInfo.BaseAddress;
+                ret.AllocationBase = memoryInfo.AllocationBase;
+                ret.AllocationProtect = memoryInfo.AllocationProtect;
+                ret.Protect = memoryInfo.Protect;
+                ret.RegionSize = memoryInfo.RegionSize;
+                ret.State = memoryInfo.State;
+                ret.Type = memoryInfo.Type;
+            }
+            return ret;
         }
 
         /// <summary>
@@ -215,8 +340,8 @@ namespace SputnikAsm.LProcess.Utilities
         /// <param name="processHandle">A handle to the process whose memory information is queried.</param>
         /// <param name="addressFrom">A pointer to the starting address of the region of pages to be queried.</param>
         /// <param name="addressTo">A pointer to the ending address of the region of pages to be queried.</param>
-        /// <returns>A collection of <see cref="MemoryBasicInformation" /> structures.</returns>
-        public static IEnumerable<MemoryBasicInformation> Query(ASafeMemoryHandle processHandle, IntPtr addressFrom,
+        /// <returns>A collection of <see cref="MemoryBasicInformation32" /> structures.</returns>
+        public static IEnumerable<MemoryBasicInformation32> Query32(ASafeMemoryHandle processHandle, IntPtr addressFrom,
             IntPtr addressTo)
         {
             // Check if the handle is valid
@@ -231,17 +356,17 @@ namespace SputnikAsm.LProcess.Utilities
                 throw new ArgumentException("The starting address must be lower than the ending address.", "addressFrom");
 
             // Create the variable storing the result of the call of VirtualQueryEx
-            int ret;
+            IntPtr ret;
 
             // Enumerate the memory pages
             do
             {
                 // Allocate the structure to store information of memory
-                MemoryBasicInformation memoryInfo;
+                MemoryBasicInformation32 memoryInfo;
 
                 // Get the next memory page
-                ret = Kernel32.VirtualQueryEx(processHandle, new IntPtr(numberFrom), out memoryInfo,
-                    MarshalType<MemoryBasicInformation>.Size);
+                var sz = MarshalType<MemoryBasicInformation32>.Size;
+                ret = Kernel32.VirtualQueryEx(processHandle, new IntPtr(numberFrom), out memoryInfo, (IntPtr)sz);
 
                 // Increment the starting address with the size of the page
                 numberFrom += memoryInfo.RegionSize;
@@ -249,7 +374,49 @@ namespace SputnikAsm.LProcess.Utilities
                 // Return the memory page
                 if (memoryInfo.State != MemoryStateFlags.Free)
                     yield return memoryInfo;
-            } while (numberFrom < numberTo && ret != 0);
+            } while (numberFrom < numberTo && ret != IntPtr.Zero);
+        }
+
+        /// <summary>
+        ///     Retrieves information about a range of pages within the virtual address space of a specified process.
+        /// </summary>
+        /// <param name="processHandle">A handle to the process whose memory information is queried.</param>
+        /// <param name="addressFrom">A pointer to the starting address of the region of pages to be queried.</param>
+        /// <param name="addressTo">A pointer to the ending address of the region of pages to be queried.</param>
+        /// <returns>A collection of <see cref="MemoryBasicInformation64" /> structures.</returns>
+        public static IEnumerable<MemoryBasicInformation64> Query64(ASafeMemoryHandle processHandle, IntPtr addressFrom, IntPtr addressTo)
+        {
+            // Check if the handle is valid
+            AHandleManipulator.ValidateAsArgument(processHandle, "processHandle");
+
+            // Convert the addresses to Int64
+            var numberFrom = addressFrom.ToInt64();
+            var numberTo = addressTo.ToInt64();
+
+            // The first address must be lower than the second
+            if (numberFrom >= numberTo)
+                throw new ArgumentException("The starting address must be lower than the ending address.", "addressFrom");
+
+            // Create the variable storing the result of the call of VirtualQueryEx
+            IntPtr ret;
+
+            // Enumerate the memory pages
+            do
+            {
+                // Allocate the structure to store information of memory
+                MemoryBasicInformation64 memoryInfo;
+
+                // Get the next memory page
+                var sz = MarshalType<MemoryBasicInformation64>.Size;
+                ret = Kernel32.VirtualQueryEx(processHandle, new IntPtr(numberFrom), out memoryInfo, (IntPtr)sz);
+
+                // Increment the starting address with the size of the page
+                numberFrom += (Int64)memoryInfo.RegionSize;
+
+                // Return the memory page
+                if (memoryInfo.State != MemoryStateFlags.Free)
+                    yield return memoryInfo;
+            } while (numberFrom < numberTo && ret != IntPtr.Zero);
         }
 
         /// <summary>
@@ -372,10 +539,25 @@ namespace SputnikAsm.LProcess.Utilities
             return address.ToIntPtr();
         }
         #endregion
-        public static Boolean IsAddress(ASafeMemoryHandle processHandle, UIntPtr address)
+        public static Boolean IsAddress(ASafeMemoryHandle processHandle, IntPtr address)
         {
-            var ret = Kernel32.VirtualQueryEx(processHandle, address.ToIntPtr(), out var memoryInfo, MarshalType<MemoryBasicInformation>.Size);
-            return ret != 0 && memoryInfo.State == MemoryStateFlags.Commit;
+            var memoryInfo = Query(processHandle, address, out var v);
+            return v != IntPtr.Zero && memoryInfo.State == MemoryStateFlags.Commit;
+        }
+        public static Boolean IsReadable(ASafeMemoryHandle processHandle, IntPtr address)
+        {
+            if (Environment.Is64BitProcess)
+            {
+                var sz = MarshalType<MemoryBasicInformation64>.Size;
+                var memoryInfo = Query64(processHandle, address, out var v);
+                return (v == (IntPtr)sz) && memoryInfo.State == MemoryStateFlags.Commit;
+            }
+            else
+            {
+                var sz = MarshalType<MemoryBasicInformation32>.Size;
+                var memoryInfo = Query32(processHandle, address, out var v);
+                return (v == (IntPtr)sz) && memoryInfo.State == MemoryStateFlags.Commit;
+            }
         }
     }
 }

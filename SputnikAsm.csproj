@@ -14,7 +14,7 @@
     <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
+    <PlatformTarget>x64</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -57,6 +57,7 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AConstants.cs" />
     <Compile Include="LAssembler\AAssembler.cs" />
     <Compile Include="LAssembler\LEnums\AVexLeadingOpCode.cs" />
     <Compile Include="LAssembler\LEnums\AVexOpCodeExtension.cs" />
@@ -68,7 +69,9 @@
     <Compile Include="LAutoAssembler\LCollections\AExceptionInfoArray.cs" />
     <Compile Include="LAutoAssembler\LCollections\AAllocArray.cs" />
     <Compile Include="LAutoAssembler\LEnums\AScriptObjectType.cs" />
+    <Compile Include="LBinary\LByteInterpreter\AByteInterpreter.cs" />
     <Compile Include="LBinary\AMultiByte.cs" />
+    <Compile Include="LBinary\LByteInterpreter\LEnums\AFindTypeOption.cs" />
     <Compile Include="LCollections\ACharArray.cs" />
     <Compile Include="LCollections\ARefStringArray.cs" />
     <Compile Include="LCollections\ATByteArray.cs" />
@@ -99,6 +102,7 @@
     <Compile Include="LDisassembler\APrefix.cs" />
     <Compile Include="LExtensions\XPointerExt.cs" />
     <Compile Include="LGenerics\AArrayManager.cs" />
+    <Compile Include="LMemScan\LEnums\AVariableType.cs" />
     <Compile Include="LProcess\AProcessSharp.cs" />
     <Compile Include="LProcess\LApplied\AAppliedManager.cs" />
     <Compile Include="LProcess\LApplied\AComplexAppliedManager.cs" />

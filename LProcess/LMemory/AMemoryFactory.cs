@@ -60,9 +60,10 @@ namespace SputnikAsm.LProcess.LMemory
             {
                 var size = IntPtr.Size;
                 var adresseTo = size == 8 ? new IntPtr(0x7fffffffffffffff) : new IntPtr(0x7fffffff);
-                return
-                    AMemoryHelper.Query(Process.Handle, IntPtr.Zero, adresseTo)
-                        .Select(page => new AMemoryRegion(Process, page.BaseAddress));
+                if (Environment.Is64BitProcess)
+                    return AMemoryHelper.Query64(Process.Handle, IntPtr.Zero, adresseTo).Select(page => new AMemoryRegion(Process, page.BaseAddress));
+                else
+                    return AMemoryHelper.Query32(Process.Handle, IntPtr.Zero, adresseTo).Select(page => new AMemoryRegion(Process, page.BaseAddress));
             }
         }
 

@@ -1201,7 +1201,7 @@ namespace SputnikAsm.LAutoAssembler
                                                 {
                                                     if (bytes[j] != byteBuf[j])
                                                     {
-                                                        if (AMathUtils.InRangeX(bytes[j], Byte.MinValue, Byte.MaxValue))
+                                                        if (AMathUtils.InRange(bytes[j], Byte.MinValue, Byte.MaxValue))
                                                             throw new Exception(UStringUtils.Sprintf(rsTheBytesAtAreNotWhatWasExpected, s1));
                                                     }
                                                 }

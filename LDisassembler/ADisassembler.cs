@@ -1,12 +1,17 @@
 ﻿using System;
+using System.Deployment.Internal;
 using System.Windows.Forms;
 using Sputnik.LBinary;
 using Sputnik.LInterfaces;
 using Sputnik.LString;
 using Sputnik.LUtils;
 using SputnikAsm.LBinary;
+using SputnikAsm.LBinary.LByteInterpreter;
+using SputnikAsm.LCollections;
 using SputnikAsm.LDisassembler.LEnums;
 using SputnikAsm.LExtensions;
+using SputnikAsm.LGenerics;
+using SputnikAsm.LMemScan.LEnums;
 using SputnikAsm.LProcess;
 using SputnikAsm.LProcess.LNative;
 using SputnikAsm.LProcess.Utilities;
@@ -17,6 +22,28 @@ namespace SputnikAsm.LDisassembler
 {
     public partial class ADisassembler : IUDisposable
     {
+        #region Internal Classes
+        #region ADecodeValue
+        internal class ADecodeValue
+        {
+            #region Variables
+            public UIntPtr Value;
+            public AVariableType Type;
+            public Boolean IsAddress;
+            public String S;
+            #endregion
+            #region Constructor
+            public ADecodeValue()
+            {
+                Value = UIntPtr.Zero;
+                Type = AVariableType.Byte;
+                IsAddress = false;
+                S = "";
+            }
+            #endregion
+        }
+        #endregion
+        #endregion
         #region Constants
         const int BIT_REX_W = 8;
         const int BIT_REX_R = 4;
@@ -1732,11 +1759,11 @@ namespace SputnikAsm.LDisassembler
                     {
                         //check if this byte is cloaked (due to pageboundaries)
                         // todo handle cloak
-                        //cloaked = hascloakedregioninrange(lastdisassembledata.address + i, 1, va, pa);
+                        //cloaked = hascloakedregioninrange(LastDisassembleData.address + i, 1, va, pa);
                         //if (cloaked) result += "{C00FF00}"; //green
                     }
                     // todo add this!
-                    changed = false;//hasaddressbeenchanged(lastdisassembledata.address + i);
+                    changed = false;//hasaddressbeenchanged(LastDisassembleData.address + i);
                     if (changed)
                         result += "{C0000FF}"; //red
                 }
@@ -1811,7 +1838,7 @@ namespace SputnikAsm.LDisassembler
                 if (Has4ByteHexString(d, ref s))
                 {
                     address = (UIntPtr)AStringUtils.StrToQWordEx(s); //s already has the $ in front
-                    result = AMemoryHelper.IsAddress(SymbolHandler.Process.Handle, address);
+                    result = AMemoryHelper.IsAddress(SymbolHandler.Process.Handle, address.ToIntPtr());
                 }
             }
             else
@@ -1908,7 +1935,7 @@ namespace SputnikAsm.LDisassembler
             String result;
             if ((ShowSymbols | ShowModules | ShowSections) & (chars >= 8))
             {
-                result = SymbolHandler.GetNameFromAddress(value, ShowSymbols, ShowModules, ShowSections, null, out var found, chars, false);
+                result = SymbolHandler.GetNameFromAddress(value, ShowSymbols, ShowModules, ShowSections, null, out var found, chars);
                 //when found, and the symbol contains a space or comma, put the symbolname in quotes
                 if (found && (AStringUtils.Pos(" ", result) != -1 || AStringUtils.Pos(",", result) != -1))
                 {
@@ -2184,183 +2211,184 @@ namespace SputnikAsm.LDisassembler
         //        special = "";
         //}
         #endregion
-        #region DecodeLastParametersToString -- todo
-        //public String DecodeLastParametersToString()
-        //{
-        //    UIntPtr jumpaddress = UIntPtr.Zero;
-        //    var buffer = new AByteArray();
-        //    buffer.SetLength(63);
-        //    var x = UIntPtr.Zero;
-        //    var a = false;
-        //    var s = "";
-        //    var parametercount = 0;
-        //    var sv1 = "";
-        //    var sv2 = "";
-        //    var i = 0;
-        //    if (lastdisassembledata.commentsoverride != "")
-        //        return lastdisassembledata.commentsoverride;
-        //    var result = "";
-        //    if (lastdisassembledata.isjump)
-        //    {
-        //        if (lastdisassembledata.modrmvaluetype == tdisassemblervaluetype.tdisassemblervaluetype.dvtaddress)
-        //        {
-        //            jumpaddress = lastdisassembledata.modrmvalue;
-        //            if (~readprocessmemory(processhandle, (pointer)(jumpaddress), &jumpaddress, processhandler.pointersize, x))
-        //                return result;
-        //        }
-        //        else
-        //        {
-        //            if (lastdisassembledata.parametervaluetype == tdisassemblervaluetype.tdisassemblervaluetype.dvtnone)
-        //                return result; //jump with no address (e.g reg)
-        //            jumpaddress = lastdisassembledata.parametervalue;
-        //        }
-        //        //check if the bytes at jumpAddress is ff 25 (jmp [xxxxxxxx])
-        //        if (readprocessmemory(processhandle, (pointer)(jumpaddress), &buffer[0], 6, x))
-        //        {
-        //
-        //            if ((buffer[0] == 0xff) && (buffer[1] == 0x25))
-        //            {
-        //                result = result + "->";  //double, so ->->
-        //                if (is64bit)
-        //                    jumpaddress = jumpaddress + 6 + pinteger(&buffer[2]); //jumpaddress+6 because of relative addressing
-        //                else
-        //                    jumpaddress = pdword(&buffer[2]);
-        //                //jumpaddress now contains the address of the address to jump to
-        //                //so, get the address it actually jumps to
-        //                if (~readprocessmemory(processhandle, (pointer)(jumpaddress), &jumpaddress, processhandler.pointersize, x))
-        //                    return result;
-        //            }
-        //            s = symhandler.getnamefromaddress(jumpaddress, symhandler.showsymbols, symhandler.showmodules, symhandler.showsections, nil, nil, 8, false);
-        //            if (pos(s, lastdisassembledata.parameters) == 0)  //no need to show a comment if it's exactly the same
-        //                result = result + "->" + s;
-        //        }
-        //    }
-        //    else
-        //    {
-        //        if ((lastdisassembledata.modrmvaluetype == tdisassemblervaluetype.tdisassemblervaluetype.dvtaddress) || (lastdisassembledata.parametervaluetype != tdisassemblervaluetype.tdisassemblervaluetype.dvtnone))
-        //        {
-        //            a = false;
-        //            parametercount = 0;
-        //            if (lastdisassembledata.parametervaluetype != tdisassemblervaluetype.tdisassemblervaluetype.dvtnone)
-        //                parametercount += 1;
-        //            if (lastdisassembledata.modrmvaluetype == tdisassemblervaluetype.tdisassemblervaluetype.dvtaddress)
-        //                parametercount += 1;
-        //            if (lastdisassembledata.modrmvaluetype == tdisassemblervaluetype.tdisassemblervaluetype.dvtaddress)
-        //            {
-        //                if ((parametercount > 1) && (modrmposition == mright))
-        //                    values[1].value = lastdisassembledata.modrmvalue;
-        //                else
-        //                    values[0].value = lastdisassembledata.modrmvalue;
-        //            }
-        //            if (lastdisassembledata.parametervaluetype != tdisassemblervaluetype.tdisassemblervaluetype.dvtnone)
-        //            {
-        //                if ((parametercount > 1) && (modrmposition != mright))
-        //                    values[1].value = lastdisassembledata.parametervalue;
-        //                else
-        //                    values[0].value = lastdisassembledata.parametervalue;
-        //            }
-        //            //for (i = 0; i <= parametercount - 1; i++)
-        //            //{
-        //            //    values[i].s = "";
-        //            //    if (isaddress(values[i].value))
-        //            //    {
-        //            //        values[i].isaddress = true;
-        //            //        x = 0;
-        //            //        values[i].vtype = vtdword;
-        //            //        readprocessmemory(processhandle, (pointer)(values[i].value), &buffer[0], 63, x);
-        //            //        if (x > 0)
-        //            //        {
-        //            //            if (lastdisassembledata.isfloat)
-        //            //            {
-        //            //                switch (lastdisassembledata.datasize)
-        //            //                {
-        //            //                    case 4:
-        //            //                        values[i].vtype = vtsingle;
-        //            //                        break;
-        //            //                    case 8:
-        //            //                        values[i].vtype = vtdouble;
-        //            //                        break;
-        //            //                    case 10:
-        //            //                        values[i].vtype = vtqword;
-        //            //                        break; 
-        //            //                }
-        //            //            }
-        //            //            else
-        //            //                values[i].vtype = findtypeofdata(values[i].value, &buffer[0], x);
-        //            //        }
-        //            //        else
-        //            //        {
-        //            //            values[i].s = "";
-        //            //            continue;
-        //            //        }
-        //            //    }
-        //            //    else
-        //            //    {
-        //            //        x = sizeof(values[i].value);
-        //            //        pptruint(&buffer[0]) = values[i].value; //assign it so I don't have to make two compare routines
-        //            //        values[i].vtype = findtypeofdata(0, &buffer[0], x);
-        //            //        values[i].isaddress = false;
-        //            //    }
-        //            //    switch (values[i].vtype)
-        //            //    {
-        //            //        case vtbyte:
-        //            //            values[i].s = (buffer[0]);
-        //            //            break;
-        //            //        case vtword:
-        //            //            values[i].s = (psmallint(&buffer[0]));
-        //            //            break;
-        //            //        case vtdword:
-        //            //            if (a)
-        //            //                values[i].s = AStringUtils.IntToHex(pdword(&buffer[0]), 8);
-        //            //            else
-        //            //                values[i].s = (pinteger(&buffer[0]));
-        //            //            break;
-        //            //        case vtqword:
-        //            //            values[i].s = (pint64(&buffer[0]));
-        //            //            break;
-        //            //        case vtsingle:
-        //            //            values[i].s = format("%.2f", set::of(psingle(&buffer[0]), eos));
-        //            //            break;
-        //            //        case vtdouble:
-        //            //            values[i].s = format("%.2f", set::of(pdouble(&buffer[0]), eos));
-        //            //            break;
-        //            //        case vtstring:
-        //            //            {
-        //            //                buffer[x] = 0;
-        //            //                values[i].s = '"' + (pchar)(&buffer[0]) + '"';
-        //            //            }
-        //            //            break;
-        //            //        case vtunicodestring:
-        //            //            {
-        //            //                buffer[x] = 0;
-        //            //                if (x > 0)
-        //            //                    buffer[x - 1] = 0;
-        //            //
-        //            //                values[i].s = '"' + pwidechar(&buffer[0]) + '"';
-        //            //            }
-        //            //            break;
-        //            //        case vtpointer:
-        //            //            {
-        //            //                if (SymbolHandler.Process.IsX64)
-        //            //                    values[i].s = AStringUtils.IntToHex(pqword(&buffer[0]), 8);
-        //            //                else
-        //            //                    values[i].s = AStringUtils.IntToHex(pdword(&buffer[0]), 8);
-        //            //
-        //            //            }
-        //            //            break;
-        //            //    }
-        //            //    // result:=VariableTypeToString(vtype);
-        //            //    if (values[i].isaddress & (values[i].s != ""))
-        //            //        values[i].s = '(' + values[i].s + ')';
-        //            //    if (i == 0)
-        //            //        result = result + values[i].s;
-        //            //    else
-        //            //        result = result + ',' + values[i].s;
-        //            //}
-        //        }
-        //    }
-        //    return result;
-        //}
+        #region DecodeLastParametersToString
+        public unsafe String DecodeLastParametersToString()
+        {
+            var byteInterp = new AByteInterpreter(SymbolHandler);
+            var values = new AArrayManager<ADecodeValue>();
+            values.Inc();
+            values.Inc();
+            var bufferBack = UBinaryUtils.NewZeroByteArray(63);
+            var buffer = new UBytePtr(bufferBack);
+            Byte[] readBuf;
+            UIntPtr jumpaddress = UIntPtr.Zero;
+            var x = 0;
+            var s = "";
+            var parametercount = 0;
+            var sv1 = "";
+            var sv2 = "";
+            var i = 0;
+            if (LastDisassembleData.CommentsOverride != "")
+                return LastDisassembleData.CommentsOverride;
+            var result = "";
+            if (LastDisassembleData.IsJump)
+            {
+                if (LastDisassembleData.ModRmValueType == ADisassemblerValueType.Address)
+                {
+                    jumpaddress = LastDisassembleData.ModRmValue;
+                    readBuf = Proc.Memory.Read<Byte>(jumpaddress.ToIntPtr(), Proc.PointerSize);
+                    if (readBuf.Length != Proc.PointerSize)
+                        return result;
+                    jumpaddress = UBitConverter.ToUIntPtr(readBuf);
+                }
+                else
+                {
+                    if (LastDisassembleData.ParameterValueType == ADisassemblerValueType.None)
+                        return result; //jump with no address (e.g reg)
+                    jumpaddress = LastDisassembleData.ParameterValue;
+                }
+                //check if the bytes at jumpAddress is ff 25 (jmp [xxxxxxxx])
+                if (Kernel32.ReadProcessMemory(Proc.Handle, jumpaddress.ToIntPtr(), buffer.ToIntPtr(0), 6, out x))
+                {
+        
+                    if ((buffer[0] == 0xff) && (buffer[1] == 0x25))
+                    {
+                        result = result + "->";  //double, so ->->
+                        if (Proc.IsX64)
+                            jumpaddress = jumpaddress + 6 + buffer.ReadInt32(2); //jumpaddress+6 because of relative addressing
+                        else
+                            jumpaddress = (UIntPtr)buffer.ReadUInt32(2);
+                        //jumpaddress now contains the address of the address to jump to
+                        //so, get the address it actually jumps to
+                        readBuf = Proc.Memory.Read<Byte>(jumpaddress.ToIntPtr(), Proc.PointerSize);
+                        if (readBuf.Length != Proc.PointerSize)
+                            return result;
+                        jumpaddress = UBitConverter.ToUIntPtr(readBuf);
+                    }
+                    s = SymbolHandler.GetNameFromAddress(jumpaddress, ShowSymbols, ShowModules, ShowSections, null, out _, 8, false);
+                    if (AStringUtils.Pos(s, LastDisassembleData.Parameters) == 0)  //no need to show a comment if it's exactly the same
+                        result = result + "->" + s;
+                }
+            }
+            else
+            {
+                if (LastDisassembleData.ModRmValueType == ADisassemblerValueType.Address || LastDisassembleData.ParameterValueType != ADisassemblerValueType.None)
+                {
+                    parametercount = 0;
+                    if (LastDisassembleData.ParameterValueType != ADisassemblerValueType.None)
+                        parametercount += 1;
+                    if (LastDisassembleData.ModRmValueType == ADisassemblerValueType.Address)
+                        parametercount += 1;
+                    if (LastDisassembleData.ModRmValueType == ADisassemblerValueType.Address)
+                    {
+                        if ((parametercount > 1) && (_modRmPosition == ATmrPos.Right))
+                            values[1].Value = LastDisassembleData.ModRmValue;
+                        else
+                            values[0].Value = LastDisassembleData.ModRmValue;
+                    }
+                    if (LastDisassembleData.ParameterValueType != ADisassemblerValueType.None)
+                    {
+                        if ((parametercount > 1) && (_modRmPosition != ATmrPos.Right))
+                            values[1].Value = LastDisassembleData.ParameterValue;
+                        else
+                            values[0].Value = LastDisassembleData.ParameterValue;
+                    }
+                    for (i = 0; i <= parametercount - 1; i++)
+                    {
+                        values[i].S = "";
+                        if (AMemoryHelper.IsAddress(Proc.Handle, values[i].Value.ToIntPtr()))
+                        {
+                            values[i].IsAddress = true;
+                            values[i].Type = AVariableType.DWord;
+                            Kernel32.ReadProcessMemory(Proc.Handle, values[i].Value.ToIntPtr(), buffer.ToIntPtr(), buffer.Capacity, out x);
+                            if (x > 0)
+                            {
+                                if (LastDisassembleData.IsFloat)
+                                {
+                                    switch (LastDisassembleData.DataSize)
+                                    {
+                                        case 4:
+                                            values[i].Type = AVariableType.Single;
+                                            break;
+                                        case 8:
+                                            values[i].Type = AVariableType.Double;
+                                            break;
+                                        case 10:
+                                            values[i].Type = AVariableType.QWord;
+                                            break; 
+                                    }
+                                }
+                                else
+                                    values[i].Type = byteInterp.FindTypeOfData(values[i].Value, buffer, x);
+                            }
+                            else
+                            {
+                                values[i].S = "";
+                                continue;
+                            }
+                        }
+                        else
+                        {
+                            x = Proc.PointerSize;
+                            buffer.WriteUIntPtr(values[i].Value); //assign it so I don't have to make two compare routines
+                            values[i].Type = byteInterp.FindTypeOfData(UIntPtr.Zero, buffer, x);
+                            values[i].IsAddress = false;
+                        }
+                        switch (values[i].Type)
+                        {
+                            case AVariableType.Byte:
+                                values[i].S = buffer[0].ToString();
+                                break;
+                            case AVariableType.Word:
+                                values[i].S = buffer.ReadInt16().ToString();
+                                break;
+                            case AVariableType.DWord:
+                                values[i].S = buffer.ReadInt32().ToString();
+                                break;
+                            case AVariableType.QWord:
+                                values[i].S = buffer.ReadInt64().ToString();
+                                break;
+                            case AVariableType.Single:
+                                values[i].S = UStringUtils.Sprintf("%.2f", buffer.ReadFloat());
+                                break;
+                            case AVariableType.Double:
+                                values[i].S = UStringUtils.Sprintf("%.2f", buffer.ReadDouble()); 
+                                break;
+                            case AVariableType.String:
+                                {
+                                    buffer[x] = 0;
+                                    values[i].S = '"' + UBitConverter.UnpackSingle("z1", 0, bufferBack).ToString() + '"';
+                                }
+                                break;
+                            case AVariableType.UnicodeString:
+                                {
+                                    buffer[x] = 0;
+                                    if (x > 0)
+                                        buffer[x - 1] = 0;
+                                    values[i].S = '"' + UBitConverter.UnpackSingle("z7", 0, bufferBack).ToString() + '"';
+                                }
+                                break;
+                            case AVariableType.Pointer:
+                                {
+                                    if (SymbolHandler.Process.IsX64)
+                                        values[i].S = AStringUtils.IntToHex(buffer.ReadUInt64(), 8);
+                                    else
+                                        values[i].S = AStringUtils.IntToHex(buffer.ReadUInt32(), 8);
+                                }
+                                break;
+                        }
+                        // result:=VariableTypeToString(vtype);
+                        if (values[i].IsAddress & (values[i].S != ""))
+                            values[i].S = '(' + values[i].S + ')';
+                        if (i == 0)
+                            result = result + values[i].S;
+                        else
+                            result = result + ',' + values[i].S;
+                    }
+                }
+            }
+            return result;
+        }
         #endregion
         #region SetSyntaxHighlighting
         public void SetSyntaxHighlighting(Boolean state)
@@ -2431,19 +2459,19 @@ namespace SputnikAsm.LDisassembler
                 //if (defaultbinutils != nil)
                 //{
                 //    //use this
-                //    lastdisassembledata.address = offset;
-                //    lastdisassembledata.seperatorcount = 0;
-                //    defaultbinutils.disassemble(lastdisassembledata);
-                //    result = AStringUtils.IntToHex(lastdisassembledata.address, 8);
+                //    LastDisassembleData.address = offset;
+                //    LastDisassembleData.seperatorcount = 0;
+                //    defaultbinutils.disassemble(LastDisassembleData);
+                //    result = AStringUtils.IntToHex(LastDisassembleData.address, 8);
                 //    result = result + " - ";
-                //    for (i = 0; i <= length(lastdisassembledata.bytes) - 1; i++)
-                //        result = result + AStringUtils.IntToHex(lastdisassembledata.bytes[i], 2) + ' ';
+                //    for (i = 0; i <= length(LastDisassembleData.bytes) - 1; i++)
+                //        result = result + AStringUtils.IntToHex(LastDisassembleData.bytes[i], 2) + ' ';
                 //    result = result + " - ";
-                //    result = result + lastdisassembledata.opcode;
+                //    result = result + LastDisassembleData.opcode;
                 //    result = result + ' ';
-                //    result = result + lastdisassembledata.parameters;
-                //    if (length(lastdisassembledata.bytes) > 0)
-                //        offset += length(lastdisassembledata.bytes);
+                //    result = result + LastDisassembleData.parameters;
+                //    if (length(LastDisassembleData.bytes) > 0)
+                //        offset += length(LastDisassembleData.bytes);
                 //    else
                 //    {
                 //        if (processhandler.systemarchitecture == archarm)
@@ -2476,7 +2504,7 @@ namespace SputnikAsm.LDisassembler
                 //if (processhandler.systemarchitecture == archarm)
                 //{
                 //    result = armdisassembler.disassemble(offset);
-                //    lastdisassembledata = armdisassembler.lastdisassembledata;
+                //    LastDisassembleData = armdisassembler.LastDisassembleData;
                 //    return result;
                 //}
                 _modRmPosition = ATmrPos.None;
@@ -2504,10 +2532,10 @@ namespace SputnikAsm.LDisassembler
                 //    //if so, call the OnDisassemble propery, and if it returns true don't handle the original
                 //    if (ondisassembleoverride(self, offset, LastDisassembleData, result, description))
                 //    {
-                //        if (length(lastdisassembledata.bytes) == 0)  //BAD!
-                //            setlength(lastdisassembledata.bytes, 1);
+                //        if (length(LastDisassembleData.bytes) == 0)  //BAD!
+                //            setlength(LastDisassembleData.bytes, 1);
                 //
-                //        offset += length(lastdisassembledata.bytes);
+                //        offset += length(LastDisassembleData.bytes);
                 //        return result;
                 //    }
                 //}
@@ -2518,10 +2546,10 @@ namespace SputnikAsm.LDisassembler
                 //     {
                 //         if (globaldisassembleoverrides[i](self, offset, LastDisassembleData, result, description))
                 //         {
-                //             if (length(lastdisassembledata.bytes) == 0)  //BAD!
-                //                 setlength(lastdisassembledata.bytes, 1);
+                //             if (length(LastDisassembleData.bytes) == 0)  //BAD!
+                //                 setlength(LastDisassembleData.bytes, 1);
                 // 
-                //             offset += length(lastdisassembledata.bytes);
+                //             offset += length(LastDisassembleData.bytes);
                 //             return result;
                 //         }
                 //     }
@@ -2604,7 +2632,7 @@ namespace SputnikAsm.LDisassembler
                     _rexPrefix = 0;
                     if (Is64Bit)
                     {
-                        if (AMathUtils.InRangeX(memory[0], 0x40, 0x4f))  //does it start with a rex prefix ?
+                        if (AMathUtils.InRange(memory[0], 0x40, 0x4f))  //does it start with a rex prefix ?
                         {
                             LastDisassembleData.Bytes.Inc();
                             LastDisassembleData.Bytes.Last = memory[0];
@@ -2631,7 +2659,7 @@ namespace SputnikAsm.LDisassembler
                     }
                     var prefixSize = LastDisassembleData.Bytes.Length;
                     LastDisassembleData.PrefixSize = prefixSize;
-                    if (noVexPossible == false && AMathUtils.InRangeX(memory[0], 0xc4, 0xc5))
+                    if (noVexPossible == false && AMathUtils.InRange(memory[0], 0xc4, 0xc5))
                     {
                         _hasVex = true;
                         int bytesToMove;
@@ -2796,7 +2824,7 @@ namespace SputnikAsm.LDisassembler
                 // todo handle cloak
                 //# ifdef windows
                 //string result;
-                //lastdisassembledata.iscloaked = hascloakedregioninrange(lastdisassembledata.address, length(lastdisassembledata.bytes), va, pa);
+                //LastDisassembleData.iscloaked = hascloakedregioninrange(LastDisassembleData.address, length(LastDisassembleData.bytes), va, pa);
                 //#else
                 LastDisassembleData.IsCloaked = false;
                 //#endif
@@ -2819,8 +2847,8 @@ namespace SputnikAsm.LDisassembler
                 //        result = tempResult;
                 //        description = tempDescription;
                 //
-                //        if (length(lastdisassembledata.bytes) > 0)
-                //            offset = initialOffset + length(lastdisassembledata.bytes);
+                //        if (length(LastDisassembleData.bytes) > 0)
+                //            offset = initialOffset + length(LastDisassembleData.bytes);
                 //    }
                 //}
             }

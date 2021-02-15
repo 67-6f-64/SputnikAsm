@@ -22,6 +22,14 @@ namespace SputnikAsm.LUtils
         }
         #endregion
         #region Pos
+        public static int Pos(Char needle, String str)
+        {
+            return UStringUtils.IndexOf(str, needle.ToString());
+        }
+        public static int Pos(Char needle, String str, Boolean ignoreCase)
+        {
+            return UStringUtils.IndexOf(str, needle.ToString(), ignoreCase);
+        }
         public static int Pos(String needle, String str)
         {
             return UStringUtils.IndexOf(str, needle);
@@ -32,12 +40,24 @@ namespace SputnikAsm.LUtils
         }
         #endregion
         #region PosEx
+        public static int PosEx(Char needle, String str, int start)
+        {
+            return UStringUtils.IndexOf(str, needle.ToString(), start);
+        }
         public static int PosEx(String needle, String str, int start)
         {
             return UStringUtils.IndexOf(str, needle, start);
         }
         #endregion
         #region RPos
+        public static int RPos(Char needle, String str)
+        {
+            return UStringUtils.LastIndexOf(str, needle.ToString());
+        }
+        public static int RPos(Char needle, String str, Boolean ignoreCase)
+        {
+            return UStringUtils.LastIndexOf(str, needle.ToString(), ignoreCase);
+        }
         public static int RPos(String needle, String str)
         {
             return UStringUtils.LastIndexOf(str, needle);
@@ -48,6 +68,10 @@ namespace SputnikAsm.LUtils
         }
         #endregion
         #region RPosEx
+        public static int RPosEx(Char needle, String str, int start)
+        {
+            return UStringUtils.LastIndexOf(str, needle.ToString(), start);
+        }
         public static int RPosEx(String needle, String str, int start)
         {
             return UStringUtils.LastIndexOf(str, needle, start);

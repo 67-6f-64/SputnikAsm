@@ -15,7 +15,6 @@ using SputnikAsm.LUtils;
 
 namespace SputnikAsm.LSymbolHandler
 {
-
     public class ASymbolHandler
     {
         #region Internal Classes
@@ -352,6 +351,9 @@ namespace SputnikAsm.LSymbolHandler
         public AArrayManager<AUserDefinedSymbol> UserDefinedSymbols;
         private AModuleInfoArray _moduleList;
         private ASymbolLoaderThread _symbolLoaderThread;
+        public Boolean ShowSymbols;
+        public Boolean ShowModules;
+        public Boolean ShowSections;
         #endregion
         #region Constructor
         public ASymbolHandler()
@@ -361,7 +363,10 @@ namespace SputnikAsm.LSymbolHandler
             SymbolList = new AArrayManager<ASymbol>();
             UserDefinedSymbols = new AArrayManager<AUserDefinedSymbol>();
             _moduleList = new AModuleInfoArray();
-    }
+            ShowSymbols = false;
+            ShowModules = false;
+            ShowSections = false;
+        }
         #endregion
         #region Tokenize
         public void Tokenize(String s, AStringArray tokens)
@@ -533,7 +538,7 @@ namespace SputnikAsm.LSymbolHandler
                         AStringUtils.Val("0x" + tokens[i], out result, out j);
                         if (j <= 0)
                             continue; // hexadecimal value 
-                                      //not a hexadecimal value
+                        //not a hexadecimal value
                         var mi = Process.ModuleFactory.FetchModule(tokens[i]);
                         if (mi != null)
                         {
@@ -753,10 +758,34 @@ namespace SputnikAsm.LSymbolHandler
         }
         #endregion
         #region GetNameFromAddress
-        public String GetNameFromAddress(UIntPtr value, Boolean showSymbols, Boolean showModules, Boolean showSections, Object p, out Boolean found, int chars, Boolean v)
+        public String GetNameFromAddress(UIntPtr address)
+        {
+            return GetNameFromAddress(address, ShowSymbols, ShowModules, ShowSections, null, out _, 8, false);
+        }
+        public String GetNameFromAddress(UIntPtr address, out Boolean found)
+        {
+            return GetNameFromAddress(address, ShowSymbols, ShowModules, ShowSections, null, out found, 8, false);
+        }
+        public String GetNameFromAddress(UIntPtr address, out Boolean found, int hexCharSize)
+        {
+            return GetNameFromAddress(address, ShowSymbols, ShowModules, ShowSections, null, out found, hexCharSize, false);
+        }
+        public String GetNameFromAddress(UIntPtr address, Boolean showSymbols, Boolean showModules, Boolean showSections)
+        {
+            return GetNameFromAddress(address, showSymbols, showModules, showSections, null, out _, 8, false);
+        }
+        public String GetNameFromAddress(UIntPtr address, Boolean showSymbols, Boolean showModules, Boolean showSections, Object p, out Boolean found)
+        {
+            return GetNameFromAddress(address, showSymbols, showModules, showSections, p, out found, 8, false);
+        }
+        public String GetNameFromAddress(UIntPtr address, Boolean showSymbols, Boolean showModules, Boolean showSections, Object p, out Boolean found, int hexCharSize)
+        {
+            return GetNameFromAddress(address, showSymbols, showModules, showSections, p, out found, hexCharSize, false);
+        }
+        public String GetNameFromAddress(UIntPtr address, Boolean showSymbols, Boolean showModules, Boolean showSections, Object p, out Boolean found, int hexCharSize, Boolean important)
         {
             found = false;
-            return "";
+            return ""; // todo MAKE THIS WORK
         }
         #endregion
         #region WaitForSymbolsLoaded

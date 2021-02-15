@@ -6,6 +6,7 @@ using SputnikAsm.LAssembler;
 using SputnikAsm.LAutoAssembler;
 using SputnikAsm.LAutoAssembler.LCollections;
 using SputnikAsm.LBinary;
+using SputnikAsm.LBinary.LByteInterpreter;
 using SputnikAsm.LCollections;
 using SputnikAsm.LDisassembler;
 using SputnikAsm.LDisassembler.LEnums;
@@ -56,8 +57,12 @@ namespace SputnikAsm
             //}
             //Console.WriteLine(d.LastDisassembleData.Prefix + ' ' + d.LastDisassembleData.OpCode + ' ' + d.LastDisassembleData.Parameters);
             
-            //Console.ReadKey();
-            //Environment.Exit(1);
+            var bi = new AByteInterpreter(a.SymHandler);
+            var bp = m.Memory.Read((IntPtr)0x411C88, 32);
+            using (var bip = new UBytePtr(bp))
+            {
+                Console.WriteLine("Found dataType: " + bi.FindTypeOfData((UIntPtr)0x411C88, bip, 8));
+            }
 
             // aa.Assembler.SymHandler.Process = m;
             // var cd = @"
@@ -78,14 +83,14 @@ namespace SputnikAsm
             // //var ptr = bytes.ToIntPtr().ToUIntPtr();
             // 
             var ptr = (UIntPtr)0x40230F;
-            var i = 10;
+            var i = 30;
             while (i-- > 0)
             {
                 try
                 {
                     d.Disassemble(ref ptr, ref s1);
-                    var currentline = d.LastDisassembleData.Prefix + ' ' + d.LastDisassembleData.OpCode + ' ' + d.LastDisassembleData.Parameters;
-                    Console.WriteLine(currentline);
+                    var cl = d.LastDisassembleData.Prefix + ' ' + d.LastDisassembleData.OpCode + ' ' + d.LastDisassembleData.Parameters;
+                    Console.WriteLine(cl + " ; " + d.DecodeLastParametersToString());
                 }
                 catch
                 {
