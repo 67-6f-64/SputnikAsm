@@ -37,6 +37,22 @@ namespace SputnikAsm.LUtils
             return UStringUtils.IndexOf(str, needle, start);
         }
         #endregion
+        #region RPos
+        public static int RPos(String needle, String str)
+        {
+            return UStringUtils.LastIndexOf(str, needle);
+        }
+        public static int RPos(String needle, String str, Boolean ignoreCase)
+        {
+            return UStringUtils.LastIndexOf(str, needle, ignoreCase);
+        }
+        #endregion
+        #region RPosEx
+        public static int RPosEx(String needle, String str, int start)
+        {
+            return UStringUtils.LastIndexOf(str, needle, start);
+        }
+        #endregion
         #region Val
         public static void Val(String str, out UIntPtr v, out int code)
         {
