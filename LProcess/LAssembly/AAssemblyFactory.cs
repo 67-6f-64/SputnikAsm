@@ -262,7 +262,7 @@ namespace SputnikAsm.LProcess.LAssembly
         /// <param name="address">The address where the assembly code is injected.</param>
         public void Inject(string asm, IntPtr address)
         {
-            var scr = Assembler.Assemble(Process, asm, address);
+            var scr = Assembler.Assemble(asm, address);
             foreach (var c in scr)
             {
                 if (c.Type != AScriptObjectType.Poke)
@@ -289,7 +289,7 @@ namespace SputnikAsm.LProcess.LAssembly
         public IAAllocatedMemory Inject(string asm)
         {
             // Assemble the assembly code
-            var code = Assembler.Assemble(Process, asm);
+            var code = Assembler.Assemble(asm);
             // Allocate a chunk of memory to store the assembly code
             var memory = Process.MemoryFactory.Allocate(ARandomizer.GenerateString(), code.GetTotalBytes());
             // Inject the code

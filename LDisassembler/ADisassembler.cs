@@ -3,8 +3,10 @@ using System.Deployment.Internal;
 using System.Windows.Forms;
 using Sputnik.LBinary;
 using Sputnik.LInterfaces;
+using Sputnik.LMarshal;
 using Sputnik.LString;
 using Sputnik.LUtils;
+using SputnikAsm.LAssembler.LEnums;
 using SputnikAsm.LBinary;
 using SputnikAsm.LBinary.LByteInterpreter;
 using SputnikAsm.LCollections;
@@ -1605,7 +1607,7 @@ namespace SputnikAsm.LDisassembler
             {
                 if (displacementString != "")
                 {
-                    if (displacementString[1] == '-')
+                    if (displacementString[0] == '-')
                         result += displacementString; //already starts with a sign
                     else
                         result = result + '+' + displacementString;
@@ -1700,27 +1702,25 @@ namespace SputnikAsm.LDisassembler
         }
         #endregion
         #region PreviousOpCode
-        public UIntPtr PreviousOpCode(UIntPtr address, ADisassembler d = null)
+        public UIntPtr PreviousOpCode(UIntPtr address)
         {
             var result = UIntPtr.Zero;
-            if (d == null)
-                d = this;
-            var aggressive = d._aggressiveAlignment;
-            d._aggressiveAlignment = true;
-            var x = PreviousOpCodeHelp(d, address, 80, ref result);
+            var aggressive = _aggressiveAlignment;
+            _aggressiveAlignment = true;
+            var x = PreviousOpCodeHelp(address, 80, ref result);
             if (x != address)
             {
                 //no match found 80 bytes from the start
                 //try 40
-                x = PreviousOpCodeHelp(d, address, 40, ref result);
+                x = PreviousOpCodeHelp(address, 40, ref result);
                 if (x != address)
                 {
                     //nothing with 40, try 20
-                    x = PreviousOpCodeHelp(d, address, 20, ref result);
+                    x = PreviousOpCodeHelp(address, 20, ref result);
                     if (x != address)
                     {
                         //no 20, try 10
-                        x = PreviousOpCodeHelp(d, address, 10, ref result);
+                        x = PreviousOpCodeHelp(address, 10, ref result);
                         if (x != address)
                         {
                             //and if all else fails try to find the closest one
@@ -1729,7 +1729,7 @@ namespace SputnikAsm.LDisassembler
                             {
                                 x = address - i;
                                 var s = "";
-                                d.Disassemble(ref x, ref s);
+                                Disassemble(ref x, ref s);
                                 if (x == address)
                                 {
                                     result = address - i;
@@ -1741,7 +1741,7 @@ namespace SputnikAsm.LDisassembler
                     }
                 }
             }
-            d._aggressiveAlignment = aggressive;
+            _aggressiveAlignment = aggressive;
             return result;
         }
         #endregion
@@ -1818,22 +1818,19 @@ namespace SputnikAsm.LDisassembler
         public Boolean HasAddress(String d, ref UIntPtr address, Object context = null)
         {
             var s = "";
-            var i = 0;
-            var j = 0;
-            var haserror = false;
-            var result = false;
             if (d == "")
-                return result;
+                return false;
             if (AStringUtils.Pos(" ", d) == -1)
-                return result;
+                return false;
+            var result = false;
             //if the opcode has a , then get the last part
-            i = AStringUtils.Pos(",", d);
+            var i = AStringUtils.Pos(",", d);
             if (i != -1)
                 d = AStringUtils.Copy(d, i + 1, d.Length);
             if (context == null)
             {
                 if (AStringUtils.Pos("+", d) != -1)
-                    return result; //it has an offset, so also a register. without a context, this is impossible
+                    return false; //it has an offset, so also a register. without a context, this is impossible
                 //check O for a hexadecimal value of 8 bytes and longer.
                 if (Has4ByteHexString(d, ref s))
                 {
@@ -1852,14 +1849,14 @@ namespace SputnikAsm.LDisassembler
                 i = AStringUtils.Pos("[", d);
                 if (i != -1)
                     d = AStringUtils.Copy(d, i + 1, AStringUtils.Pos("]", d) - i - 1);
-                address = SymbolHandler.GetAddressFromName(d, false, out haserror);
-                result = !haserror;
+                address = SymbolHandler.GetAddressFromName(d, false, out var hasError);
+                result = !hasError;
             }
             return result;
         }
         #endregion
         #region PreviousOpCodeHelp
-        public UIntPtr PreviousOpCodeHelp(ADisassembler d, UIntPtr address, int distance, ref UIntPtr result2)
+        public UIntPtr PreviousOpCodeHelp(UIntPtr address, int distance, ref UIntPtr result2)
         {
             var y = UIntPtr.Zero;
             var s = "";
@@ -1867,7 +1864,7 @@ namespace SputnikAsm.LDisassembler
             while (x.ToUInt64() < address.ToUInt64())
             {
                 y = x;
-                d.Disassemble(ref x, ref s);
+                Disassemble(ref x, ref s);
             }
             var result = x;
             result2 = y;
@@ -1965,251 +1962,273 @@ namespace SputnikAsm.LDisassembler
         }
         #endregion
         #region SplitDisassembledString -- todo
-        //public void SplitDisassembledString(String disassembled, Boolean showvalues, ref String address, ref String bytes, ref String opcode, ref String special, pcontext context = null)
-        //{
-        //    var offset = UIntPtr.Zero;
-        //    var value = UIntPtr.Zero;
-        //    var e = 0;
-        //    var i = 0;
-        //    var j = 0;
-        //    var j2 = 0;
-        //    var k = 0;
-        //    var l = 0;
-        //    string ts, ts2, ts3;
-        //    var actualread = UIntPtr.Zero;
-        //    var valuetype = 0;
-        //    //    tokens: ttokens;
-        //    var fvalue = 0.0f;
-        //    var fvalue2 = 0.0;
-        //    var tempbuf = new UStringBuilder(127);
-        //    var pc = "";
-        //    var pwc = "";
-        //    tvariabletype variabletype;
-        //    var tempaddress = UIntPtr.Zero;
-        //    var err = false;
-        //    var isjumper = false;
-        //    var hexstring = "";
-        //    i = AStringUtils.Pos(" - ", disassembled);
-        //    address = AStringUtils.Copy(disassembled, 1, i - 1).ToUpper();
-        //    i += 3;
-        //    j = AStringUtils.PosEx(" - ", disassembled, i);
-        //    if (j == -1)
-        //        j = disassembled.Length + 1;
-        //    bytes = AStringUtils.Copy(disassembled, i, (j - i));
-        //    j += 3;
-        //    k = AStringUtils.PosEx(" : ", disassembled, j);
-        //    l = k;
-        //    if (k == -1)
-        //        k = disassembled.Length + 1;
-        //    opcode = AStringUtils.Copy(disassembled, j, (k - j));
-        //    if (showvalues)
-        //    {
-        //        ts = "";
-        //        special = "";
-        //        if ((HasAddress(opcode, tempaddress, context)) | ((opcode.Length > 3) && (opcode[0] == 'l') && (opcode[1] == 'e') && (opcode[2] == 'a')))
-        //        {
-        //            if (AMemoryHelper.IsAddress(SymbolHandler.Process.Handle, tempaddress))
-        //            {
-        //                try
-        //                {
-        //
-        //                    if ((opcode[0] == 'l') && (opcode[1] == 'e') && (opcode[2] == 'a')) //lea
-        //                    {
-        //                        j = AStringUtils.Pos("[", opcode);
-        //                        j2 = AStringUtils.Pos("]", opcode);
-        //                        ts2 = AStringUtils.Copy(opcode, j + 1, j2 - j - 1);
-        //                        tempaddress = SymbolHandler.GetAddressFromName(ts2, false, out err);
-        //                        if (err)
-        //                            return; //error
-        //                    }
-        //                }
-        //                catch
-        //                {
-        //                    tempaddress = UIntPtr.Zero; ////////////////////////// REACHED WITH INDEX FIX
-        //                }
-        //                isjumper = false;
-        //                if (opcode[1] == 'j')
-        //                    isjumper = true; //jmp, jx
-        //                if ((opcode[1] == 'l') && (opcode[2] == 'o') && (opcode[3] == 'o'))
-        //                    isjumper = true; //loop
-        //                if ((opcode[1] == 'c') && (opcode[2] == 'a'))
-        //                    isjumper = true; //call
-        //                valuetype = OpCodeToValueType(opcode);
-        //                i = pos("[", disassembled);
-        //                if (i != -1)
-        //                {
-        //                    //it might have an override
-        //                    if (pos("qword ptr", opcode) != -1)
-        //                        valuetype = 4;
-        //                    else if (pos("dword ptr", opcode) != -1) //usually a double
-        //                        valuetype = 2;
-        //                    else if (pos("word ptr", opcode) != -1)
-        //                        valuetype = 1;
-        //                    else if (pos("byte ptr", opcode) != -1)
-        //                        valuetype = 0;
-        //                    else
-        //                    {
-        //                        //check the register used
-        //                        j2 = pos(",[", opcode);
-        //                        k = pos("],", opcode);
-        //                        if (j2 != -1)  //register in front
-        //                        {
-        //                            l = pos(" ", opcode);
-        //                            ts3 = copy(opcode, l + 1, j2 - l - 1);
-        //
-        //                            switch (tokentoregisterbit(uppercase(ts3)))
-        //                            {
-        //                                case ttregister8bit:
-        //                                    valuetype = 0;
-        //                                    break;
-        //                                case ttregister16bit:
-        //                                    valuetype = 1;
-        //                                    break;
-        //                                case ttregister32bit:
-        //                                    valuetype = 2;
-        //                                    break;
-        //                                default: valuetype = 2;
-        //                                    break;
-        //                            }
-        //                        }
-        //                        else
-        //                        if (k != -1)   //register after ],
-        //                        {
-        //                            l = pos("],", opcode);
-        //                            ts3 = copy(opcode, l + 2, length(opcode) - l - 1);
-        //
-        //                            switch (tokentoregisterbit(uppercase(ts3)))
-        //                            {
-        //                                case ttregister8bit: valuetype = 0; break;
-        //                                case ttregister16bit: valuetype = 1; break;
-        //                                case ttregister32bit: valuetype = 2; break;
-        //                                default: valuetype = 2; break;
-        //                            }
-        //                        } //else no idea, check var
-        //                    }
-        //                } //not an address specifier
-        //
-        //                if (valuetype == 2)
-        //                {
-        //                    if (readprocessmemory(processhandle, (pointer)(tempaddress), &tempbuf[0], 16, actualread))
-        //                    {
-        //                        variabletype = findtypeofdata(tempaddress, &tempbuf[0], 16);
-        //                        switch (variabletype)
-        //                        {
-        //                            case vtsingle:
-        //                                valuetype = 3;
-        //                                break;
-        //                            case vtdouble:
-        //                                valuetype = 4;
-        //                                break;
-        //                            case vtstring:
-        //                                valuetype = 5;
-        //                                break;
-        //                            case vtunicodestring:
-        //                                valuetype = 6;
-        //                                break;
-        //                        }
-        //                    }
-        //                }
-        //                if (isjumper)
-        //                    valuetype = 2; //handle it as a dword
-        //                value = 0;
-        //                fvalue = 0;
-        //                fvalue2 = 0;
-        //                switch (valuetype)
-        //                {
-        //                    case 0:
-        //                        if (readprocessmemory(processhandle, (pointer)(tempaddress), &value, 1, actualread)) ts = AStringUtils.IntToHex(value, 2);
-        //                        break;
-        //                    case 1:
-        //                        if (readprocessmemory(processhandle, (pointer)(tempaddress), &value, 2, actualread)) ts = AStringUtils.IntToHex(value, 4);
-        //                        break;
-        //                    case 2:
-        //                        if (readprocessmemory(processhandle, (pointer)(tempaddress), &value, 4, actualread))
-        //                        {
-        //                            if (isjumper && ((value & 0xffff) == 0x25ff))  //it's a jmp [xxxxxxxx]    / call [xxxxxx] ...
-        //                            {
-        //                                value = 0;
-        //                                if (readprocessmemory(processhandle, (pointer)(tempaddress + 2), &value, 4, actualread))
-        //                                {
-        //                                    if (is64bit)
-        //                                        value = tempaddress + 6 + value;
-        //                                    if (readprocessmemory(processhandle, (pointer)(value), &value, processhandler.pointersize, actualread))
-        //                                        ts = "->" + symhandler.getnamefromaddress(value, symhandler.showsymbols, symhandler.showmodules, symhandler.showsections, nil, nil, 8, false);
-        //                                }
-        //                            }
-        //                            else
-        //                                ts = symhandler.getnamefromaddress(value, symhandler.showsymbols, symhandler.showmodules, symhandler.showsections, nil, nil, 8, false);
-        //                            if (isjumper)
-        //                            {
-        //                                //check if ts is a name or a hexadecimal value
-        //                                //if hex, don't use it
-        //                                val("$" + ts, j, i);
-        //                                if (i == 0)
-        //                                    ts = ""; //zero the string, it's a hexadecimal string
-        //                            }
-        //                        }
-        //                        break;
-        //                    case 3:
-        //                        if (readprocessmemory(processhandle, (pointer)(tempaddress), &fvalue, 4, actualread))
-        //                            ts = format("(float)%.4f", set::of(fvalue, eos));
-        //                        break;
-        //                    case 4:
-        //                        if (readprocessmemory(processhandle, (pointer)(tempaddress), &fvalue2, 8, actualread))
-        //                            ts = format("(double)%.4f", set::of(fvalue2, eos));
-        //                        break;
-        //                    case 5:
-        //                        {
-        //                            actualread = 0;
-        //                            readprocessmemory(processhandle, (pointer)(tempaddress), &tempbuf[0], 128, actualread);
-        //                            tempbuf[127] = 0;
-        //                            tempbuf[126] = ord('.');
-        //                            tempbuf[125] = ord('.');
-        //                            tempbuf[124] = ord('.');
-        //                            if (actualread > 0)
-        //                                tempbuf[actualread - 1] = 0;
-        //                            pc = &tempbuf[0];
-        //                            ts = '"' + pc + '"';
-        //                        }
-        //                        break;
-        //                    case 6:
-        //                        {
-        //                            actualread = 0;
-        //                            readprocessmemory(processhandle, (pointer)(tempaddress), &tempbuf[0], 128, actualread);
-        //                            tempbuf[127] = 0;
-        //                            tempbuf[126] = 0;
-        //                            tempbuf[125] = 0;
-        //                            tempbuf[124] = ord('.');
-        //                            tempbuf[123] = 0;
-        //                            tempbuf[122] = ord('.');
-        //                            tempbuf[121] = 0;
-        //                            tempbuf[120] = ord('.');
-        //                            if (actualread > 1)
-        //                            {
-        //                                tempbuf[actualread - 1] = 0;
-        //                                tempbuf[actualread - 2] = 0;
-        //                            }
-        //                            pwc = &tempbuf[0];
-        //                            ts = "\"\"" + pwc + "\"\"";
-        //                        }
-        //                        break;
-        //                }
-        //                if (ts != "")
-        //                    ts = '[' + ts + ']';
-        //            }
-        //            else
-        //            {
-        //                //tempaddress doesn't seem to be an address
-        //                variabletype = findtypeofdata(0, &tempaddress, processhandler.pointersize);
-        //                if (variabletype == vtsingle)
-        //                    ts = UStringUtils.Sprintf("(float)%.4f", tempaddress.ToIntPtr().ReadFloat());
-        //            }
-        //        }
-        //        special = ts;
-        //    }
-        //    else
-        //        special = "";
-        //}
+        public void SplitDisassembledString(String disassembled, Boolean showvalues, out String address, out String bytes, out String opcode, out String special, Object context = null)
+        {
+            var byteInterp = new AByteInterpreter(SymbolHandler);
+            var offset = UIntPtr.Zero;
+            var value = UIntPtr.Zero;
+            var e = 0;
+            var i = 0;
+            var j = 0;
+            var j2 = 0;
+            var k = 0;
+            var l = 0;
+            string ts, ts2, ts3;
+            var actualread = 0;
+            var valuetype = 0;
+            //    tokens: ttokens;
+            var fvalue = 0.0f;
+            var fvalue2 = 0.0;
+            var tempBufBack = UBinaryUtils.NewZeroByteArray(127);
+            var tempbuf = new UBytePtr(tempBufBack);
+            AVariableType variabletype;
+            var tempaddress = UIntPtr.Zero;
+            var err = false;
+            var isjumper = false;
+            var hexstring = "";
+            var readBuf = new UBytePtr(UBinaryUtils.NewZeroByteArray(64));
+            i = AStringUtils.Pos(" - ", disassembled);
+            address = AStringUtils.Copy(disassembled, 1, i - 1).ToUpper();
+            i += 3;
+            j = AStringUtils.PosEx(" - ", disassembled, i);
+            if (j == -1)
+                j = disassembled.Length + 1;
+            bytes = AStringUtils.Copy(disassembled, i, (j - i));
+            j += 3;
+            k = AStringUtils.PosEx(" : ", disassembled, j);
+            l = k;
+            if (k == -1)
+                k = disassembled.Length + 1;
+            opcode = AStringUtils.Copy(disassembled, j, (k - j));
+            if (showvalues)
+            {
+                ts = "";
+                special = "";
+                if (HasAddress(opcode, ref tempaddress, context) | (opcode.Length > 3 && opcode.StartsWith("lea")))
+                {
+                    if (AMemoryHelper.IsAddress(SymbolHandler.Process.Handle, tempaddress.ToIntPtr()))
+                    {
+                        try
+                        {
+        
+                            if (opcode.StartsWith("lea")) //lea
+                            {
+                                j = AStringUtils.Pos("[", opcode);
+                                j2 = AStringUtils.Pos("]", opcode);
+                                ts2 = AStringUtils.Copy(opcode, j + 1, j2 - j - 1);
+                                tempaddress = SymbolHandler.GetAddressFromName(ts2, false, out err);
+                                if (err)
+                                    return; //error
+                            }
+                        }
+                        catch
+                        {
+                            tempaddress = UIntPtr.Zero; ////////////////////////// REACHED WITH INDEX FIX
+                        }
+                        isjumper = false;
+                        if (opcode.StartsWith("j"))
+                            isjumper = true; //jmp, jx
+                        if (opcode.StartsWith("loo"))
+                            isjumper = true; //loop
+                        if (opcode.StartsWith("ca"))
+                            isjumper = true; //call
+                        valuetype = OpCodeToValueType(opcode);
+                        i = AStringUtils.Pos("[", disassembled);
+                        if (i != -1)
+                        {
+                            //it might have an override
+                            if (AStringUtils.Pos("qword ptr", opcode) != -1)
+                                valuetype = 4;
+                            else if (AStringUtils.Pos("dword ptr", opcode) != -1) //usually a double
+                                valuetype = 2;
+                            else if (AStringUtils.Pos("word ptr", opcode) != -1)
+                                valuetype = 1;
+                            else if (AStringUtils.Pos("byte ptr", opcode) != -1)
+                                valuetype = 0;
+                            else
+                            {
+                                //check the register used
+                                j2 = AStringUtils.Pos(",[", opcode);
+                                k = AStringUtils.Pos("],", opcode);
+                                if (j2 != -1)  //register in front
+                                {
+                                    l = AStringUtils.Pos(" ", opcode);
+                                    ts3 = AStringUtils.Copy(opcode, l + 1, j2 - l - 1);
+        
+                                    switch (AAsmTools.Assembler.TokenToRegisterBit(ts3.ToUpper()))
+                                    {
+                                        case ATokenType.Register8Bit:
+                                            valuetype = 0;
+                                            break;
+                                        case ATokenType.Register16Bit:
+                                            valuetype = 1;
+                                            break;
+                                        case ATokenType.Register32Bit:
+                                            valuetype = 2;
+                                            break;
+                                        default: valuetype = 2;
+                                            break;
+                                    }
+                                }
+                                else
+                                if (k != -1)   //register after ],
+                                {
+                                    l = AStringUtils.Pos("],", opcode);
+                                    ts3 = AStringUtils.Copy(opcode, l + 2, opcode.Length - l - 1);
+                                    switch (AAsmTools.Assembler.TokenToRegisterBit(ts3.ToUpper()))
+                                    {
+                                        case ATokenType.Register8Bit:
+                                            valuetype = 0;
+                                            break;
+                                        case ATokenType.Register16Bit:
+                                            valuetype = 1;
+                                            break;
+                                        case ATokenType.Register32Bit:
+                                            valuetype = 2;
+                                            break;
+                                        default: valuetype = 2;
+                                            break;
+                                    }
+                                } //else no idea, check var
+                            }
+                        } //not an address specifier
+                        if (valuetype == 2)
+                        {
+                            if (Kernel32.ReadProcessMemory(Proc.Handle, tempaddress.ToIntPtr(), tempbuf.ToIntPtr(), 16, out actualread))
+                            {
+                                variabletype = byteInterp.FindTypeOfData(tempaddress, tempbuf, 16);
+                                switch (variabletype)
+                                {
+                                    case AVariableType.Single:
+                                        valuetype = 3;
+                                        break;
+                                    case AVariableType.Double:
+                                        valuetype = 4;
+                                        break;
+                                    case AVariableType.String:
+                                        valuetype = 5;
+                                        break;
+                                    case AVariableType.UnicodeString:
+                                        valuetype = 6;
+                                        break;
+                                }
+                            }
+                        }
+                        if (isjumper)
+                            valuetype = 2; //handle it as a dword
+                        value = UIntPtr.Zero;
+                        fvalue = 0;
+                        fvalue2 = 0;
+                        switch (valuetype)
+                        {
+                            case 0: // byte
+                                if (Kernel32.ReadProcessMemory(Proc.Handle, tempaddress.ToIntPtr(), readBuf.ToIntPtr(), 1, out actualread))
+                                {
+                                    value = (UIntPtr)readBuf.ReadByte();
+                                    ts = AStringUtils.IntToHex(value, 2);
+                                }
+                                break;
+                            case 1: // word
+                                if (Kernel32.ReadProcessMemory(Proc.Handle, tempaddress.ToIntPtr(), readBuf.ToIntPtr(), 2, out actualread))
+                                {
+                                    value = (UIntPtr)readBuf.ReadUInt16();
+                                    ts = AStringUtils.IntToHex(value, 4);
+                                }
+                                break;
+                            case 2: // dword
+                                if (Kernel32.ReadProcessMemory(Proc.Handle, tempaddress.ToIntPtr(), readBuf.ToIntPtr(), 4, out actualread))
+                                {
+                                    value = (UIntPtr)readBuf.ReadUInt32();
+                                    if (isjumper && (((int)value.ToUInt32() & 0xffff) == 0x25ff))  //it's a jmp [xxxxxxxx]    / call [xxxxxx] ...
+                                    {
+                                        value = UIntPtr.Zero;
+                                        if (Kernel32.ReadProcessMemory(Proc.Handle, (IntPtr)(tempaddress.ToUInt64() + 2), readBuf.ToIntPtr(), 4, out actualread))
+                                        {
+                                            value = (UIntPtr)readBuf.ReadUInt32();
+                                            if (Proc.IsX64)
+                                                value = (UIntPtr)(tempaddress.ToUInt64() + 6 + value.ToUInt64());
+                                            if (Kernel32.ReadProcessMemory(Proc.Handle, value.ToIntPtr(), readBuf.ToIntPtr(), Proc.PointerSize, out actualread))
+                                            {
+                                                value = readBuf.ReadUIntPtr();
+                                                ts = "->" + SymbolHandler.GetNameFromAddress(value, SymbolHandler.ShowSymbols, SymbolHandler.ShowModules, SymbolHandler.ShowSections, null, out _, 8, false);
+                                            }
+                                        }
+                                    }
+                                    else
+                                        ts = SymbolHandler.GetNameFromAddress(value, SymbolHandler.ShowSymbols, SymbolHandler.ShowModules, SymbolHandler.ShowSections, null, out _, 8, false);
+                                    if (isjumper)
+                                    {
+                                        //check if ts is a name or a hexadecimal value
+                                        //if hex, don't use it
+                                        AStringUtils.Val("0x" + ts, out j, out i);
+                                        if (i == 0)
+                                            ts = ""; //zero the string, it's a hexadecimal string
+                                    }
+                                }
+                                break;
+                            case 3: // Single
+                                if (Kernel32.ReadProcessMemory(Proc.Handle, tempaddress.ToIntPtr(), readBuf.ToIntPtr(), 4, out actualread))
+                                {
+                                    fvalue = readBuf.ReadFloat();
+                                    ts = UStringUtils.Sprintf("(float)%.4f", fvalue);
+                                }
+                                break;
+                            case 4: // Double
+                                if (Kernel32.ReadProcessMemory(Proc.Handle, tempaddress.ToIntPtr(), readBuf.ToIntPtr(), 8, out actualread))
+                                {
+                                    fvalue2 = readBuf.ReadDouble();
+                                    ts = UStringUtils.Sprintf("(double)%.4f", fvalue2);
+                                }
+                                break;
+                            case 5: // String
+                                {
+                                    Kernel32.ReadProcessMemory(Proc.Handle, tempaddress.ToIntPtr(), tempbuf.ToIntPtr(), 128, out actualread);
+                                    tempbuf[127] = 0;
+                                    tempbuf[126] = (Byte)'.';
+                                    tempbuf[125] = (Byte)'.';
+                                    tempbuf[124] = (Byte)'.';
+                                    if (actualread > 0)
+                                        tempbuf[actualread - 1] = 0;
+                                    ts = '"' + UBitConverter.UnpackSingle("z1", 0, tempBufBack).ToString() + '"';
+                                }
+                                break;
+                            case 6: // UnicodeString
+                                {
+                                    Kernel32.ReadProcessMemory(Proc.Handle, tempaddress.ToIntPtr(), tempbuf.ToIntPtr(), 128, out actualread);
+                                    tempbuf[127] = 0;
+                                    tempbuf[126] = 0;
+                                    tempbuf[125] = 0;
+                                    tempbuf[124] = (Byte)'.';
+                                    tempbuf[123] = 0;
+                                    tempbuf[122] = (Byte)'.';
+                                    tempbuf[121] = 0;
+                                    tempbuf[120] = (Byte)'.';
+                                    if (actualread > 1)
+                                    {
+                                        tempbuf[actualread - 1] = 0;
+                                        tempbuf[actualread - 2] = 0;
+                                    }
+                                    ts = "\"\"" + UBitConverter.UnpackSingle("z7", 0, tempBufBack) + "\"\"";
+                                }
+                                break;
+                        }
+                        if (ts != "")
+                            ts = '[' + ts + ']';
+                    }
+                    else
+                    {
+                        //tempaddress doesn't seem to be an address
+                        tempbuf.Zero();
+                        variabletype = byteInterp.FindTypeOfData(UIntPtr.Zero, tempbuf, Proc.PointerSize);
+                        if (variabletype == AVariableType.Single)
+                            ts = UStringUtils.Sprintf("(float)%.4f", tempaddress.ToIntPtr().ReadFloat());
+                    }
+                }
+                special = ts;
+            }
+            else
+                special = "";
+        }
         #endregion
         #region DecodeLastParametersToString
         public unsafe String DecodeLastParametersToString()
@@ -2251,7 +2270,7 @@ namespace SputnikAsm.LDisassembler
                 if (Kernel32.ReadProcessMemory(Proc.Handle, jumpaddress.ToIntPtr(), buffer.ToIntPtr(0), 6, out x))
                 {
         
-                    if ((buffer[0] == 0xff) && (buffer[1] == 0x25))
+                    if ((buffer[0] == 0xff) && buffer[1] == 0x25)
                     {
                         result = result + "->";  //double, so ->->
                         if (Proc.IsX64)
@@ -2281,14 +2300,14 @@ namespace SputnikAsm.LDisassembler
                         parametercount += 1;
                     if (LastDisassembleData.ModRmValueType == ADisassemblerValueType.Address)
                     {
-                        if ((parametercount > 1) && (_modRmPosition == ATmrPos.Right))
+                        if ((parametercount > 1) && _modRmPosition == ATmrPos.Right)
                             values[1].Value = LastDisassembleData.ModRmValue;
                         else
                             values[0].Value = LastDisassembleData.ModRmValue;
                     }
                     if (LastDisassembleData.ParameterValueType != ADisassemblerValueType.None)
                     {
-                        if ((parametercount > 1) && (_modRmPosition != ATmrPos.Right))
+                        if (parametercount > 1 && _modRmPosition != ATmrPos.Right)
                             values[1].Value = LastDisassembleData.ParameterValue;
                         else
                             values[0].Value = LastDisassembleData.ParameterValue;

@@ -739,7 +739,7 @@ namespace SputnikAsm.LSymbolHandler
                 {
                     return UIntPtr.Zero;
                 }
-                if (list[i][1] == '-')
+                if (list[i][0] == '-')
                     offsets[i - 1] = -offsets[i - 1];
             }
             //still here so notation was correct and baseAddress+offsets are filled in

@@ -74,7 +74,7 @@ namespace SputnikAsm.LProcess.LAssembly
         /// <returns>An array of bytes containing the assembly code.</returns>
         public AScriptBytesArray Assemble()
         {
-            return _assemblyFactory.Assembler.Assemble(_assemblyFactory.Process, Mnemonics.ToString());
+            return _assemblyFactory.Assembler.Assemble(Mnemonics.ToString());
         }
 
         /// <summary>

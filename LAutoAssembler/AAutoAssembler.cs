@@ -13,12 +13,9 @@ using SputnikAsm.LDisassembler;
 using SputnikAsm.LExtensions;
 using SputnikAsm.LGenerics;
 using SputnikAsm.LProcess;
-using SputnikAsm.LProcess.LMemory;
 using SputnikAsm.LProcess.LNative.LTypes;
-using SputnikAsm.LProcess.LThreads;
 using SputnikAsm.LProcess.Utilities;
 using SputnikAsm.LString;
-using SputnikAsm.LSymbolHandler;
 using SputnikAsm.LUtils;
 
 namespace SputnikAsm.LAutoAssembler
@@ -289,14 +286,11 @@ namespace SputnikAsm.LAutoAssembler
         #endregion
         #region Variables
         public AAssembler Assembler;
-        public ASymbolHandler SelfSymbolHandler;
         #endregion
         #region Constructor
-        public AAutoAssembler()
+        public AAutoAssembler(AAssembler assembler)
         {
-            Assembler = new AAssembler();
-            SelfSymbolHandler = new ASymbolHandler();
-            SelfSymbolHandler.Process = new AProcessSharp(System.Diagnostics.Process.GetCurrentProcess().Id, AMemoryType.Remote);
+            Assembler = assembler;
         }
         #endregion
         #region RemoveComments
@@ -883,9 +877,9 @@ namespace SputnikAsm.LAutoAssembler
             {
                 UIntPtr result;
                 if (targetSelf)
-                    result = SelfSymbolHandler.GetAddressFromName(name);
+                    result = AAsmTools.SelfSymbolHandler.GetAddressFromName(name);
                 else
-                    result = Assembler.SymHandler.GetAddressFromName(name);
+                    result = Assembler.SymbolHandler.GetAddressFromName(name);
                 if (result != UIntPtr.Zero)
                     return result;
             }
@@ -912,7 +906,7 @@ namespace SputnikAsm.LAutoAssembler
             for (var j = 0; j < defines.Length; j++)
             {
                 if (defines[j].Name.ToUpper() == name)
-                    return Assembler.SymHandler.GetAddressFromName(defines[j].Whatever);
+                    return Assembler.SymbolHandler.GetAddressFromName(defines[j].Whatever);
             }
             return UIntPtr.Zero;
         }
@@ -1019,7 +1013,7 @@ namespace SputnikAsm.LAutoAssembler
                     labels[i].References2.SetLength(0);
                 }
             }
-            var symHandler = Assembler.SymHandler;
+            var symHandler = Assembler.SymbolHandler;
             symHandler.Process = process;
             symHandler.WaitForSymbolsLoaded();
             //2 pass scanner
@@ -1280,11 +1274,11 @@ namespace SputnikAsm.LAutoAssembler
                                     }
                                     //define it here already
                                     if (s3 != "")
-                                        Assembler.SymHandler.SetUserDefinedSymbolAllocSize(s1, x, Assembler.SymHandler.GetAddressFromName(s3));
+                                        Assembler.SymbolHandler.SetUserDefinedSymbolAllocSize(s1, x, Assembler.SymbolHandler.GetAddressFromName(s3));
                                     else
-                                        Assembler.SymHandler.SetUserDefinedSymbolAllocSize(s1, x);
+                                        Assembler.SymbolHandler.SetUserDefinedSymbolAllocSize(s1, x);
                                     globalAllocs.Inc();
-                                    globalAllocs.Last.Address = Assembler.SymHandler.GetUserDefinedSymbolByName(s1);
+                                    globalAllocs.Last.Address = Assembler.SymbolHandler.GetUserDefinedSymbolByName(s1);
                                     globalAllocs.Last.Name = s1;
                                     globalAllocs.Last.Size = x;
                                     assemblerLines.Dec();
@@ -1419,13 +1413,13 @@ namespace SputnikAsm.LAutoAssembler
                                     UIntPtr testPtr;
                                     try
                                     {
-                                        testPtr = Assembler.SymHandler.GetAddressFromName(s1);
+                                        testPtr = Assembler.SymbolHandler.GetAddressFromName(s1);
                                     }
                                     catch
                                     {
                                         throw new Exception(UStringUtils.Sprintf(rsXCouldNotBeFound, s1));
                                     }
-                                    using (var disassembler = new ADisassembler(Assembler.SymHandler))
+                                    using (var disassembler = new ADisassembler(Assembler.SymbolHandler))
                                     {
                                         disassembler.IsDataOnly = true;
                                         disassembler.Disassemble(ref testPtr, ref s1);
@@ -1451,8 +1445,8 @@ namespace SputnikAsm.LAutoAssembler
                                 if (a != -1 && b != -1)
                                 {
                                     var s1 = trim(copy(currentline, a + 1, b - a - 1));
-                                    if ((length(s1) > 1) && ((s1[1] == '\'') || (s1[1] == '"')))
-                                        s1 = ansidequotedstr(s1, s1[1]);
+                                    if ((length(s1) > 1) && ((s1[0] == '\'') || (s1[0] == '"')))
+                                        s1 = ansidequotedstr(s1, s1[0]);
                                     if (pos(":", s1) == 0)
                                     {
                                         s2 = extractfilename(s1);

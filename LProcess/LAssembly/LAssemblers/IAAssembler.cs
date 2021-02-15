@@ -13,7 +13,7 @@ namespace SputnikAsm.LProcess.LAssembly.LAssemblers
         /// </summary>
         /// <param name="asm">The assembly code.</param>
         /// <returns>An array of bytes containing the assembly code.</returns>
-        AScriptBytesArray Assemble(AProcessSharp process, String asm);
+        AScriptBytesArray Assemble(String asm);
 
         /// <summary>
         ///     Assemble the specified assembly code at a base address.
@@ -21,6 +21,6 @@ namespace SputnikAsm.LProcess.LAssembly.LAssemblers
         /// <param name="asm">The assembly code.</param>
         /// <param name="baseAddress">The address where the code is rebased.</param>
         /// <returns>An array of bytes containing the assembly code.</returns>
-        AScriptBytesArray Assemble(AProcessSharp process, String asm, IntPtr baseAddress);
+        AScriptBytesArray Assemble(String asm, IntPtr baseAddress);
     }
 }

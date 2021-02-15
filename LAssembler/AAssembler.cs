@@ -3,6 +3,7 @@ using Sputnik.LUtils;
 using Sputnik.UParser.LSpk;
 using SputnikAsm.LAssembler.LEnums;
 using SputnikAsm.LCollections;
+using SputnikAsm.LProcess;
 using SputnikAsm.LProcess.LNative;
 using SputnikAsm.LSymbolHandler;
 using SputnikAsm.LUtils;
@@ -19,16 +20,18 @@ namespace SputnikAsm.LAssembler
         public int Parameter1, Parameter2, Parameter3;
         public int OpCodeNr;
         public AIndexArray AssemblerIndex;
-        public ASymbolHandler SymHandler = new ASymbolHandler();
+        public ASymbolHandler SymbolHandler;
         public ASingleLineAssembler Assembler;
         #endregion
         #region Properties
         public Boolean Is64Bit { get; }
         public int OpCodeCount => OpCodes.Length;
+        public AProcessSharp Proc => SymbolHandler.Process;
         #endregion
         #region Constructor
-        public AAssembler()
+        public AAssembler(ASymbolHandler symbolHandler)
         {
+            SymbolHandler = symbolHandler;
             Is64Bit = ANative.IsProcessId64Bit(System.Diagnostics.Process.GetCurrentProcess().Id) == 1;
             OpCodes = AOpCodes.GetOpCodes();
             Parameter1 = 0;
@@ -439,7 +442,7 @@ namespace SputnikAsm.LAssembler
             var result = ATokenType.Register32Bit;
             if (token.Length < 2)
                 return result;
-            switch (token[1])
+            switch (token[0])
             {
                 case 'X':
                 {
@@ -456,7 +459,7 @@ namespace SputnikAsm.LAssembler
                             return ATokenType.RegisterXmm;
                         default:
                         {
-                            if (SymHandler.Process.IsX64)
+                            if (SymbolHandler.Process.IsX64)
                             {
                                 switch (token)
                                 {
@@ -597,7 +600,7 @@ namespace SputnikAsm.LAssembler
                     break;
                 default:
                 {
-                    if (SymHandler.Process.IsX64)
+                    if (SymbolHandler.Process.IsX64)
                     {
                         switch (token)
                         {
@@ -897,7 +900,7 @@ namespace SputnikAsm.LAssembler
             for (i = 0; i <= opCode.Length; i++)
             {
                 //check if this is a quote char
-                if (i < opCode.Length && ((opCode[i] == '\'') || (opCode[i] == '"')))
+                if (i < opCode.Length && (opCode[i] == '\'' || opCode[i] == '"'))
                 {
                     if (quoted)  //check if it's the end quote
                     {
@@ -940,8 +943,8 @@ namespace SputnikAsm.LAssembler
                         {
                             case 'B': //BYTE, BYTE PTR
                                 {
-                                    if ((t[1] == 'Y') && (t[2] == 'T'))  //could be BYTE
-                                        isPartial = (t == "BYTE") || (t == "BYTE PTR");
+                                    if (t[1] == 'Y' && t[2] == 'T')  //could be BYTE
+                                        isPartial = t == "BYTE" || t == "BYTE PTR";
                                 }
                                 break;
                             case 'D': //DQWORD, DWORD, DQWORD PTR, DWORD PTR
@@ -951,14 +954,14 @@ namespace SputnikAsm.LAssembler
                                         case 'Q': //DQWORD or DQWORD PTR
                                             {
                                                 if (t[2] == 'W')
-                                                    isPartial = (t == "DQWORD") || (t == "DQWORD PTR");
+                                                    isPartial = t == "DQWORD" || t == "DQWORD PTR";
                                             }
                                             break;
 
                                         case 'W': //DWORD or DWORD PTR
                                             {
                                                 if (t[2] == 'O')
-                                                    isPartial = (t == "DWORD") || (t == "DWORD PTR");
+                                                    isPartial = t == "DWORD" || t == "DWORD PTR";
                                             }
                                             break;
                                     }
@@ -966,25 +969,25 @@ namespace SputnikAsm.LAssembler
                                 break;
                             case 'F': //FAR
                                 {
-                                    if ((t[1] == 'A') && (t[2] == 'R'))
-                                        isPartial = (t == "FAR");
+                                    if (t[1] == 'A' && t[2] == 'R')
+                                        isPartial = t == "FAR";
                                 }
                                 break;
                             case 'L': //LONG
                                 {
-                                    if ((t[1] == 'O') && (t[2] == 'N'))
-                                        isPartial = (t == "LONG");
+                                    if (t[1] == 'O' && t[2] == 'N')
+                                        isPartial = t == "LONG";
                                 }
                                 break;
                             case 'Q': //QWORD, QWORD PTR
                                 {
-                                    if ((t[1] == 'W') && (t[2] == 'O'))  //could be QWORD
-                                        isPartial = (t == "QWORD") || (t == "QWORD PTR");
+                                    if (t[1] == 'W' && t[2] == 'O')  //could be QWORD
+                                        isPartial = t == "QWORD" || t == "QWORD PTR";
                                 }
                                 break;
                             case 'S': //SHORT
                                 {
-                                    if ((t[1] == 'H') && (t[2] == 'O'))
+                                    if (t[1] == 'H' && t[2] == 'O')
                                         isPartial = (t == "SHORT");
                                 }
                                 break;
@@ -1010,8 +1013,8 @@ namespace SputnikAsm.LAssembler
                                 break;
                             case 'W': //WORD, WORD PTR
                                 {
-                                    if ((t[1] == 'O') && (t[3] == 'R'))  //could be WORD
-                                        isPartial = (t == "WORD") || (t == "WORD PTR");
+                                    if (t[1] == 'O' && t[3] == 'R')  //could be WORD
+                                        isPartial = t == "WORD" || t == "WORD PTR";
                                 }
                                 break;
                         }
@@ -1034,7 +1037,7 @@ namespace SputnikAsm.LAssembler
             i = 0;
             while (i < tokens.Length)
             {
-                if ((tokens[i] == "") || (tokens[i] == " ") || (tokens[i] == ","))
+                if (tokens[i] == "" || tokens[i] == " " || tokens[i] == ",")
                 {
                     for (j = i; j < tokens.Length - 1; j++)
                         tokens[j] = tokens[j + 1];
@@ -1059,7 +1062,7 @@ namespace SputnikAsm.LAssembler
             if (token.Length > 4 && token.StartsWith("[[") && token.EndsWith("]]"))
             {
                 //looks like a pointer in a address specifier (idiot user detected...)
-                temp = "[" + AStringUtils.IntToHex(SymHandler.GetAddressFromName(AStringUtils.Copy(token, 2, token.Length - 4), true, out var haserror), 8) + ']';
+                temp = "[" + AStringUtils.IntToHex(SymbolHandler.GetAddressFromName(AStringUtils.Copy(token, 2, token.Length - 4), true, out var haserror), 8) + ']';
                 if (!haserror)
                     token = temp;
                 else
@@ -1123,7 +1126,7 @@ namespace SputnikAsm.LAssembler
                     AStringUtils.Val("0x" + tokens[i], out Int64 _, out var err);
                     if (err != 0 && GetReg(tokens[i], false) == -1)     //not a hexadecimal value and not a register
                     {
-                        temp = AStringUtils.IntToHex(SymHandler.GetAddressFromName(tokens[i], true, out var hasError), 8);
+                        temp = AStringUtils.IntToHex(SymbolHandler.GetAddressFromName(tokens[i], true, out var hasError), 8);
                         if (!hasError)
                             tokens[i] = temp; //can be rewritten as a hexadecimal
                         else

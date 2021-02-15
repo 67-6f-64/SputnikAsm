@@ -447,7 +447,7 @@ namespace SputnikAsm.LUtils
             if (s.Length == 0)
                 return 0;
             UInt64 result = 0;
-            switch (s[1] == '-')
+            switch (s[0] == '-')
             {
                 case true:
                     result = (UInt64)StrToInt64(s);

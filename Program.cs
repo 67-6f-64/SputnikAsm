@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.Sockets;
 using Sputnik.LBinary;
 using Sputnik.LMarshal;
 using Sputnik.LUtils;
@@ -17,6 +18,7 @@ using SputnikAsm.LProcess.LAssembly;
 using SputnikAsm.LProcess.LAssembly.LAssemblers;
 using SputnikAsm.LProcess.LMemory;
 using SputnikAsm.LProcess.Utilities;
+using SputnikAsm.LSymbolHandler;
 using SputnikAsm.LUtils;
 using SputnikWin.LFeatures.LWindows;
 
@@ -34,13 +36,15 @@ namespace SputnikAsm
             //
             //Console.WriteLine("done");
 
-            UTokenSp.Activate();
-            var a = new AAssembler();
-            var b1 = new AByteArray();
             var m = new AProcessSharp(System.Diagnostics.Process.GetProcessesByName("pacwin")[0], AMemoryType.Remote);
+            UTokenSp.Activate();
+            AAsmTools.InitTools(new ASymbolHandler());
+            AAsmTools.SymbolHandler.Process = m;
+            var a = AAsmTools.Assembler;
+            var b1 = new AByteArray();
             //var m2 = new AProcessSharp(System.Diagnostics.Process.GetCurrentProcess(), AMemoryType.Remote);
-            a.SymHandler.Process = m;
-            var aa = new AAutoAssembler();
+            a.SymbolHandler.Process = m;
+            var aa = AAsmTools.AutoAssembler;
             //var result = a.Assemble("mov eax, [edx+esi+66]", 0x400300, b1); // E9 FB 01 00 00
             //var result = a.Assemble("mov rax,[1122334455778899]", 0x400300, b1); // E9 FB 01 00 00
             //Console.WriteLine("Result: " + result);
@@ -48,7 +52,7 @@ namespace SputnikAsm
             //Console.WriteLine(UBinaryUtils.Expand(b1.TakeAll()));
             //
             //
-            var d = new ADisassembler(a.SymHandler);
+            var d = AAsmTools.Disassembler;
             //var sd = "";
             //using (var pt = new UBytePtr(b1.TakeAll()))
             //{
@@ -56,8 +60,8 @@ namespace SputnikAsm
             //    d.Disassemble(ref ptt, ref sd);
             //}
             //Console.WriteLine(d.LastDisassembleData.Prefix + ' ' + d.LastDisassembleData.OpCode + ' ' + d.LastDisassembleData.Parameters);
-            
-            var bi = new AByteInterpreter(a.SymHandler);
+
+            var bi = new AByteInterpreter(a.SymbolHandler);
             var bp = m.Memory.Read((IntPtr)0x411C88, 32);
             using (var bip = new UBytePtr(bp))
             {
@@ -88,9 +92,12 @@ namespace SputnikAsm
             {
                 try
                 {
-                    d.Disassemble(ref ptr, ref s1);
+                    var dis = d.Disassemble(ref ptr, ref s1);
                     var cl = d.LastDisassembleData.Prefix + ' ' + d.LastDisassembleData.OpCode + ' ' + d.LastDisassembleData.Parameters;
-                    Console.WriteLine(cl + " ; " + d.DecodeLastParametersToString());
+                    //var dec = d.DecodeLastParametersToString();
+                    //Console.WriteLine(cl + " ; " + d.DecodeLastParametersToString());
+                    d.SplitDisassembledString(dis, true, out var address, out var bytes, out var opcode, out var special);
+                    Console.WriteLine($"0x{address.PadRight(8)} {bytes.PadRight(20)} {opcode} {special} ");
                 }
                 catch
                 {
@@ -102,7 +109,7 @@ namespace SputnikAsm
 
 
 
-            a.SymHandler.Process = m;
+            a.SymbolHandler.Process = m;
 
             var cc = @"
 [ENABLE]

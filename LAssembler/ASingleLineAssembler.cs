@@ -200,7 +200,7 @@ namespace SputnikAsm.LAssembler
                     result = 7;
                     break;
             }
-            if (Assembler.SymHandler.Process.IsX64)
+            if (Assembler.SymbolHandler.Process.IsX64)
             {
                 switch (reg)
                 {
@@ -368,7 +368,7 @@ namespace SputnikAsm.LAssembler
             }
             if (!hasMultiply)
                 Assembler.SetSibScale(ref sib, 0);
-            if (Assembler.SymHandler.Process.IsX64)
+            if (Assembler.SymbolHandler.Process.IsX64)
             {
                 if (AStringUtils.Pos("RAX", reg) != -1)
                     SetSibIndex(ref sib, 0);
@@ -551,7 +551,7 @@ namespace SputnikAsm.LAssembler
             // set reg
             if (reg > 7)
             {
-                if (Assembler.SymHandler.Process.IsX64)
+                if (Assembler.SymbolHandler.Process.IsX64)
                     RexR = true;
                 else
                     throw new Exception("The assembler tried to set a register value that is too high");
@@ -711,7 +711,7 @@ namespace SputnikAsm.LAssembler
                 //no registers, just a address
                 SetRm(modRm, 0, 5);
                 Assembler.SetMod(modRm, 0, 0);
-                if (Assembler.SymHandler.Process.IsX64)
+                if (Assembler.SymbolHandler.Process.IsX64)
                 {
                     if ((disp <= 0x7fffffff) && Math.Abs((Int64)(FAddress - disp)) > 0x7ffffff0)  //rough estimate
                     {
@@ -885,7 +885,7 @@ namespace SputnikAsm.LAssembler
                     found = true;
                     return;
                 }
-                if (Assembler.SymHandler.Process.IsX64)
+                if (Assembler.SymbolHandler.Process.IsX64)
                 {
                     if ((reg[k] == "R8") || (reg[-k] == "R8"))
                     {
@@ -1068,7 +1068,7 @@ namespace SputnikAsm.LAssembler
             //first,last: integer;
             var startOfList = 0;
             var endOfList = 0;
-            var is64bit = Assembler.SymHandler.Process.IsX64;
+            var is64bit = Assembler.SymbolHandler.Process.IsX64;
             var candoaddressswitch = false;
             var vexvvvv = 0xf;
             FAddress = address;
@@ -1129,7 +1129,7 @@ namespace SputnikAsm.LAssembler
                                     {
                                         //wildcard
                                         v = 0;
-                                        var b = (Byte)Assembler.SymHandler.Process.Memory.Read<Byte>(((IntPtr)(address + (UInt64)i - 1)));
+                                        var b = (Byte)Assembler.SymbolHandler.Process.Memory.Read<Byte>(((IntPtr)(address + (UInt64)i - 1)));
                                         Assembler.Add(bytes, b);
                                     }
                                     else
@@ -1249,7 +1249,7 @@ namespace SputnikAsm.LAssembler
             var overrideShort = AStringUtils.Pos("SHORT ", parameter1, true) != -1;
             var overrideLong = (AStringUtils.Pos("LONG ", parameter1, true) != -1);
             var overrideFar = false;
-            if (Assembler.SymHandler.Process.IsX64)
+            if (Assembler.SymbolHandler.Process.IsX64)
                 overrideFar = (AStringUtils.Pos("FAR ", parameter1, true) != -1);
             else
                 overrideLong |= (AStringUtils.Pos("FAR ", parameter1, true) != -1);
@@ -1266,7 +1266,7 @@ namespace SputnikAsm.LAssembler
             paramType2 = Assembler.GetTokenType(ref parameter2, parameter1);
             paramType3 = Assembler.GetTokenType(ref parameter3, "");
             paramType4 = Assembler.GetTokenType(ref parameter4, "");
-            if (Assembler.SymHandler.Process.IsX64)
+            if (Assembler.SymbolHandler.Process.IsX64)
             {
                 if (paramType1 == ATokenType.Register8BitWithPrefix)
                 {
@@ -1325,7 +1325,7 @@ namespace SputnikAsm.LAssembler
                     }
                     i *= AStringUtils.StrToInt(tokens[1]);
                     bytes.SetLength(i);
-                    var bt = (Byte[])Assembler.SymHandler.Process.Memory.Read((IntPtr)address, i);
+                    var bt = (Byte[])Assembler.SymbolHandler.Process.Memory.Read((IntPtr)address, i);
                     if (bt.Length == bytes.Length)
                     {
                         for (i = 0; i < bt.Length; i++)
@@ -1441,7 +1441,7 @@ namespace SputnikAsm.LAssembler
             var signedVType = Assembler.SignedValueToType((IntPtr)v);
             result = false;
             //to make it easier for people that don't like the relative addressing limit
-            if ((!overrideShort) & (!overrideLong) & (Assembler.SymHandler.Process.IsX64))    //if 64-bit and no override is given
+            if ((!overrideShort) & (!overrideLong) & (Assembler.SymbolHandler.Process.IsX64))    //if 64-bit and no override is given
             {
                 //check if this is a jmp or call with relative value
                 if ((tokens[mnemonic] == "JMP") || (tokens[mnemonic] == "CALL"))
@@ -1674,7 +1674,7 @@ namespace SputnikAsm.LAssembler
                                         {
                                             //verified, it doesn't have a register base in it
                                             AddOpCode(bytes, j);
-                                            if (Assembler.SymHandler.Process.IsX64)
+                                            if (Assembler.SymbolHandler.Process.IsX64)
                                                 Assembler.AddQWord(bytes, v);
                                             else
                                                 Assembler.AddDWord(bytes, (UInt32)v);
@@ -1699,7 +1699,7 @@ namespace SputnikAsm.LAssembler
                                         {
                                             //verified, it doesn't have a register base in it
                                             AddOpCode(bytes, j);
-                                            if (Assembler.SymHandler.Process.IsX64)
+                                            if (Assembler.SymbolHandler.Process.IsX64)
                                                 Assembler.AddQWord(bytes, v);
                                             else
                                                 Assembler.AddDWord(bytes, (UInt32)v);
@@ -1724,7 +1724,7 @@ namespace SputnikAsm.LAssembler
                                         {
                                             //verified, it doesn't have a registerbase in it
                                             AddOpCode(bytes, j);
-                                            if (Assembler.SymHandler.Process.IsX64)
+                                            if (Assembler.SymbolHandler.Process.IsX64)
                                                 Assembler.AddQWord(bytes, v);
                                             else
                                                 Assembler.AddDWord(bytes, (UInt32)v);
@@ -1781,7 +1781,7 @@ namespace SputnikAsm.LAssembler
                                         {
                                             //verified, it doesn't have a registerbase in it
                                             AddOpCode(bytes, j);
-                                            if (Assembler.SymHandler.Process.IsX64)
+                                            if (Assembler.SymbolHandler.Process.IsX64)
                                                 Assembler.AddQWord(bytes, v);
                                             else
                                                 Assembler.AddDWord(bytes, (UInt32)v);
@@ -1853,7 +1853,7 @@ namespace SputnikAsm.LAssembler
                                         {
                                             //verified, it doesn't have a registerbase in it
                                             AddOpCode(bytes, j);
-                                            if (Assembler.SymHandler.Process.IsX64)
+                                            if (Assembler.SymbolHandler.Process.IsX64)
                                                 Assembler.AddQWord(bytes, v);
                                             else
                                                 Assembler.AddDWord(bytes, (UInt32)v);
@@ -1955,7 +1955,7 @@ namespace SputnikAsm.LAssembler
                                         {
                                             //verified, it doesn't have a registerbase in it
                                             AddOpCode(bytes, j);
-                                            if (Assembler.SymHandler.Process.IsX64)
+                                            if (Assembler.SymbolHandler.Process.IsX64)
                                                 Assembler.AddQWord(bytes, v);
                                             else
                                                 Assembler.AddDWord(bytes, (UInt32)v);
@@ -3134,7 +3134,7 @@ namespace SputnikAsm.LAssembler
                             }
                             break;
                         case AParam.Ymm256:
-                            if (Assembler.IsYmm256(paramType1) | ((paramType1 == ATokenType.MemoryLocation32) && (parameter1[1] == '[')))
+                            if (Assembler.IsYmm256(paramType1) | ((paramType1 == ATokenType.MemoryLocation32) && (parameter1[0] == '[')))
                             {
                                 //ymm_m256,
                                 if ((Assembler.OpCodes[j].ParamType2 == AParam.Ymm) && (paramType2 == ATokenType.RegisterYmm))
@@ -3242,7 +3242,7 @@ namespace SputnikAsm.LAssembler
                                             }
                                         }
                                     }
-                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.Ymm256) && (Assembler.IsYmm256(paramType3) | ((paramType3 == ATokenType.MemoryLocation32) && (parameter3[1] == '['))))
+                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.Ymm256) && (Assembler.IsYmm256(paramType3) | ((paramType3 == ATokenType.MemoryLocation32) && (parameter3[0] == '['))))
                                     {
                                         //ymm,ymm,ymm/m256
                                         if (Assembler.OpCodes[j].ParamType4 == AParam.None)
@@ -3382,7 +3382,7 @@ namespace SputnikAsm.LAssembler
                                             return result;
                                         }
                                     }
-                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.Rm32) && (Assembler.IsMem32(paramType3) | ((paramType3 ==ATokenType.MemoryLocation32) && (parameter3[1] == '['))))
+                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.Rm32) && (Assembler.IsMem32(paramType3) | ((paramType3 ==ATokenType.MemoryLocation32) && (parameter3[0] == '['))))
                                     {
                                         //xmm,xmm,rm32
                                         if (Assembler.OpCodes[j].ParamType4 == AParam.None)
@@ -3405,7 +3405,7 @@ namespace SputnikAsm.LAssembler
                                             return result;
                                         }
                                     }
-                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.Xmm32) && (Assembler.IsXmm32(paramType3) | ((paramType3 ==ATokenType.MemoryLocation32) && (parameter3[1] == '['))))
+                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.Xmm32) && (Assembler.IsXmm32(paramType3) | ((paramType3 ==ATokenType.MemoryLocation32) && (parameter3[0] == '['))))
                                     {
                                         //xmm,xmm,xmm/m32,
                                         if (Assembler.OpCodes[j].ParamType4 == AParam.None)
@@ -3453,7 +3453,7 @@ namespace SputnikAsm.LAssembler
                                         }
                                     }
 
-                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.Xmm64) && (Assembler.IsXmm64(paramType3) | ((paramType3 ==ATokenType.MemoryLocation32) && (parameter3[1] == '['))))
+                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.Xmm64) && (Assembler.IsXmm64(paramType3) | ((paramType3 ==ATokenType.MemoryLocation32) && (parameter3[0] == '['))))
                                     {
                                         //xmm,xmm,xmm/m64
                                         if (Assembler.OpCodes[j].ParamType4 == AParam.None)
@@ -3481,7 +3481,7 @@ namespace SputnikAsm.LAssembler
                                         }
                                     }
 
-                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.Xmm128) && (Assembler.IsXmm128(paramType3) | ((paramType3 ==ATokenType.MemoryLocation32) && (parameter3[1] == '['))))
+                                    if ((Assembler.OpCodes[j].ParamType3 == AParam.Xmm128) && (Assembler.IsXmm128(paramType3) | ((paramType3 ==ATokenType.MemoryLocation32) && (parameter3[0] == '['))))
                                     {
                                         //xmm,xmm,xmm/m128,
                                         if (Assembler.OpCodes[j].ParamType4 == AParam.None)
@@ -3523,7 +3523,7 @@ namespace SputnikAsm.LAssembler
                                         }
                                     }
                                 }
-                                if ((Assembler.OpCodes[j].ParamType2 == AParam.Ymm256) && (Assembler.IsYmm256(paramType2) | ((paramType2 ==ATokenType.MemoryLocation32) && (parameter2[1] == '['))))
+                                if ((Assembler.OpCodes[j].ParamType2 == AParam.Ymm256) && (Assembler.IsYmm256(paramType2) | ((paramType2 ==ATokenType.MemoryLocation32) && (parameter2[0] == '['))))
                                 {
                                     //xmm,ymm/m256
                                     AddOpCode(bytes, j);
@@ -4004,7 +4004,7 @@ namespace SputnikAsm.LAssembler
                 if (result)
                 {
                     //insert rex prefix if needed
-                    if (Assembler.SymHandler.Process.IsX64)
+                    if (Assembler.SymbolHandler.Process.IsX64)
                     {
                         if (Assembler.OpCodes[j].W0)
                             RexW = false;
