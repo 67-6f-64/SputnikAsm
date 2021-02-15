@@ -36,11 +36,13 @@ namespace SputnikAsm.LUtils
         public static int CopyMemory(Byte[] dest, int destStart, Byte[] src, int srcStart, int size)
         {
             var d = dest;
+            var dS = destStart;
             var s = src;
+            var sS = srcStart;
             var i = 0;
-            while (size-- > 0 && i < dest.Length && i < src.Length && destStart + i < dest.Length && srcStart + i < src.Length)
+            while (size-- > 0 && i < d.Length && i < s.Length && dS + i < d.Length && sS + i < s.Length)
             {
-                d[destStart + i] = s[srcStart + i];
+                d[dS + i] = s[sS + i];
                 i++;
             }
             return i;

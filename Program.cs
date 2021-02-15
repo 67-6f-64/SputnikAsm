@@ -64,9 +64,12 @@ jmp cat
 meeko:
     db 00 00 00 00
 
+{$try}
 dog:
 mov eax, edx
 jmp 400300
+{$except}
+mov edx, edi
 
 [DISABLE]
             ".Trim();
@@ -79,20 +82,13 @@ jmp 400300
             var info = new ADisableInfo();
             var ret = aa.AutoAssemble(pacWin, code, false, true, false, false, info, false, scr);
             Console.WriteLine("Result: " + ret);
-            //aa.AutoAssemble(pacWin, code, false, true, false, false, info, true, scr);
-            //foreach (var o in scr.Raw)
-            //{
-            //    Console.WriteLine("Line: " + o.Value);
-            //}
+            aa.AutoAssemble(pacWin, code, false, true, false, false, info, true, scr);
+            foreach (var o in scr.Raw)
+                Console.WriteLine("Line: " + o.Value);
             Console.WriteLine("meeko Loc: " + a.SymHandler.GetUserDefinedSymbolByName("meeko").ToUInt64().ToString("X"));
 
             // Console.WriteLine(proc.ReadMem((IntPtr)0x411C88, ReadType.Int32));
             // proc.Poke(scr.ToString());
-
-            var labels = new AStringArray();
-            aa.GetPotentialLabels(code, labels);
-            foreach (var o in labels.Raw)
-                Console.WriteLine("Label: " + o);
 
             Console.ReadKey();
         }

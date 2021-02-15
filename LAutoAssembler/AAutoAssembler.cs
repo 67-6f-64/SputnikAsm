@@ -995,8 +995,6 @@ namespace SputnikAsm.LAutoAssembler
             var prefered = UIntPtr.Zero;
             var oldprefered = UIntPtr.Zero;
             var protection = MemoryProtectionFlags.ExecuteReadWrite;
-            var intPtrSize = 0;
-            var intPtrHexSize = 0;
             var result = false;
             allocs.SetLength(0);
             kallocs.SetLength(0);
@@ -1005,11 +1003,6 @@ namespace SputnikAsm.LAutoAssembler
             createthread.SetLength(0);
             createthreadandwait.SetLength(0);
             currentaddress = UIntPtr.Zero;
-            if (Assembler.Is64Bit) // todo remove intptrsize stuff
-                intPtrSize = 8;
-            else
-                intPtrSize = 4;
-            intPtrHexSize = intPtrSize * 2;
             //add all symbols as defined labels
             if (disableInfo != null)
             {
@@ -1063,7 +1056,6 @@ namespace SputnikAsm.LAutoAssembler
                     currentline = code[i].Value.Trim().ToUpper();
                     if (currentline == "{$STRICT}")
                         strictmode = true;
-
                     if (currentline == "{$TRY}")
                         hastryexcept = true;
                 }
@@ -1120,7 +1112,7 @@ namespace SputnikAsm.LAutoAssembler
                                 continue;
                             }
                             #endregion
-                            #region Apply Defines
+                            #region Command DEFINE()
                             //apply defines (before DEFINE since define(bla, 123) and define(xxx, bla+123) should work
                             //also, do not touch define with any previous define
                             if (AStringUtils.Copy(currentline, 0, 7).ToUpper() == "DEFINE(")
@@ -1755,7 +1747,8 @@ namespace SputnikAsm.LAutoAssembler
                                     assemblerlines.SetLength(assemblerlines.Length - 1);   //don't bother with this in the 2nd pass
                                     continue;
                                 }
-                                else throw new Exception(rsWrongSyntaxALLOCIdentifierSizeinbytes);
+                                else
+                                    throw new Exception(rsWrongSyntaxALLOCIdentifierSizeinbytes);
                             }
                             #endregion
                             //replace ALLOC identifiers with values so the assemble error check doesnt crash on that
@@ -2599,7 +2592,7 @@ namespace SputnikAsm.LAutoAssembler
                 //unprotectmemory
                 for (i = 0; i < fullaccess.Length; i++)
                     if (createScript)
-                        newScript.Add("FullAccess " + AStringUtils.IntToHex(fullaccess[i].Address, intPtrHexSize) + " " + fullaccess[i].Size);
+                        newScript.Add("FullAccess " + AStringUtils.IntToHex(fullaccess[i].Address, 8) + " " + fullaccess[i].Size);
                     else
                         process.FullAccess((IntPtr)fullaccess[i].Address.ToUInt64(), (int)fullaccess[i].Size);
                 #region Load Binaries -- todo
@@ -2747,7 +2740,7 @@ namespace SputnikAsm.LAutoAssembler
                     testPtr = assembled[i].Address;
                     if (createScript)
                     {
-                        newScript.Add("Poke " + AStringUtils.IntToHex(testPtr, intPtrHexSize) + " " + AStringUtils.BinToHexStr(assembled[i].Bytes.Raw));
+                        newScript.Add("Poke " + AStringUtils.IntToHex(testPtr, 8) + " " + AStringUtils.BinToHexStr(assembled[i].Bytes.Raw));
                         ok1 = true;
                         ok2 = true;
                     }

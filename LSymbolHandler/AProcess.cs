@@ -1588,5 +1588,13 @@ namespace SputnikAsm.LSymbolHandler
             //return FindFreeBlockForRegion_result;
         }
         #endregion
+        #region CreateThread
+        public Boolean CreateThread(IntPtr address, IntPtr parameter, out int threadId)
+        {
+            var sh = _process.GetSafeHandle();
+            var h = NativeMethods.CreateRemoteThread(sh, IntPtr.Zero, 0, address, parameter, 0, out threadId);
+            return h != null && h.DangerousGetHandle() != IntPtr.Zero;
+        }
+        #endregion
     }
 }
