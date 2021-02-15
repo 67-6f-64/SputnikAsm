@@ -1,9 +1,14 @@
 ﻿using System;
+using Sputnik.LBinary;
+using Sputnik.LMarshal;
 using Sputnik.LUtils;
 using SputnikAsm.LAssembler;
 using SputnikAsm.LAutoAssembler;
 using SputnikAsm.LAutoAssembler.LCollections;
 using SputnikAsm.LCollections;
+using SputnikAsm.LDisassembler;
+using SputnikAsm.LDisassembler.LEnums;
+using SputnikAsm.LExtensions;
 using SputnikAsm.LGenerics;
 using SputnikAsm.LProcess;
 using SputnikAsm.LProcess.LAssembly;
@@ -19,14 +24,13 @@ namespace SputnikAsm
     {
         static void Main(string[] args)
         {
+
             //var Brackets = new ACharArray('(', ')', '[', ']', '{', '}');
             //var StdWordDelims = new ACharArray(',', '.', ';', '/', '\\', ':', '\'', '"', '`', '(', ')', '[', ']', '{', '}');
             //StdWordDelims.AddRange(Brackets.TakeAll());
             //StdWordDelims.AddRange(ACharUtils.Range('\0', ' ').TakeAll());
             //
             //Console.WriteLine("done");
-            //Console.ReadKey();
-            //Environment.Exit(1);
 
 
             UTokenSp.Activate();
@@ -38,39 +42,49 @@ namespace SputnikAsm
             //Console.WriteLine("Result: " + result);
             //Console.WriteLine("Bytes:");
             //Console.WriteLine(UBinaryUtils.Expand(b.Raw));
-
             var aa = new AAutoAssembler();
             aa.Assembler.SymHandler.Process = m;
 
 
+            //var b = new AByteArray();
+            //aa.Assembler.Assemble("mov eax, [edx+esi+66]", 0x400300, b);
+            //aa.Assembler.Assemble("mov eax, edx", 0x400300, b);
+
+            var cd = @"
+call MessageBoxA
+            ".Trim();
+            var codex = new ARefStringArray();
+            codex.Assign(UStringUtils.GetLines(cd).ToArray());
+            aa.RemoveComments(codex);
+
+            var b = aa.Assemble(aa.SelfSymbolHandler.Process, codex);
+            var d = new Disassembler();
+            var s1 = "";
+            var bytes = new UBytePtr(b[0].Bytes.TakeAll());
+            var ptr = bytes.ToIntPtr().ToUIntPtr();
+            d.dataonly = true;
+            d.disassemble(ref ptr, ref s1);
+            var currentline = d.lastdisassembledata.prefix + ' ' + d.lastdisassembledata.opcode + ' ' +
+                              d.lastdisassembledata.parameters;
+            Console.WriteLine(currentline);
+
+            Console.ReadKey();
+            Environment.Exit(1);
+
+
+
 
             var cc = @"
-            [ENABLE]
-createThread(exec)
+[ENABLE]
 400300:
-
-data:
-    db 00 00 00 00
-
-exec:
-mov, eax 7
-exec2:
-inc eax
-mov [data], eax
-jmp exec2
-push 0
-add esp, 4
-retn
-
+mov eax, edx6
+lea edx, esi
 [DISABLE]
 dealloc(dog)
             ".Trim();
            var code = new ARefStringArray();
            code.Assign(UStringUtils.GetLines(cc).ToArray());
            aa.RemoveComments(code);
-
-           aa.GetEnableAndDisablePos(code, out var en, out var de);
-
            var scr = new AScriptBytesArray();
            var info = new ADisableInfo();
            var ret = aa.AutoAssemble(m, code, false, true, false, false, info, false, scr);
@@ -81,19 +95,19 @@ dealloc(dog)
             foreach (var o in scr)
                Console.WriteLine("Line: " + o.Type + " " + o.Address.ToUInt64().ToString("X") + " " + AStringUtils.BinToHexStr(o.Bytes.TakeAll()));
            
-           // var f = new AAssemblyFactory(m, new ASharpAsm());
-           // f.Inject(
-           //     new[]
-           //     {
-           //         "mov, eax 7",
-           //         "push 0",
-           //         "add esp, 4",
-           //         "retn"
-           //     },
-           //     (IntPtr) 0x400310);
-           //
-           // var v = f.Execute<int>((IntPtr)0x400310);
-           // Console.WriteLine("Return: " + v);
+            var f = new AAssemblyFactory(m, new ASharpAsm());
+            f.Inject(
+                new[]
+                {
+                    "mov, eax 7",
+                    "push 0",
+                    "add esp, 4",
+                    "retn"
+                },
+                (IntPtr) 0x400310);
+           
+            var v = f.Execute<int>((IntPtr)0x400310);
+            Console.WriteLine("Return: " + v);
 
 
          //f.InjectAndExecute(

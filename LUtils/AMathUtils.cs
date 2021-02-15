@@ -5,6 +5,10 @@ namespace SputnikAsm.LUtils
     public static class AMathUtils
     {
         #region InRangeX
+        public static Boolean InRangeX(Byte value, Byte min, Byte max)
+        {
+            return value >= min && value <= max;
+        }
         public static Boolean InRangeX(UInt32 value, UInt32 min, UInt32 max)
         {
             return value >= min && value <= max;

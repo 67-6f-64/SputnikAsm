@@ -436,6 +436,12 @@ namespace SputnikAsm.LProcess.LNative
         public static extern bool ReadProcessMemory(ASafeMemoryHandle hProcess, IntPtr lpBaseAddress,
             [Out] byte[] lpBuffer, int dwSize, out int lpNumberOfBytesRead);
 
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool ReadProcessMemory(ASafeMemoryHandle hProcess, IntPtr lpBaseAddress,
+            IntPtr lpBuffer, int dwSize, out int lpNumberOfBytesRead);
+
+
         /// <summary>
         ///     Decrements a thread's suspend count. When the suspend count is decremented to zero, the execution of the thread is
         ///     resumed.

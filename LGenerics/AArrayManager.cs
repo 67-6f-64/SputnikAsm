@@ -667,10 +667,13 @@ namespace SputnikAsm.LGenerics
         #region GetEnumerator
         public IEnumerator<T> GetEnumerator()
         {
-            for (var i = 0; i < Length; i++)
+            lock (_lock)
             {
-                var c = Buffer[i];
-                yield return c;
+                for (var i = 0; i < Length; i++)
+                {
+                    var c = Buffer[i];
+                    yield return c;
+                }
             }
         }
         IEnumerator IEnumerable.GetEnumerator()

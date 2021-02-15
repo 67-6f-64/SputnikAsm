@@ -83,6 +83,15 @@
     <Compile Include="LAssembler\AOpCodes.cs" />
     <Compile Include="LAssembler\ASingleLineAssembler.cs" />
     <Compile Include="LAutoAssembler\AAutoAssembler.cs" />
+    <Content Include="LDisassembler\big.cs" />
+    <Compile Include="LDisassembler\Disassembler.cs" />
+    <Compile Include="LDisassembler\LEnums\tdisassemblerclass.cs" />
+    <Compile Include="LDisassembler\LEnums\tdisassemblervaluetype.cs" />
+    <Compile Include="LDisassembler\LEnums\tmrpos.cs" />
+    <Compile Include="LDisassembler\LEnums\tregistertype.cs" />
+    <Compile Include="LDisassembler\opcodeflags.cs" />
+    <Compile Include="LDisassembler\tlastdisassembledata.cs" />
+    <Compile Include="LDisassembler\tprefix.cs" />
     <Compile Include="LExtensions\XPointerExt.cs" />
     <Compile Include="LGenerics\AArrayManager.cs" />
     <Compile Include="LProcess\AProcessSharp.cs" />
@@ -196,6 +205,7 @@
     <Compile Include="LSymbolHandler\ASymbolHandler.cs" />
     <Compile Include="LSymbolHandler\AUserDefinedSymbol.cs" />
     <Compile Include="LUtils\AArrayUtils.cs" />
+    <Compile Include="LUtils\ABitUtils.cs" />
     <Compile Include="LUtils\AMathUtils.cs" />
     <Compile Include="LUtils\ACharUtils.cs" />
     <Compile Include="Program.cs" />

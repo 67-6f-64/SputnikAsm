@@ -2398,6 +2398,7 @@ namespace SputnikAsm.LAutoAssembler
                     }
                 }
                 #endregion
+                #region 2nd Pass
                 //-----------------------2nd pass------------------------
                 //assemblerlines only contains label specifiers and assembler instructions
                 assembled.SetLength(0);
@@ -2648,6 +2649,7 @@ namespace SputnikAsm.LAutoAssembler
                     throw new Exception(currentlinenr + ':' + ex.Message);
                 }
                 ok2 = true;
+                #endregion
                 //unprotectmemory
                 for (i = 0; i < fullaccess.Length; i++)
                 {
