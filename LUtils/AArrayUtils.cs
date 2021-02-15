@@ -23,17 +23,17 @@ namespace SputnikAsm.LUtils
         #region CopyMemory
         public static int CopyMemory(AByteArray dest, int destStart, AByteArray src, int size)
         {
-            return CopyMemory(dest.Raw, destStart, src.Raw, 0, size);
+            return CopyMemory(dest.Buffer, destStart, src.Buffer, 0, size);
         }
         public static int CopyMemory(AByteArray dest, AByteArray src, int size)
         {
-            return CopyMemory(dest.Raw, 0, src.Raw, 0, size);
+            return CopyMemory(dest.Buffer, 0, src.Buffer, 0, size);
         }
-        public static int CopyMemory(Byte[] dest, Byte[] src, int size)
+        public static int CopyMemory<T>(T[] dest, T[] src, int size)
         {
             return CopyMemory(dest, 0, src, 0, size);
         }
-        public static int CopyMemory(Byte[] dest, int destStart, Byte[] src, int srcStart, int size)
+        public static int CopyMemory<T>(T[] dest, int destStart, T[] src, int srcStart, int size)
         {
             var d = dest;
             var dS = destStart;

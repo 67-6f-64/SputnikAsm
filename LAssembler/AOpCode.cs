@@ -23,9 +23,7 @@ namespace SputnikAsm.LAssembler
         public AVexLeadingOpCode VexLeadingOpCode;
         public int VexExtraParam;
         // RexPrefixOffset: byte; //if specified specifies which byte should be used for the rexw (e.g f3 before rex )
-
         //paramencoding: TParamEncoding;
-
         public AOpCode()
         {
             Mnemonic = "";

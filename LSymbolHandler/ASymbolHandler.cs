@@ -58,7 +58,7 @@ namespace SputnikAsm.LSymbolHandler
             #region Find
             public AModuleInfo Find(String moduleName)
             {
-                foreach (var c in Raw)
+                foreach (var c in this)
                 {
                     if (c.IsMatch(moduleName))
                         return c;
@@ -69,7 +69,7 @@ namespace SputnikAsm.LSymbolHandler
             #region FindBaseAddress
             public IntPtr FindBaseAddress(String moduleName)
             {
-                foreach (var c in Raw)
+                foreach (var c in this)
                 {
                     if (c.IsMatch(moduleName))
                         return c.BaseAddress;
@@ -240,14 +240,14 @@ namespace SputnikAsm.LSymbolHandler
                 return processList;
             }
             #endregion
-            public USafeList<ASymbol> SymbolList;
+            public AArrayManager<ASymbol> SymbolList;
             public AProcessSharp Process;
             public Boolean IsLoading;
             public String CurrentModuleName;
             public Boolean Terminated;
             public ASymbolLoaderThread()
             {
-                SymbolList = new USafeList<ASymbol>();
+                SymbolList = new AArrayManager<ASymbol>();
                 Process = null;
                 IsLoading = false;
                 CurrentModuleName = "";
@@ -302,7 +302,7 @@ namespace SputnikAsm.LSymbolHandler
                 var h = Process.Native.Handle;
                 if (useSnapshot)
                 {
-                    foreach (var m in GetModuleList(Process.Native.Id).Raw)
+                    foreach (var m in GetModuleList(Process.Native.Id))
                     {
                         CurrentModuleName = m.ModuleName;
                         SymLoadModuleExW(h, IntPtr.Zero, m.ModulePath, null, 0, 0, IntPtr.Zero, 0);
@@ -779,7 +779,7 @@ namespace SputnikAsm.LSymbolHandler
                     _symbolLoaderThread.Execute();
                     while (_symbolLoaderThread.IsLoading)
                         Thread.Sleep(10);
-                    SymbolList.Assign(_symbolLoaderThread.SymbolList.Content);
+                    SymbolList.Assign(_symbolLoaderThread.SymbolList.TakeAll());
                 }
             }
         }

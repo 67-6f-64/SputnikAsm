@@ -64,11 +64,11 @@ namespace SputnikAsm.LCollections
         #region ToString
         public override String ToString()
         {
-            return String.Join("\n", Raw.Select(c => c.Value));
+            return String.Join("\n", TakeAll().Select(c => c.Value));
         }
         public String ToString(String separator)
         {
-            return String.Join(separator, Raw.Select(c => c.Value));
+            return String.Join(separator, TakeAll().Select(c => c.Value));
         }
         #endregion
     }

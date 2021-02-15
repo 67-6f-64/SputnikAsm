@@ -17,8 +17,8 @@ namespace SputnikAsm.LUtils
         {
             Brackets = new ACharArray('(', ')', '[', ']', '{', '}');
             StdWordDelims = new ACharArray(',', '.', ';', '/', '\\', ':', '\'', '"', '`', '(', ')', '[', ']', '{', '}');
-            StdWordDelims.AddRange(Brackets.Raw);
-            StdWordDelims.AddRange(ACharUtils.Range('\0', ' ').Raw);
+            StdWordDelims.AddRange(Brackets.TakeAll());
+            StdWordDelims.AddRange(ACharUtils.Range('\0', ' ').TakeAll());
         }
         #endregion
         #region Pos

@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using SputnikAsm.LAutoAssembler.LEnums;
 using SputnikAsm.LExtensions;
 using SputnikAsm.LProcess.LAssembly.LAssemblers;
 using SputnikAsm.LProcess.LAssembly.LCallingConventions;
@@ -262,8 +263,12 @@ namespace SputnikAsm.LProcess.LAssembly
         public void Inject(string asm, IntPtr address)
         {
             var scr = Assembler.Assemble(Process, asm, address);
-            foreach (var c in scr.Raw)
-                Process.Memory.Write(c.Address.ToIntPtr(), c.Bytes.Raw);
+            foreach (var c in scr)
+            {
+                if (c.Type != AScriptObjectType.Poke)
+                    continue;
+                Process.Memory.Write(c.Address.ToIntPtr(), c.Bytes.TakeAll());
+            }
         }
 
         /// <summary>

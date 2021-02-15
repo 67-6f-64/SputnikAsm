@@ -27,7 +27,7 @@ namespace SputnikAsm.LAutoAssembler.LCollections
         public int GetTotalBytes()
         {
             var total = 0;
-            foreach (var c in Raw)
+            foreach (var c in this)
             {
                 if (c.Type == AScriptObjectType.Poke)
                     total += c.Bytes.Length;

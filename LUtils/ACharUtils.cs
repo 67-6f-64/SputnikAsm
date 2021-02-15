@@ -14,7 +14,7 @@ namespace SputnikAsm.LUtils
             var f = Math.Min(first, second);
             var e = Math.Max(first, second);
             for (var i = f; i <= e; i++)
-                ret.Add((Char)i);
+                ret.Add((Char) i);
             return ret;
         }
         #endregion
@@ -26,12 +26,7 @@ namespace SputnikAsm.LUtils
             var n = (UInt16)needle;
             var f = Math.Min(first, second);
             var e = Math.Max(first, second);
-            for (var i = f; i <= e; i++)
-            {
-                if (n == i)
-                    return true;
-            }
-            return false;
+            return n >= f && needle <= e;
         }
         #endregion
     }

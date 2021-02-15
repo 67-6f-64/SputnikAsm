@@ -528,37 +528,40 @@ namespace SputnikAsm.LAutoAssembler
                 }
                 else
                 {
-                    if (input[i] == '\'')
+                    switch (input[i])
                     {
-                        if (inQuote)
+                        case '\'':
                         {
-                            if (a != -1)
-                                tokens.Add(AStringUtils.Copy(input, a, i - a), a);
-                            a = -1;
-                            inQuote = false;
+                            if (inQuote)
+                            {
+                                if (a != -1)
+                                    tokens.Add(AStringUtils.Copy(input, a, i - a), a);
+                                a = -1;
+                                inQuote = false;
+                            }
+                            else
+                            {
+                                inQuote = true;
+                                a = i;
+                            }
+                            continue;
                         }
-                        else
+                        case '"':
                         {
-                            inQuote = true;
-                            a = i;
+                            if (inQuote2)
+                            {
+                                if (a != -1)
+                                    tokens.Add(AStringUtils.Copy(input, a, i - a), a);
+                                a = -1;
+                                inQuote2 = false;
+                            }
+                            else
+                            {
+                                inQuote2 = true;
+                                a = i;
+                            }
+                            continue;
                         }
-                        continue;
-                    }
-                    if (input[i] == '"')
-                    {
-                        if (inQuote2)
-                        {
-                            if (a != -1)
-                                tokens.Add(AStringUtils.Copy(input, a, i - a), a);
-                            a = -1;
-                            inQuote2 = false;
-                        }
-                        else
-                        {
-                            inQuote2 = true;
-                            a = i;
-                        }
-                        continue;
                     }
                     if (a != -1)
                         tokens.Add(AStringUtils.Copy(input, a, i - a), a);
@@ -1139,7 +1142,7 @@ namespace SputnikAsm.LAutoAssembler
                                 {
                                     s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
                                     slist.Assign(s1.Split(',', ' '));
-                                    foreach(var s1v in slist.Raw)
+                                    foreach(var s1v in slist)
                                     {
                                         addsymbollist.SetLength(addsymbollist.Length + 1);
                                         addsymbollist.Last = s1v;
@@ -1942,10 +1945,9 @@ namespace SputnikAsm.LAutoAssembler
                                 {
                                     ok1 = Assembler.Assemble(currentline, currentaddress.ToUInt64(), assembled[0].Bytes, AAssemblerPreference.apnone, true);
                                 }
-                                catch (Exception ee)
+                                catch
                                 {
                                     // ignored
-                                    Console.WriteLine(ee.Message);
                                 }
                                 if (!ok1)  //the instruction could not be assembled as it is right now
                                 {
@@ -2783,14 +2785,14 @@ namespace SputnikAsm.LAutoAssembler
                     testPtr = assembled[i].Address;
                     if (createScript)
                     {
-                        scriptBytes.Add(AScriptObjectType.Poke, testPtr, new AByteArray(UBinaryUtils.Copy(assembled[i].Bytes.Raw)));
+                        scriptBytes.Add(AScriptObjectType.Poke, testPtr, new AByteArray(assembled[i].Bytes.TakeAll()));
                         ok1 = true;
                         ok2 = true;
                     }
                     else
                     {
                         ok1 = AMemoryHelper.FullAccess(process.Handle, testPtr.ToIntPtr(), assembled[i].Bytes.Length);
-                        ok2 = process.Memory.Write((IntPtr)testPtr.ToUInt64(), assembled[i].Bytes.Raw) == assembled[i].Bytes.Length;
+                        ok2 = process.Memory.Write((IntPtr)testPtr.ToUInt64(), assembled[i].Bytes.TakeAll()) == assembled[i].Bytes.Length;
                     }
                     if (!ok1)
                         ok2 = false;

@@ -2,10 +2,11 @@
 using System.Collections;
 using System.Collections.Generic;
 using Sputnik.LGenerics;
+using SputnikAsm.LUtils;
 
 namespace SputnikAsm.LGenerics
 {
-    public class AArrayManager<T>
+    public class AArrayManager<T> : IEnumerable<T>
     {
         #region UFunctorComparer
         internal sealed class UFunctorComparer<T> : IComparer<T>
@@ -29,10 +30,10 @@ namespace SputnikAsm.LGenerics
         #endregion
         #region Variables
         private readonly Object _lock;
+        public T[] Buffer;
         #endregion
         #region Properties
-        public int Length => Raw.Length;
-        public T[] Raw { get; private set; }
+        public int Length { get; private set; }
         public T First
         {
             get => Get(0);
@@ -40,8 +41,8 @@ namespace SputnikAsm.LGenerics
         }
         public T Last
         {
-            get => Get(Raw.Length - 1);
-            set => Set(Raw.Length - 1, value);
+            get => Get(Length - 1);
+            set => Set(Length - 1, value);
         }
         #endregion
         #region Override []
@@ -52,9 +53,17 @@ namespace SputnikAsm.LGenerics
         }
         #endregion
         #region Constructor
+        public AArrayManager(int size)
+        {
+            Buffer = new T[size];
+            for (var i = 0; i < size; i++)
+                Buffer[i] = NextElement(i);
+            _lock = new Object();
+        }
         public AArrayManager(params T[] tokens)
         {
-            Raw = tokens;
+            Buffer = tokens;
+            Length = Buffer.Length;
             _lock = new Object();
         }
         #endregion
@@ -70,24 +79,11 @@ namespace SputnikAsm.LGenerics
             lock (_lock)
             {
                 if (size <= 0)
-                {
-                    Raw = new T[0];
-                    return;
-                }
-                if (size < Raw.Length)
-                {
-                    var newBuffer = new T[size];
-                    for (var i = 0; i < newBuffer.Length; i++)
-                    {
-                        if (i < Raw.Length)
-                            newBuffer[i] = Raw[i];
-                        else
-                            newBuffer[i] = NextElement(i);
-                    }
-                    Raw = newBuffer;
-                    return;
-                }
-                EnsureCapacity(size);
+                    size = 0;
+                if (size > Length)
+                    EnsureCapacity(size);
+                else
+                    Length = size;
             }
         }
         #endregion
@@ -122,24 +118,31 @@ namespace SputnikAsm.LGenerics
         {
             lock (_lock)
             {
-                if (capacity <= Raw.Length)
-                    return;
-                var newBuffer = new T[capacity];
-                for (var i = 0; i < newBuffer.Length; i++)
+                if (capacity <= Buffer.Length)
                 {
-                    if (i < Raw.Length)
-                        newBuffer[i] = Raw[i];
-                    else
-                        newBuffer[i] = NextElement(i);
+                    if (capacity > Length)
+                        Length = capacity;
+                    return;
                 }
-                Raw = newBuffer;
+                if (capacity < Buffer.Length)
+                {
+                    if (capacity > Length)
+                        Length = capacity;
+                    return;
+                }
+                var oldLength = Length;
+                var sz = Math.Max(Buffer.Length << 1, Length + capacity + 10);
+                Array.Resize(ref Buffer, sz);
+                for (var i = oldLength; i < Buffer.Length; i++)
+                    Buffer[i] = NextElement(i);
+                Length = capacity;
             }
         }
         #endregion
         #region NextElement
         public virtual T NextElement(int index)
         {
-            return Activator.CreateInstance<T>();
+            return typeof(T).GetConstructor(Type.EmptyTypes) != null ? Activator.CreateInstance<T>() : default;
         }
         #endregion
         #region Contains
@@ -150,7 +153,7 @@ namespace SputnikAsm.LGenerics
                 var comp = EqualityComparer<T>.Default;
                 for (var i = 0; i < Length; ++i)
                 {
-                    if (comp.Equals(Raw[i], item))
+                    if (comp.Equals(Buffer[i], item))
                         return true;
                 }
                 return false;
@@ -160,7 +163,7 @@ namespace SputnikAsm.LGenerics
         {
             lock (_lock)
             {
-                foreach (var item in Raw)
+                foreach (var item in Buffer)
                 {
                     if (match(item))
                         return true;
@@ -174,7 +177,8 @@ namespace SputnikAsm.LGenerics
         {
             lock (_lock)
             {
-                Raw = values;
+                Buffer = values;
+                Length = Buffer.Length;
             }
         }
         #endregion
@@ -196,7 +200,7 @@ namespace SputnikAsm.LGenerics
         }
         public void AddRange(AArrayManager<T> array)
         {
-            foreach (var item in array.Raw)
+            foreach (var item in array.Buffer)
                 Add(item);
         }
         #endregion
@@ -205,9 +209,9 @@ namespace SputnikAsm.LGenerics
         {
             lock (_lock)
             {
-                if (index < 0 || index >= Raw.Length)
+                if (index < 0 || index >= Length)
                     throw new Exception("outside bounds of array");
-                return Raw[index];
+                return Buffer[index];
             }
         }
         #endregion
@@ -216,9 +220,9 @@ namespace SputnikAsm.LGenerics
         {
             lock (_lock)
             {
-                if (index < 0 || index >= Raw.Length)
+                if (index < 0 || index >= Length)
                     throw new Exception("outside bounds of array");
-                Raw[index] = value;
+                Buffer[index] = value;
             }
         }
         #endregion
@@ -230,7 +234,7 @@ namespace SputnikAsm.LGenerics
                 var comp = EqualityComparer<T>.Default;
                 for (var i = 0; i < Length; ++i)
                 {
-                    if (comp.Equals(Raw[i], item))
+                    if (comp.Equals(Buffer[i], item))
                     {
                         RemoveAt(i);
                         return;
@@ -244,32 +248,39 @@ namespace SputnikAsm.LGenerics
             {
                 if (length <= 0)
                     return;
-                if (startIndex >= Raw.Length)
+                if (startIndex >= Length)
                     return;
                 var removed = 0;
-                for (var i = startIndex; i < Raw.Length; i++)
+                for (var i = startIndex; i < Length; i++)
                 {
                     if (i < startIndex)
                         continue;
                     if (i >= startIndex && i < startIndex + length)
                         removed++;
                     var iOffset = i + length;
-                    if (iOffset < 0 || iOffset >= Raw.Length)
+                    if (iOffset < 0 || iOffset >= Length)
                         continue;
-                    Raw[i] = Raw[iOffset];
+                    Buffer[i] = Buffer[iOffset];
                 }
                 if (removed <= 0)
                     return;
-                var newBuffer = new T[Raw.Length - removed];
-                Array.Copy(Raw, newBuffer, Raw.Length - removed);
-                Raw = newBuffer;
+                var newBuffer = new T[Length - removed];
+                Array.Copy(Buffer, newBuffer, Length - removed);
+                Buffer = newBuffer;
+                Length = Buffer.Length;
             }
         }
         #endregion
         #region RemoveAt
-        public void RemoveAt(int index)
+        public Boolean RemoveAt(int index)
         {
-            Remove(index, 1);
+            if (index < 0 || index >= Length)
+                return false;
+            Length--;
+            if (index < Length)
+                Array.Copy(Buffer, index + 1, Buffer, index, Length - index);
+            Buffer[Length] = default;
+            return true;
         }
         #endregion
         #region RemoveRange
@@ -277,9 +288,11 @@ namespace SputnikAsm.LGenerics
         {
             lock (_lock)
             {
-                if (index < 0 || index >= Raw.Length)
+                if (count == 1)
+                    return RemoveAt(index);
+                if (index < 0 || index >= Length)
                     return false;
-                if (index + count > Raw.Length)
+                if (index + count > Length)
                     return false;
                 //_list.RemoveRange(index, count);
                 if (count < 0)
@@ -290,8 +303,9 @@ namespace SputnikAsm.LGenerics
                     return true;
                 var size = Length - count;
                 if (index < size)
-                    Array.Copy(Raw, index + count, Raw, index, size - index);
-                Array.Clear(Raw, size, count);
+                    Array.Copy(Buffer, index + count, Buffer, index, size - index);
+                Array.Clear(Buffer, size, count);
+                Length -= count;
                 return true;
             }
         }
@@ -316,7 +330,7 @@ namespace SputnikAsm.LGenerics
             {
                 var removedAny = false;
                 var removeList = new USafeList<T>();
-                foreach (var item in Raw)
+                foreach (var item in Buffer)
                 {
                     if (!match(item))
                         continue;
@@ -327,6 +341,16 @@ namespace SputnikAsm.LGenerics
                     Remove(item);
                 return removedAny;
             }
+        }
+        #endregion
+        #region RemoveAtWithSwap
+        public void RemoveAtWithSwap(int index)
+        {
+            if (index < 0 || index >= Length)
+                return;
+            Buffer[index] = Buffer[Length - 1];
+            Buffer[Length - 1] = default;
+            --Length;
         }
         #endregion
         #region Insert
@@ -344,15 +368,25 @@ namespace SputnikAsm.LGenerics
             {
                 if (index < 0)
                     return;
+                var freeCapacity = Buffer.Length - Length;
+                if (freeCapacity >= length)
+                {
+                    var space = Buffer.Length - index;
+                    AArrayUtils.CopyMemory(Buffer, index + length, Take(index, space), 0, space);
+                    AArrayUtils.CopyMemory(Buffer, index, data, 0, length);
+                    Length += length;
+                    return;
+                }
                 var first = Take(0, index);
                 var second = data;
                 var third = Take(index);
                 var len = Length + (index - Length);
                 EnsureCapacity(len);
-                Raw = new T[first.Length + length + third.Length];
-                Array.Copy(first, 0, Raw, 0, first.Length);
-                Array.Copy(second, 0, Raw, first.Length, length);
-                Array.Copy(third, 0, Raw, first.Length + length, third.Length);
+                Buffer = new T[((first.Length + length + third.Length) << 1) + 10];
+                Array.Copy(first, 0, Buffer, 0, first.Length);
+                Array.Copy(second, 0, Buffer, first.Length, length);
+                Array.Copy(third, 0, Buffer, first.Length + length, third.Length);
+                Length += length;
             }
         }
         #endregion
@@ -371,10 +405,10 @@ namespace SputnikAsm.LGenerics
             lock (_lock)
             {
                 T ret;
-                if (Raw.Length > 0)
+                if (Length > 0)
                 {
-                    ret = Raw[Raw.Length - 1];
-                    RemoveAt(Raw.Length - 1);
+                    ret = Buffer[Length - 1];
+                    RemoveAt(Length - 1);
                 }
                 else
                     ret = default;
@@ -388,9 +422,9 @@ namespace SputnikAsm.LGenerics
             lock (_lock)
             {
                 T ret;
-                if (Raw.Length > 0)
+                if (Length > 0)
                 {
-                    ret = Raw[0];
+                    ret = Buffer[0];
                     RemoveAt(0);
                 }
                 else
@@ -404,7 +438,7 @@ namespace SputnikAsm.LGenerics
         {
             lock (_lock)
             {
-                Insert(Raw.Length, value);
+                Insert(Length, value);
                 return true;
             }
         }
@@ -414,7 +448,7 @@ namespace SputnikAsm.LGenerics
         {
             lock (_lock)
             {
-                Array.Reverse(Raw);
+                Array.Reverse(Buffer);
                 return true;
             }
         }
@@ -428,7 +462,7 @@ namespace SputnikAsm.LGenerics
                     return false;
                 if (Length - index < count)
                     return false;
-                Array.Reverse(Raw, index, count);
+                Array.Reverse(Buffer, index, count);
                 return true;
             }
         }
@@ -438,21 +472,21 @@ namespace SputnikAsm.LGenerics
         {
             lock (_lock)
             {
-                Array.Sort(Raw, 0, Length);
+                Array.Sort(Buffer, 0, Length);
             }
         }
         public void Sort(IComparer comparer)
         {
             lock (_lock)
             {
-                Array.Sort(Raw, 0, Length, comparer);
+                Array.Sort(Buffer, 0, Length, comparer);
             }
         }
         public void Sort(IComparer<T> comparer)
         {
             lock (_lock)
             {
-                Array.Sort(Raw, 0, Length, comparer);
+                Array.Sort(Buffer, 0, Length, comparer);
             }
         }
         public void Sort(Comparison<T> comparison)
@@ -463,7 +497,7 @@ namespace SputnikAsm.LGenerics
                     return;
                 if (Length <= 1)
                     return;
-                Array.Sort(Raw, 0, Raw.Length, new UFunctorComparer<T>(comparison));
+                Array.Sort(Buffer, 0, Length, new UFunctorComparer<T>(comparison));
             }
         }
         #endregion
@@ -472,7 +506,7 @@ namespace SputnikAsm.LGenerics
         {
             lock (_lock)
             {
-                foreach (var item in Raw)
+                foreach (var item in Buffer)
                 {
                     if (match(item))
                         return true;
@@ -487,7 +521,7 @@ namespace SputnikAsm.LGenerics
             lock (_lock)
             {
                 var i = 0;
-                foreach (var item in Raw)
+                foreach (var item in Buffer)
                 {
                     if (match(item))
                         i++;
@@ -501,7 +535,7 @@ namespace SputnikAsm.LGenerics
         {
             lock (_lock)
             {
-                foreach (var item in Raw)
+                foreach (var item in Buffer)
                 {
                     if (match(item))
                         return item;
@@ -515,9 +549,9 @@ namespace SputnikAsm.LGenerics
         {
             lock (_lock)
             {
-                for (var i = Raw.Length - 1; i >= 0; i--)
+                for (var i = Length - 1; i >= 0; i--)
                 {
-                    var item = Raw[i];
+                    var item = Buffer[i];
                     if (match(item))
                         return item;
                 }
@@ -530,7 +564,7 @@ namespace SputnikAsm.LGenerics
         {
             lock (_lock)
             {
-                foreach (var item in Raw)
+                foreach (var item in Buffer)
                 {
                     if (match(item))
                         return item;
@@ -544,9 +578,9 @@ namespace SputnikAsm.LGenerics
         {
             lock (_lock)
             {
-                for (var i = 0; i < Raw.Length; i++)
+                for (var i = 0; i < Length; i++)
                 {
-                    var item = Raw[i];
+                    var item = Buffer[i];
                     if (match(item))
                         return i;
                 }
@@ -560,7 +594,7 @@ namespace SputnikAsm.LGenerics
         {
             lock (_lock)
             {
-                foreach (var item in Raw)
+                foreach (var item in Buffer)
                     action(item);
             }
         }
@@ -575,9 +609,9 @@ namespace SputnikAsm.LGenerics
             lock (_lock)
             {
                 var ret = new USafeList<T>();
-                for (var i = start; i < Raw.Length; i++)
+                for (var i = start; i < Length; i++)
                 {
-                    var c = Raw[i];
+                    var c = Buffer[i];
                     if (count != -1 && count <= 0)
                         return ret.Content;
                     ret.Add(c);
@@ -585,6 +619,17 @@ namespace SputnikAsm.LGenerics
                         count--;
                 }
                 return ret.Content;
+            }
+        }
+        #endregion
+        #region TakeAll
+        public T[] TakeAll()
+        {
+            lock (_lock)
+            {
+                var ret = new T[Length];
+                Array.Copy(Buffer, 0, ret, 0, Length);
+                return ret;
             }
         }
         #endregion
@@ -596,7 +641,7 @@ namespace SputnikAsm.LGenerics
                 var comp = EqualityComparer<T>.Default;
                 for (var i = 0; i < Length; ++i)
                 {
-                    if (comp.Equals(Raw[i], item))
+                    if (comp.Equals(Buffer[i], item))
                         return i;
                 }
                 return -1;
@@ -611,12 +656,28 @@ namespace SputnikAsm.LGenerics
                 var comp = EqualityComparer<T>.Default;
                 for (var i = Length - 1; i >= 0; --i)
                 {
-                    if (comp.Equals(Raw[i], item))
+                    if (comp.Equals(Buffer[i], item))
                         return i;
                 }
                 return -1;
             }
         }
+        #endregion
+        #region IEnumerable<T>
+        #region GetEnumerator
+        public IEnumerator<T> GetEnumerator()
+        {
+            for (var i = 0; i < Length; i++)
+            {
+                var c = Buffer[i];
+                yield return c;
+            }
+        }
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
+        #endregion
         #endregion
     }
 }

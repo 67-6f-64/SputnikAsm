@@ -4099,7 +4099,7 @@ namespace SputnikAsm.LAssembler
                             {
                                 unsafe
                                 {
-                                    fixed (byte* bt = bytes.Raw)
+                                    fixed (byte* bt = bytes.Buffer)
                                     {
                                         var vp = (UInt32)(ActualDisplacement - (address + (UInt32)bytes.Length));
                                         *(UInt32*)bt[RelativeAddressLocation] = vp;
