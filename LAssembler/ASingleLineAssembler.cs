@@ -1,7 +1,9 @@
 ﻿using System;
 using Sputnik.LEngine;
+using Sputnik.LUtils;
 using SputnikAsm.LAssembler.LEnums;
 using SputnikAsm.LCollections;
+using SputnikAsm.LSymbolHandler;
 using SputnikAsm.LUtils;
 
 namespace SputnikAsm.LAssembler
@@ -1028,6 +1030,27 @@ namespace SputnikAsm.LAssembler
             }
         }
         #endregion
+        #region Invalid64BitValueFor32BitField -- todo fill this in!
+        public void Invalid64BitValueFor32BitField(UInt64 v)
+        {
+            //qword newv;
+            //
+            //if ((((cardinal)v >> 32) == 0) && ((((cardinal)v >> 31) & 1) == 1))  //could be saved
+            //{
+            //    newv = qword(0) | v;
+            //    if ((naggedtheuseraboutwrongsignedvalue == false) && (getcurrentthreadid == mainthreadid))
+            //    {
+            //        naggedtheuseraboutwrongsignedvalueanswer = messagedlg(format(rsinvalid64bitvaluefor32bitfield, set::of(v, newv, eos)), mtwarning, set::of(mbyes, mbno, eos), 0) == mryes;
+            //        naggedtheuseraboutwrongsignedvalue = true;
+            //    }
+            //
+            //    if (naggedtheuseraboutwrongsignedvalue & (naggedtheuseraboutwrongsignedvalueanswer == false))
+            //        create(rsinvalidvaluefor32bit);
+            //}
+            //else
+            //    create(rsinvalidvaluefor32bit);
+        }
+        #endregion
         #region Assemble
         public Boolean Assemble(String opCode, UInt64 address, AByteArray bytes, AAssemblerPreference aPref = AAssemblerPreference.apnone, Boolean skipRangeCheck = false)
         {
@@ -1036,14 +1059,19 @@ namespace SputnikAsm.LAssembler
             var j = 0;
             UInt64 v = 0;
             UInt64 v2 = 0;
+            UInt64 newv = 0;
             var mnemonic = 0;
             var nroftokens = 0;
             var paramtype1 = ATokenType.ttinvalidtoken;
             var paramtype2 = ATokenType.ttinvalidtoken;
             var paramtype3 = ATokenType.ttinvalidtoken;
+            var paramtype4 = ATokenType.ttinvalidtoken;
             var parameter1 = "";
             var parameter2 = "";
             var parameter3 = "";
+            var parameter4 = "";
+            var oldParamtype1 = ATokenType.ttinvalidtoken;
+            var oldParamtype2 = ATokenType.ttinvalidtoken;
             var vtype = 0;
             var v2type = 0;
             var signedvtype = 0;
@@ -1057,6 +1085,12 @@ namespace SputnikAsm.LAssembler
             var overridefar = false;
             var is64bit = Assembler.SymHandler.Process.IsX64;
             Byte b = 0;
+            var br = UIntPtr.Zero;
+            var candoaddressswitch = false;
+            var bigvex = false;
+            var vexvvvv = 0xf;
+            var cannotencodewithrexw = false;
+            FAddress = address;
             RelativeAddressLocation = -1;
             RexPrefix = 0;
             var result = false;
@@ -1064,28 +1098,131 @@ namespace SputnikAsm.LAssembler
             nroftokens = tokens.Length;
             if (nroftokens == 0)
                 return false;
-            if (tokens[0] == "DB")
+            switch (tokens[0][0])
             {
-                for (i = 1; i <= nroftokens - 1; i++)
-                {
-                    if (tokens[i][0] == '\'')  //string
+                case 'A':  //A* //allign
                     {
-                        //find the original non uppercase stringpos in the opcode
-                        j = AStringUtils.Pos(tokens[i], opCode.ToUpper());
-                        if (j != -1)
+                        if (tokens[0] == "ALIGN")
                         {
-                            tempstring = AStringUtils.Copy(opCode, j, tokens[i].Length);
-                            Assembler.AddString(bytes, tempstring);
+                            if (nroftokens >= 2)
+                            {
+                                i = AStringUtils.HexStrToInt(tokens[1]);
+                                if (nroftokens >= 3)
+                                    b = (Byte)AStringUtils.HexStrToInt(tokens[2]);
+                                else
+                                    b = 0;
+                                var k = i - (Int64)address % i;
+                                if (k == i)
+                                    return true;
+                                for (i = 0; i < k; i++)
+                                    Assembler.Add(bytes, b);
+                                result = true;
+                                return true;
+                            }
                         }
-                        else
-                            Assembler.AddString(bytes, tokens[i]); //lets try to save face...
                     }
-                    else
-                        Assembler.Add(bytes, (Byte)AStringUtils.StrToInt("$" + tokens[i]));
-                }
-                result = true;
-                return result;
+                    break;
+                case 'D': //D*
+                    {
+                        if (tokens[0] == "DB")
+                        {
+                            for (i = 1; i < nroftokens; i++)
+                            {
+                                if (tokens[i][0] == '\'')  //string
+                                {
+                                    //find the original non uppercase string pos in the opcode
+                                    j = AStringUtils.Pos(tokens[i], opCode.ToUpper());
+                                    if (j != -1)
+                                    {
+                                        tempstring = AStringUtils.Copy(opCode, j, tokens[i].Length);
+                                        Assembler.AddString(bytes, tempstring);
+                                    }
+                                    else
+                                        Assembler.AddString(bytes, tokens[i]); //lets try to save face...
+                                }
+                                else
+                                {    //db 00 00 ?? ?? ?? ?? 00 00
+                                    if ((tokens[i].Length >= 1 && (AArrayUtils.InArray(tokens[i][0], '?', '*'))) &&
+                                       (tokens[i].Length < 2 || (tokens[i].Length == 2 && tokens[i][1] == tokens[i][0])))
+                                    {
+                                        //wildcard
+                                        v = 0;
+                                        b = (Byte)Assembler.SymHandler.Process.ReadMem((IntPtr)(address + (UInt64)i - 1), ReadType.Byte, 1);
+                                        Assembler.Add(bytes, b);
+                                    }
+                                    else
+                                        Assembler.Add(bytes, (Byte)AStringUtils.HexStrToInt(tokens[i]));
+                                }
+                            }
+                            result = true;
+                            return true;
+                        }
+                        if (tokens[0] == "DW")
+                        {
+                            for (i = 1; i < nroftokens; i++)
+                            {
+                                if (tokens[i][0] == '\'')  //string
+                                {
+                                    j = AStringUtils.Pos(tokens[i], opCode.ToUpper());
+                                    if (j != -1)
+                                    {
+                                        tempstring = AStringUtils.Copy(opCode, j, tokens[i].Length);
+                                        Assembler.AddWideString(bytes, tempstring);
+                                    }
+                                    else
+                                        Assembler.AddWideString(bytes, tokens[i]); //lets try to save face...
+                                }
+                                else
+                                    Assembler.AddWord(bytes, (UInt16)AStringUtils.HexStrToInt(tokens[i]));
+                            }
+                            result = true;
+                            return true;
+                        }
+                        if (tokens[0] == "DD")
+                        {
+                            for (i = 1; i < nroftokens; i++)
+                                Assembler.AddDWord(bytes, (UInt32)AStringUtils.HexStrToInt(tokens[i]));
+                            result = true;
+                            return true;
+                        }
+                        if (tokens[0] == "DQ")
+                        {
+                            for (i = 1; i < nroftokens; i++)
+                                Assembler.AddQWord(bytes, (UInt64)AStringUtils.HexStrToInt64(tokens[i]));
+                            result = true;
+                            return true;
+                        }
+                    }
+                    break;
+                case 'N': //N*
+                    {
+                        if (tokens.Length == 2 && tokens[0] == "NOP" && UStringUtils.IsXDigit(tokens[1]))  //NOP HEXVALUE
+                        {
+                            j = AStringUtils.HexStrToInt(tokens[1]);
+                            Assembler.Add(bytes, UBinaryUtils.NewByteArray(0x90, j));
+                            return true;
+                        }
+                    }
+                    break;
             }
+            // for (i = 0; i <= length(extraassemblers) - 1; i++)
+            // {
+            //     if (assigned(extraassemblers[i]))
+            //         extraassemblers[i](address, opcode, bytes);
+            // 
+            //     result = length(bytes) > 0;
+            //     if (result)
+            //         return findfreeblockforregion_result;
+            // }
+            // if (processhandler.systemarchitecture == archarm)
+            // {
+            //     //handle it by the arm assembler
+            //     // for i:=0 to nroftokens do
+            //     //   tempstring:=tempstring+tokens[i]+' ';   //seperators like "," are gone, but the armassembler doesn't really care about that  (only tokens matter)
+            // 
+            //     result = armassemble(address, opcode, bytes);
+            //     return findfreeblockforregion_result;
+            // }
             mnemonic = -1;
             for (i = 0; i < tokens.Length; i++)
             {

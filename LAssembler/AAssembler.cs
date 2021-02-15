@@ -205,10 +205,11 @@ namespace SputnikAsm.LAssembler
                 bytes[j] = (Byte)s[i];
         }
         #endregion
-        #region AddUnicodeString
-        public void AddUnicodeString(AByteArray bytes, String s)
+        #region AddWideString
+        public void AddWideString(AByteArray bytes, String s)
         {
-            Add(bytes, USpk.SpkEncoding.GetBytes(s));
+            var t = UStringUtils.SubStr(s, 1, -1); //not the quotes;
+            Add(bytes, USpk.SpkEncoding.GetBytes(t));
         }
         #endregion
         #region ValueToType

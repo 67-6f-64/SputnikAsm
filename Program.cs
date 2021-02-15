@@ -18,12 +18,7 @@ namespace SputnikAsm
             var b = new AByteArray();
             a.SymHandler.Process = pacWin;
 
-            //var result = a.Assemble("mov eax, edx", 0x400300, b); // 
-            //B8 05 03 40 00
-            //8B 05 05 03 40 00
-            //var result = a.Assemble("mov eax, [400305]", 0x400300, b); // A1 09 00 00 00
-            var result = a.Assemble("jmp 400500", 0x400300, b); // E9 FB 01 00 00
-            //var result = a.Assemble("mov eax, [eax+esi+7]", 0x400300, b); // 8B 44 30 07
+            var result = a.Assemble("mov eax, [edx+esi+66]", 0x400300, b); // E9 FB 01 00 00
             Console.WriteLine("Result: " + result);
             Console.WriteLine("Bytes:");
             Console.WriteLine(UBinaryUtils.Expand(b.Raw));
@@ -34,8 +29,22 @@ namespace SputnikAsm
 
             var cc = @"
             [ENABLE]
+struct cat
+    moo: DB ?
+    kitten: DB ?
+endstruct
+struct cat2
+    moo: DB ? ?
+    kitten: DB ?
+endstruct
+
+
 400300:
-mov eax, [400500]
+mov eax, dword ptr[411c88]
+    NOP 3
+
+400311:
+    db 44 ?? ?? 44
 
 [DISABLE]
             ".Trim();
