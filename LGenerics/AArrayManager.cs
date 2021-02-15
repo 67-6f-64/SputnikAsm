@@ -72,6 +72,12 @@ namespace SputnikAsm.LGenerics
             return default;
         }
         #endregion
+        #region Assign
+        public void Assign(params T[] values)
+        {
+            Raw = values;
+        }
+        #endregion
         #region Get
         public T Get(int index)
         {

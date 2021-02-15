@@ -5,32 +5,32 @@ namespace SputnikAsm.LAssembler
 {
     public class AOpCode
     {
-        public string mnemonic;
-        public AExtraOpCode opcode1, opcode2;
-        public AParam paramtype1, paramtype2, paramtype3;
-        public byte bytes;
-        public byte bt1, bt2, bt3;
-        public Boolean signed;
-        public Boolean norexw;
-        public Boolean invalidin64bit;
-        public Boolean invalidin32bit;
+        public String Mnemonic;
+        public AExtraOpCode OpCode1, OpCode2;
+        public AParam ParamType1, ParamType2, ParamType3;
+        public Byte Bytes;
+        public Byte Bt1, Bt2, Bt3;
+        public Boolean Signed;
+        public Boolean NorExw;
+        public Boolean InvalidIn64Bit;
+        public Boolean InvalidIn32Bit;
         // RexPrefixOffset: byte; //if specified specifies which byte should be used for the rexw (e.g f3 before rex )
         public AOpCode()
         {
-            mnemonic = "";
-            opcode1 = AExtraOpCode.eo_none;
-            opcode2 = AExtraOpCode.eo_none;
-            paramtype1 = AParam.par_noparam;
-            paramtype2 = AParam.par_noparam;
-            paramtype3 = AParam.par_noparam;
-            bytes = 0;
-            bt1 = 0;
-            bt2 = 0;
-            bt3 = 0;
-            signed = false;
-            norexw = false;
-            invalidin64bit = false;
-            invalidin32bit = false;
+            Mnemonic = "";
+            OpCode1 = AExtraOpCode.eo_none;
+            OpCode2 = AExtraOpCode.eo_none;
+            ParamType1 = AParam.par_noparam;
+            ParamType2 = AParam.par_noparam;
+            ParamType3 = AParam.par_noparam;
+            Bytes = 0;
+            Bt1 = 0;
+            Bt2 = 0;
+            Bt3 = 0;
+            Signed = false;
+            NorExw = false;
+            InvalidIn64Bit = false;
+            InvalidIn32Bit = false;
         }
     }
 }

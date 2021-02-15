@@ -33,191 +33,186 @@ namespace SputnikAsm.LAssembler
             public Boolean is64bit = true;
         }
         #endregion
-        #region opcodes
-        public AOpCode[] opcodes;
-        #endregion
         #region Variables
-        public int parameter1, parameter2, parameter3;
-        public int opcodenr;
-        public AIndexArray assemblerindex;
-        public TSymhandler symhandler = new TSymhandler();
-        public ASingleLineAssembler singlelineassembler;
+        public AOpCode[] OpCodes;
+        public int Parameter1, Parameter2, Parameter3;
+        public int OpCodeNr;
+        public AIndexArray AssemblerIndex;
+        public TSymhandler SymHandler = new TSymhandler();
+        public ASingleLineAssembler Assembler;
         #endregion
         #region Properties
-        public int opcodecount => opcodes.Length;
+        public int OpCodeCount => OpCodes.Length;
         #endregion
         #region Constructor
         public AAssembler()
         {
-            opcodes = AOpCodes.GetOpCodes();
-            parameter1 = 0;
-            parameter2 = 0;
-            parameter3 = 0;
-            opcodenr = 0;
-            assemblerindex = new AIndexArray(25);
-            var lastentry = 0;
-            AIndex lastindex = null;
-            for (var i = 0; i < assemblerindex.Length; i++)
+            OpCodes = AOpCodes.GetOpCodes();
+            Parameter1 = 0;
+            Parameter2 = 0;
+            Parameter3 = 0;
+            OpCodeNr = 0;
+            AssemblerIndex = new AIndexArray(25);
+            var lastEntry = 0;
+            AIndex lastIndex = null;
+            for (var i = 0; i < AssemblerIndex.Length; i++)
             {
-                assemblerindex[i].StartEntry = -1;
-                assemblerindex[i].NextEntry = -1;
-                assemblerindex[i].SubIndex = null;
-                for (var j = lastentry; j < opcodecount; j++)
+                AssemblerIndex[i].StartEntry = -1;
+                AssemblerIndex[i].NextEntry = -1;
+                AssemblerIndex[i].SubIndex = null;
+                for (var j = lastEntry; j < OpCodeCount; j++)
                 {
-                    if (opcodes[j].mnemonic[0] == 'A' + i)
+                    if (OpCodes[j].Mnemonic[0] == 'A' + i)
                     {
                         //found the first entry with this as first character
-                        if (lastindex != null)
-                            lastindex.NextEntry = j;
-                        lastindex = assemblerindex[i];
-                        assemblerindex[i].StartEntry = j;
-                        assemblerindex[i].SubIndex = null; //default initialization
-                        lastentry = j;
+                        if (lastIndex != null)
+                            lastIndex.NextEntry = j;
+                        lastIndex = AssemblerIndex[i];
+                        AssemblerIndex[i].StartEntry = j;
+                        AssemblerIndex[i].SubIndex = null; //default initialization
+                        lastEntry = j;
                         break; // todo check if should be continue
                     }
-                    if (opcodes[j].mnemonic[0] > 'A' + i)
+                    if (OpCodes[j].Mnemonic[0] > 'A' + i)
                         break; // passed it // todo check if should be continue
                 }
             }
-            if (assemblerindex.Last.StartEntry != -1)
-                assemblerindex.Last.NextEntry = opcodecount;
+            if (AssemblerIndex.Last.StartEntry != -1)
+                AssemblerIndex.Last.NextEntry = OpCodeCount;
             //fill in the subindexes
-            for (var i = 0; i < assemblerindex.Length; i++)
+            for (var i = 0; i < AssemblerIndex.Length; i++)
             {
-                if (assemblerindex[i].StartEntry == -1)
+                if (AssemblerIndex[i].StartEntry == -1)
                     continue;
                 //initialize subindex
-                assemblerindex[i].SubIndex = new AIndexArray(25);
-                for (var j = 0; j < assemblerindex.Length; j++)
+                AssemblerIndex[i].SubIndex = new AIndexArray(25);
+                for (var j = 0; j < AssemblerIndex.Length; j++)
                 {
-                    assemblerindex[i].SubIndex[j].StartEntry = -1;
-                    assemblerindex[i].SubIndex[j].NextEntry = -1;
-                    assemblerindex[i].SubIndex[j].SubIndex = null;
+                    AssemblerIndex[i].SubIndex[j].StartEntry = -1;
+                    AssemblerIndex[i].SubIndex[j].NextEntry = -1;
+                    AssemblerIndex[i].SubIndex[j].SubIndex = null;
                 }
-                lastindex = null;
-                if (assemblerindex[i].NextEntry == -1)  //last one in the list didn't get a assignment
-                    assemblerindex[i].NextEntry = opcodecount + 1;
-                for (var j = 0; j < assemblerindex.Length; j++)
+                lastIndex = null;
+                if (AssemblerIndex[i].NextEntry == -1)  //last one in the list didn't get a assignment
+                    AssemblerIndex[i].NextEntry = OpCodeCount + 1;
+                for (var j = 0; j < AssemblerIndex.Length; j++)
                 {
-                    for (var k = assemblerindex[i].StartEntry; k < assemblerindex[i].NextEntry - 1; k++)
+                    for (var k = AssemblerIndex[i].StartEntry; k < AssemblerIndex[i].NextEntry - 1; k++)
                     {
-                        if (opcodes[k].mnemonic[0] == 'A' + j)
+                        if (OpCodes[k].Mnemonic[0] == 'A' + j)
                         {
-                            if (lastindex != null)
-                                lastindex.NextEntry = k;
-                            lastindex = assemblerindex[i].SubIndex[j];
-                            assemblerindex[i].SubIndex[j].StartEntry = k;
+                            if (lastIndex != null)
+                                lastIndex.NextEntry = k;
+                            lastIndex = AssemblerIndex[i].SubIndex[j];
+                            AssemblerIndex[i].SubIndex[j].StartEntry = k;
                             break; // todo check if should be continue
                         }
                     }
                 }
             }
-            singlelineassembler = new ASingleLineAssembler(this);
+            Assembler = new ASingleLineAssembler(this);
         }
         #endregion
-        #region getopcodesindex
-        /*
-        will return the first entry in the opcodes list for this opcode
-        If not found, -1
-        */
-        public int getopcodesindex(string opcode)
+        #region GetOpCodesIndex
+        public int GetOpCodesIndex(String opCode)
         {
             int i;
             int index1, index2;
             AIndex bestindex;
             int minindex, maxindex;
-            opcode = opcode.ToUpper();
+            opCode = opCode.ToUpper();
             var result = -1;
-            if (opcode.Length <= 0)
+            if (opCode.Length <= 0)
                 return result;
-            index1 = opcode[0] - 'A';
+            index1 = opCode[0] - 'A';
             if ((index1 < 0) || (index1 >= 25))
                 return result; //not alphabetical
-            bestindex = assemblerindex[index1];
+            bestindex = AssemblerIndex[index1];
             if (bestindex.StartEntry == -1)
                 return result;
-            if ((assemblerindex[index1].SubIndex != null) && (opcode.Length > 1))
+            if ((AssemblerIndex[index1].SubIndex != null) && (opCode.Length > 1))
             {
-                index2 = opcode[0] - 'A';
+                index2 = opCode[0] - 'A';
                 if ((index2 < 0) || (index2 >= 25))
                     return result; //not alphabetical
-                bestindex = assemblerindex[index1].SubIndex[index2];
+                bestindex = AssemblerIndex[index1].SubIndex[index2];
                 if (bestindex.StartEntry == -1)
                     return result; //no subitem2
             }
             minindex = bestindex.StartEntry;
             maxindex = bestindex.NextEntry;
             if (maxindex == -1)
-                if (assemblerindex[index1].NextEntry != -1)
-                    maxindex = assemblerindex[index1].NextEntry;
+                if (AssemblerIndex[index1].NextEntry != -1)
+                    maxindex = AssemblerIndex[index1].NextEntry;
                 else
-                    maxindex = opcodecount;
-            if (maxindex > opcodecount)
-                maxindex = opcodecount;
+                    maxindex = OpCodeCount;
+            if (maxindex > OpCodeCount)
+                maxindex = OpCodeCount;
             //now scan from minindex to maxindex for opcode
             for (i = minindex; i <= maxindex; i++)
             {
-                if (opcodes[i].mnemonic == opcode)
+                if (OpCodes[i].Mnemonic == opCode)
                 {
                     result = i; //found it
                     return result;
                 }
-                if (opcodes[i].mnemonic[0] != opcode[0])
+                if (OpCodes[i].Mnemonic[0] != opCode[0])
                     return result;
             }
             //still here, not found, -1
             return -1;
         }
         #endregion
-        #region ismemorylocationdefault
-        public Boolean ismemorylocationdefault(string parameter)
+        #region IsMemoryLocationDefault
+        public Boolean IsMemoryLocationDefault(String parameter)
         {
-            return parameter[0] == '[' && parameter[parameter.Length - 1] == ']';
+            return parameter.StartsWith("[") && parameter.EndsWith("]");
         }
         #endregion
-        #region add
-        public void add(AByteArray bytes, params Byte[] a)
+        #region Add
+        public void Add(AByteArray bytes, params Byte[] a)
         {
             bytes.EnsureCapacity(bytes.Length + a.Length);
             for (var i = 0; i < a.Length; i++)
                 bytes[bytes.Length - a.Length + i] = a[i];
         }
-        public void add(AByteArray bytes, Byte a)
+        public void Add(AByteArray bytes, Byte a)
         {
-            add(bytes, new[] {a});
+            bytes.EnsureCapacity(bytes.Length + 1);
+            bytes.Last = a;
         }
         #endregion
-        #region addword
-        public void addword(AByteArray bytes, UInt16 a)
+        #region AddWord
+        public void AddWord(AByteArray bytes, UInt16 a)
         {
-            add(bytes, (Byte)a);
-            add(bytes, (Byte)(a >> 8));
+            Add(bytes, (Byte)a);
+            Add(bytes, (Byte)(a >> 8));
         }
         #endregion
-        #region adddword
-        public void adddword(AByteArray bytes, UInt32 a)
+        #region AddDWord
+        public void AddDWord(AByteArray bytes, UInt32 a)
         {
-            add(bytes, (Byte)a);
-            add(bytes, (Byte)(a >> 8));
-            add(bytes, (Byte)(a >> 16));
-            add(bytes, (Byte)(a >> 24));
+            Add(bytes, (Byte)a);
+            Add(bytes, (Byte)(a >> 8));
+            Add(bytes, (Byte)(a >> 16));
+            Add(bytes, (Byte)(a >> 24));
         }
         #endregion
-        #region addqword
-        public void addqword(AByteArray bytes, UInt64 a)
+        #region AddQWord
+        public void AddQWord(AByteArray bytes, UInt64 a)
         {
-            add(bytes, (Byte)a);
-            add(bytes, (Byte)(a >> 8));
-            add(bytes, (Byte)(a >> 16));
-            add(bytes, (Byte)(a >> 24));
-            add(bytes, (Byte)(a >> 32));
-            add(bytes, (Byte)(a >> 40));
-            add(bytes, (Byte)(a >> 48));
-            add(bytes, (Byte)(a >> 56));
+            Add(bytes, (Byte)a);
+            Add(bytes, (Byte)(a >> 8));
+            Add(bytes, (Byte)(a >> 16));
+            Add(bytes, (Byte)(a >> 24));
+            Add(bytes, (Byte)(a >> 32));
+            Add(bytes, (Byte)(a >> 40));
+            Add(bytes, (Byte)(a >> 48));
+            Add(bytes, (Byte)(a >> 56));
         }
         #endregion
-        #region addstring
-        public void addstring(AByteArray bytes, String s)
+        #region AddString
+        public void AddString(AByteArray bytes, String s)
         {
             var j = bytes.Length;
             bytes.EnsureCapacity(bytes.Length + s.Length - 2); //not the quotes;
@@ -225,8 +220,8 @@ namespace SputnikAsm.LAssembler
                 bytes[j] = (Byte)s[i];
         }
         #endregion
-        #region valuetotype
-        public int valuetotype(UInt32 value)
+        #region ValueToType
+        public int ValueToType(UInt32 value)
         {
             var result = 32;
             if (value <= 0xffff) 
@@ -254,8 +249,8 @@ namespace SputnikAsm.LAssembler
             return result;
         }
         #endregion
-        #region signedvaluetotype
-        public int signedvaluetotype(int value)
+        #region SignedValueToType
+        public int SignedValueToType(int value)
         {
             var result = 8;
             if ((value < -128) || (value > 127))
@@ -265,10 +260,10 @@ namespace SputnikAsm.LAssembler
             return result;
         }
         #endregion
-        #region stringvaluetotype
-        public int stringvaluetotype(string value)
+        #region StringValueToType
+        public int StringValueToType(String value)
         {
-            //this function converts a string to a valuetype depending on how it is written
+            //this function converts a string to a value type depending on how it is written
             var result = 0;
             AStringUtils.Val(value, out UInt32 x, out var err);
             if (err > 0)
@@ -290,402 +285,386 @@ namespace SputnikAsm.LAssembler
                     result = 16;
             }
             if (result == 0)
-                result = valuetotype(x); //not a specific ammount of characters given
+                result = ValueToType(x); //not a specific ammount of characters given
             return result;
         }
         #endregion
-        #region getreg
-        public int getreg(string reg)
+        #region GetReg
+        public int GetReg(String reg)
         {
-            return getreg(reg, true);
+            return GetReg(reg, true);
         }
-        public int getreg(string reg, Boolean exceptonerror)
+        public int GetReg(String reg, Boolean exceptOnError)
         {
             var result = -1;
-            if ((reg == "RAX") || (reg == "EAX") || (reg == "AX") || (reg == "AL") || (reg == "MM0") || (reg == "XMM0") || (reg == "ST(0)") || (reg == "ST") || (reg == "ES") || (reg == "CR0") || (reg == "DR0"))
-                result = 0;
-            if ((reg == "RCX") || (reg == "ECX") || (reg == "CX") || (reg == "CL") || (reg == "MM1") || (reg == "XMM1") || (reg == "ST(1)") || (reg == "CS") || (reg == "CR1") || (reg == "DR1"))
-                result = 1;
-            if ((reg == "RDX") || (reg == "EDX") || (reg == "DX") || (reg == "DL") || (reg == "MM2") || (reg == "XMM2") || (reg == "ST(2)") || (reg == "SS") || (reg == "CR2") || (reg == "DR2"))
-                result = 2;
-            if ((reg == "RBX") || (reg == "EBX") || (reg == "BX") || (reg == "BL") || (reg == "MM3") || (reg == "XMM3") || (reg == "ST(3)") || (reg == "DS") || (reg == "CR3") || (reg == "DR3"))
-                result = 3;
-            if ((reg == "SPL") || (reg == "RSP") || (reg == "ESP") || (reg == "SP") || (reg == "AH") || (reg == "MM4") || (reg == "XMM4") || (reg == "ST(4)") || (reg == "FS") || (reg == "CR4") || (reg == "DR4"))
-                result = 4;
-            if ((reg == "BPL") || (reg == "RBP") || (reg == "EBP") || (reg == "BP") || (reg == "CH") || (reg == "MM5") || (reg == "XMM5") || (reg == "ST(5)") || (reg == "GS") || (reg == "CR5") || (reg == "DR5"))
-                result = 5;
-            if ((reg == "SIL") || (reg == "RSI") || (reg == "ESI") || (reg == "SI") || (reg == "DH") || (reg == "MM6") || (reg == "XMM6") || (reg == "ST(6)") || (reg == "HS") || (reg == "CR6") || (reg == "DR6"))
-                result = 6;
-            if ((reg == "DIL") || (reg == "RDI") || (reg == "EDI") || (reg == "DI") || (reg == "BH") || (reg == "MM7") || (reg == "XMM7") || (reg == "ST(7)") || (reg == "IS") || (reg == "CR7") || (reg == "DR7"))
-                result = 7;
-            if (reg == "R8")
-                result = 8;
-            if (reg == "R9")
-                result = 9;
-            if (reg == "R10")
-                result = 10;
-            if (reg == "R11")
-                result = 11;
-            if (reg == "R12")
-                result = 12;
-            if (reg == "R13")
-                result = 13;
-            if (reg == "R14")
-                result = 14;
-            if (reg == "R15")
-                result = 15;
-            if (result == -1 && exceptonerror)
+            switch (reg)
+            {
+                case "RAX":
+                case "EAX":
+                case "AX":
+                case "AL":
+                case "MM0":
+                case "XMM0":
+                case "ST(0)":
+                case "ST":
+                case "ES":
+                case "CR0":
+                case "DR0":
+                    result = 0;
+                    break;
+                case "RCX":
+                case "ECX":
+                case "CX":
+                case "CL":
+                case "MM1":
+                case "XMM1":
+                case "ST(1)":
+                case "CS":
+                case "CR1":
+                case "DR1":
+                    result = 1;
+                    break;
+                case "RDX":
+                case "EDX":
+                case "DX":
+                case "DL":
+                case "MM2":
+                case "XMM2":
+                case "ST(2)":
+                case "SS":
+                case "CR2":
+                case "DR2":
+                    result = 2;
+                    break;
+                case "RBX":
+                case "EBX":
+                case "BX":
+                case "BL":
+                case "MM3":
+                case "XMM3":
+                case "ST(3)":
+                case "DS":
+                case "CR3":
+                case "DR3":
+                    result = 3;
+                    break;
+                case "SPL":
+                case "RSP":
+                case "ESP":
+                case "SP":
+                case "AH":
+                case "MM4":
+                case "XMM4":
+                case "ST(4)":
+                case "FS":
+                case "CR4":
+                case "DR4":
+                    result = 4;
+                    break;
+                case "BPL":
+                case "RBP":
+                case "EBP":
+                case "BP":
+                case "CH":
+                case "MM5":
+                case "XMM5":
+                case "ST(5)":
+                case "GS":
+                case "CR5":
+                case "DR5":
+                    result = 5;
+                    break;
+                case "SIL":
+                case "RSI":
+                case "ESI":
+                case "SI":
+                case "DH":
+                case "MM6":
+                case "XMM6":
+                case "ST(6)":
+                case "HS":
+                case "CR6":
+                case "DR6":
+                    result = 6;
+                    break;
+                case "DIL":
+                case "RDI":
+                case "EDI":
+                case "DI":
+                case "BH":
+                case "MM7":
+                case "XMM7":
+                case "ST(7)":
+                case "IS":
+                case "CR7":
+                case "DR7":
+                    result = 7;
+                    break;
+                case "R8":
+                    result = 8;
+                    break;
+                case "R9":
+                    result = 9;
+                    break;
+                case "R10":
+                    result = 10;
+                    break;
+                case "R11":
+                    result = 11;
+                    break;
+                case "R12":
+                    result = 12;
+                    break;
+                case "R13":
+                    result = 13;
+                    break;
+                case "R14":
+                    result = 14;
+                    break;
+                case "R15":
+                    result = 15;
+                    break;
+            }
+            if (result == -1 && exceptOnError)
                 throw new Exception("Invalid register");
             return result;
         }
         #endregion
-        #region tokentoregisterbit
-        public ATokenType tokentoregisterbit(string token)
+        #region TokenToRegisterBit
+        public ATokenType TokenToRegisterBit(String token)
         {
             var result = ATokenType.ttregister32bit;
-            if (token == "AL") result = ATokenType.ttregister8bit;
-            else
-            if (token == "CL") result = ATokenType.ttregister8bit;
-            else
-            if (token == "DL") result = ATokenType.ttregister8bit;
-            else
-            if (token == "BL") result = ATokenType.ttregister8bit;
-            else
-            if (token == "AH") result = ATokenType.ttregister8bit;
-            else
-            if (token == "CH") result = ATokenType.ttregister8bit;
-            else
-            if (token == "DH") result = ATokenType.ttregister8bit;
-            else if (token == "BH") result = ATokenType.ttregister8bit;
-            else
-            if (token == "AX") result = ATokenType.ttregister16bit;
-            else
-            if (token == "CX") result = ATokenType.ttregister16bit;
-            else
-            if (token == "DX") result = ATokenType.ttregister16bit;
-            else
-            if (token == "BX") result = ATokenType.ttregister16bit;
-            else
-            if (token == "SP") result = ATokenType.ttregister16bit;
-            else
-            if (token == "BP") result = ATokenType.ttregister16bit;
-            else
-            if (token == "SI") result = ATokenType.ttregister16bit;
-            else
-            if (token == "DI") result = ATokenType.ttregister16bit;
-            else
-
-            if (token == "EAX") result = ATokenType.ttregister32bit;
-            else
-            if (token == "ECX") result = ATokenType.ttregister32bit;
-            else
-            if (token == "EDX") result = ATokenType.ttregister32bit;
-            else
-            if (token == "EBX") result = ATokenType.ttregister32bit;
-            else
-            if (token == "ESP") result = ATokenType.ttregister32bit;
-            else
-            if (token == "EBP") result = ATokenType.ttregister32bit;
-            else
-            if (token == "ESI") result = ATokenType.ttregister32bit;
-            else
-            if (token == "EDI") result = ATokenType.ttregister32bit;
-            else
-
-            if (token == "MM0") result = ATokenType.ttregistermm;
-            else
-            if (token == "MM1") result = ATokenType.ttregistermm;
-            else
-            if (token == "MM2") result = ATokenType.ttregistermm;
-            else
-            if (token == "MM3") result = ATokenType.ttregistermm;
-            else
-            if (token == "MM4") result = ATokenType.ttregistermm;
-            else
-            if (token == "MM5") result = ATokenType.ttregistermm;
-            else
-            if (token == "MM6") result = ATokenType.ttregistermm;
-            else
-            if (token == "MM7") result = ATokenType.ttregistermm;
-            else
-
-            if (token == "XMM0") result = ATokenType.ttregisterxmm;
-            else
-            if (token == "XMM1") result = ATokenType.ttregisterxmm;
-            else
-            if (token == "XMM2") result = ATokenType.ttregisterxmm;
-            else
-            if (token == "XMM3") result = ATokenType.ttregisterxmm;
-            else
-            if (token == "XMM4") result = ATokenType.ttregisterxmm;
-            else
-            if (token == "XMM5") result = ATokenType.ttregisterxmm;
-            else
-            if (token == "XMM6") result = ATokenType.ttregisterxmm;
-            else
-            if (token == "XMM7") result = ATokenType.ttregisterxmm;
-            else
-
-
-            if (token == "ST") result = ATokenType.ttregisterst;
-            else
-            if (token == "ST(0)") result = ATokenType.ttregisterst;
-            else
-            if (token == "ST(1)") result = ATokenType.ttregisterst;
-            else
-            if (token == "ST(2)") result = ATokenType.ttregisterst;
-            else
-            if (token == "ST(3)") result = ATokenType.ttregisterst;
-            else
-            if (token == "ST(4)") result = ATokenType.ttregisterst;
-            else
-            if (token == "ST(5)") result = ATokenType.ttregisterst;
-            else
-            if (token == "ST(6)") result = ATokenType.ttregisterst;
-            else
-            if (token == "ST(7)") result = ATokenType.ttregisterst;
-            else
-
-            if (token == "ES") result = ATokenType.ttregistersreg;
-            else
-            if (token == "CS") result = ATokenType.ttregistersreg;
-            else
-            if (token == "SS") result = ATokenType.ttregistersreg;
-            else
-            if (token == "DS") result = ATokenType.ttregistersreg;
-            else
-            if (token == "FS") result = ATokenType.ttregistersreg;
-            else
-            if (token == "GS") result = ATokenType.ttregistersreg;
-            else
-            if (token == "HS") result = ATokenType.ttregistersreg;
-            else
-            if (token == "IS") result = ATokenType.ttregistersreg;
-            else
-
-            if (token == "CR0") result = ATokenType.ttregistercr;
-            else
-            if (token == "CR1") result = ATokenType.ttregistercr;
-            else
-            if (token == "CR2") result = ATokenType.ttregistercr;
-            else
-            if (token == "CR3") result = ATokenType.ttregistercr;
-            else
-            if (token == "CR4") result = ATokenType.ttregistercr;
-            else
-            if (token == "CR5") result = ATokenType.ttregistercr;
-            else
-            if (token == "CR6") result = ATokenType.ttregistercr;
-            else
-            if (token == "CR7") result = ATokenType.ttregistercr;
-            else
-
-
-            if (token == "DR0") result = ATokenType.ttregisterdr;
-            else
-            if (token == "DR1") result = ATokenType.ttregisterdr;
-            else
-            if (token == "DR2") result = ATokenType.ttregisterdr;
-            else
-            if (token == "DR3") result = ATokenType.ttregisterdr;
-            else
-            if (token == "DR4") result = ATokenType.ttregisterdr;
-            else
-            if (token == "DR5") result = ATokenType.ttregisterdr;
-            else
-            if (token == "DR6") result = ATokenType.ttregisterdr;
-            else
-            if (token == "DR7") result = ATokenType.ttregisterdr;
-            else
-            if (symhandler.process.is64bit)
+            switch (token)
             {
-                if (token == "RAX") result = ATokenType.ttregister64bit;
-                else
-                if (token == "RCX") result = ATokenType.ttregister64bit;
-                else
-                if (token == "RDX") result = ATokenType.ttregister64bit;
-                else
-                if (token == "RBX") result = ATokenType.ttregister64bit;
-                else
-                if (token == "RSP") result = ATokenType.ttregister64bit;
-                else
-                if (token == "RBP") result = ATokenType.ttregister64bit;
-                else
-                if (token == "RSI") result = ATokenType.ttregister64bit;
-                else
-                if (token == "RDI") result = ATokenType.ttregister64bit;
-                else
-                if (token == "R8") result = ATokenType.ttregister64bit;
-                else
-                if (token == "R9") result = ATokenType.ttregister64bit;
-                else
-                if (token == "R10") result = ATokenType.ttregister64bit;
-                else
-                if (token == "R11") result = ATokenType.ttregister64bit;
-                else
-                if (token == "R12") result = ATokenType.ttregister64bit;
-                else
-                if (token == "R13") result = ATokenType.ttregister64bit;
-                else
-                if (token == "R14") result = ATokenType.ttregister64bit;
-                else
-                if (token == "R15") result = ATokenType.ttregister64bit;
-                else
-
-                if (token == "SPL") result = ATokenType.ttregister8bitwithprefix;
-                else
-                if (token == "BPL") result = ATokenType.ttregister8bitwithprefix;
-                else
-                if (token == "SIL") result = ATokenType.ttregister8bitwithprefix;
-                else
-                if (token == "DIL") result = ATokenType.ttregister8bitwithprefix;
-                else
-
-
-                if (token == "R8L") result = ATokenType.ttregister8bit;
-                else
-                if (token == "R9L") result = ATokenType.ttregister8bit;
-                else
-                if (token == "R10L") result = ATokenType.ttregister8bit;
-                else
-                if (token == "R11L") result = ATokenType.ttregister8bit;
-                else
-                if (token == "R12L") result = ATokenType.ttregister8bit;
-                else
-                if (token == "R13L") result = ATokenType.ttregister8bit;
-                else
-                if (token == "R14L") result = ATokenType.ttregister8bit;
-                else
-                if (token == "R15L") result = ATokenType.ttregister8bit;
-                else
-
-                if (token == "R8W") result = ATokenType.ttregister16bit;
-                else
-                if (token == "R9W") result = ATokenType.ttregister16bit;
-                else
-                if (token == "R10W") result = ATokenType.ttregister16bit;
-                else
-                if (token == "R11W") result = ATokenType.ttregister16bit;
-                else
-                if (token == "R12W") result = ATokenType.ttregister16bit;
-                else
-                if (token == "R13W") result = ATokenType.ttregister16bit;
-                else
-                if (token == "R14W") result = ATokenType.ttregister16bit;
-                else
-                if (token == "R15W") result = ATokenType.ttregister16bit;
-                else
-
-                if (token == "R8D") result = ATokenType.ttregister32bit;
-                else
-                if (token == "R9D") result = ATokenType.ttregister32bit;
-                else
-                if (token == "R10D") result = ATokenType.ttregister32bit;
-                else
-                if (token == "R11D") result = ATokenType.ttregister32bit;
-                else
-                if (token == "R12D") result = ATokenType.ttregister32bit;
-                else
-                if (token == "R13D") result = ATokenType.ttregister32bit;
-                else
-                if (token == "R14D") result = ATokenType.ttregister32bit;
-                else
-                if (token == "R15D") result = ATokenType.ttregister32bit;
-                else
-
-                if (token == "XMM8") result = ATokenType.ttregisterxmm;
-                else
-                if (token == "XMM9") result = ATokenType.ttregisterxmm;
-                else
-                if (token == "XMM10") result = ATokenType.ttregisterxmm;
-                else
-                if (token == "XMM11") result = ATokenType.ttregisterxmm;
-                else
-                if (token == "XMM12") result = ATokenType.ttregisterxmm;
-                else
-                if (token == "XMM13") result = ATokenType.ttregisterxmm;
-                else
-                if (token == "XMM14") result = ATokenType.ttregisterxmm;
-                else
-                if (token == "XMM15") result = ATokenType.ttregisterxmm;
-                else
-                if (token == "CR8") result = ATokenType.ttregistercr;
-                else
-                if (token == "CR9") result = ATokenType.ttregistercr;
-                else
-                if (token == "CR10") result = ATokenType.ttregistercr;
-                else
-                if (token == "CR11") result = ATokenType.ttregistercr;
-                else
-                if (token == "CR12") result = ATokenType.ttregistercr;
-                else
-                if (token == "CR13") result = ATokenType.ttregistercr;
-                else
-                if (token == "CR14") result = ATokenType.ttregistercr;
-                else
-                if (token == "CR15") result = ATokenType.ttregistercr;
+                case "AL":
+                case "CL":
+                case "DL":
+                case "BL":
+                case "AH":
+                case "CH":
+                case "DH":
+                case "BH":
+                    result = ATokenType.ttregister8bit;
+                    break;
+                case "AX":
+                case "CX":
+                case "DX":
+                case "BX":
+                case "SP":
+                case "BP":
+                case "SI":
+                case "DI":
+                    result = ATokenType.ttregister16bit;
+                    break;
+                case "EAX":
+                case "ECX":
+                case "EDX":
+                case "EBX":
+                case "ESP":
+                case "EBP":
+                case "ESI":
+                case "EDI":
+                    result = ATokenType.ttregister32bit;
+                    break;
+                case "MM0":
+                case "MM1":
+                case "MM2":
+                case "MM3":
+                case "MM4":
+                case "MM5":
+                case "MM6":
+                case "MM7":
+                    result = ATokenType.ttregistermm;
+                    break;
+                case "XMM0":
+                case "XMM1":
+                case "XMM2":
+                case "XMM3":
+                case "XMM4":
+                case "XMM5":
+                case "XMM6":
+                case "XMM7":
+                    result = ATokenType.ttregisterxmm;
+                    break;
+                case "ST":
+                case "ST(0)":
+                case "ST(1)":
+                case "ST(2)":
+                case "ST(3)":
+                case "ST(4)":
+                case "ST(5)":
+                case "ST(6)":
+                case "ST(7)":
+                    result = ATokenType.ttregisterst;
+                    break;
+                case "ES":
+                case "CS":
+                case "SS":
+                case "DS":
+                case "FS":
+                case "GS":
+                case "HS":
+                case "IS":
+                    result = ATokenType.ttregistersreg;
+                    break;
+                case "CR0":
+                case "CR1":
+                case "CR2":
+                case "CR3":
+                case "CR4":
+                case "CR5":
+                case "CR6":
+                case "CR7":
+                    result = ATokenType.ttregistercr;
+                    break;
+                case "DR0":
+                case "DR1":
+                case "DR2":
+                case "DR3":
+                case "DR4":
+                case "DR5":
+                case "DR6":
+                case "DR7":
+                    result = ATokenType.ttregisterdr;
+                    break;
+                default:
+                {
+                    if (SymHandler.process.is64bit)
+                    {
+                        switch (token)
+                        {
+                            case "RAX":
+                            case "RCX":
+                            case "RDX":
+                            case "RBX":
+                            case "RSP":
+                            case "RBP":
+                            case "RSI":
+                            case "RDI":
+                            case "R8":
+                            case "R9":
+                            case "R10":
+                            case "R11":
+                            case "R12":
+                            case "R13":
+                            case "R14":
+                            case "R15":
+                                result = ATokenType.ttregister64bit;
+                                break;
+                            case "SPL":
+                            case "BPL":
+                            case "SIL":
+                            case "DIL":
+                                result = ATokenType.ttregister8bitwithprefix;
+                                break;
+                            case "R8L":
+                            case "R9L":
+                            case "R10L":
+                            case "R11L":
+                            case "R12L":
+                            case "R13L":
+                            case "R14L":
+                            case "R15L":
+                                result = ATokenType.ttregister8bit;
+                                break;
+                            case "R8W":
+                            case "R9W":
+                            case "R10W":
+                            case "R11W":
+                            case "R12W":
+                            case "R13W":
+                            case "R14W":
+                            case "R15W":
+                                result = ATokenType.ttregister16bit;
+                                break;
+                            case "R8D":
+                            case "R9D":
+                            case "R10D":
+                            case "R11D":
+                            case "R12D":
+                            case "R13D":
+                            case "R14D":
+                            case "R15D":
+                                result = ATokenType.ttregister32bit;
+                                break;
+                            case "XMM8":
+                            case "XMM9":
+                            case "XMM10":
+                            case "XMM11":
+                            case "XMM12":
+                            case "XMM13":
+                            case "XMM14":
+                            case "XMM15":
+                                result = ATokenType.ttregisterxmm;
+                                break;
+                            case "CR8":
+                            case "CR9":
+                            case "CR10":
+                            case "CR11":
+                            case "CR12":
+                            case "CR13":
+                            case "CR14":
+                            case "CR15":
+                                result = ATokenType.ttregistercr;
+                                break;
+                        }
+                    }
+                    break;
+                }
             }
             return result;
         }
         #endregion
-        #region isrm8
-        public Boolean isrm8(ATokenType parametertype)
+        #region IsMem8
+        public Boolean IsMem8(ATokenType p)
         {
-            var result = (parametertype == ATokenType.ttmemorylocation8) || (parametertype == ATokenType.ttregister8bit);
-            return result;
+            return p == ATokenType.ttmemorylocation8 || p == ATokenType.ttregister8bit;
         }
         #endregion
-        #region isrm16
-        public Boolean isrm16(ATokenType parametertype)
+        #region IsMem16
+        public Boolean IsMem16(ATokenType p)
         {
-            var result = (parametertype == ATokenType.ttmemorylocation16) || (parametertype == ATokenType.ttregister16bit);
-            return result;
+            return p == ATokenType.ttmemorylocation16 || p == ATokenType.ttregister16bit;
         }
         #endregion
-        #region isrm32
-        public Boolean isrm32(ATokenType parametertype)
+        #region IsMem32
+        public Boolean IsMem32(ATokenType p)
         {
-            var result = (parametertype == ATokenType.ttmemorylocation32) || (parametertype == ATokenType.ttregister32bit);
-            return result;
+            return p == ATokenType.ttmemorylocation32 || p == ATokenType.ttregister32bit;
         }
         #endregion
-        #region ismm_m32
-        public Boolean ismm_m32(ATokenType parametertype)
+        #region IsRmm32
+        public Boolean IsRmm32(ATokenType p)
         {
-            var result = (parametertype == ATokenType.ttregistermm) || (parametertype == ATokenType.ttmemorylocation32);
-            return result;
+            return p == ATokenType.ttregistermm || p == ATokenType.ttmemorylocation32;
         }
         #endregion
-        #region ismm_m64
-        public Boolean ismm_m64(ATokenType parametertype)
+        #region IsRmm64
+        public Boolean IsRmm64(ATokenType p)
         {
-            var result = (parametertype == ATokenType.ttregistermm) || (parametertype == ATokenType.ttmemorylocation64);
-            return result;
+            return p == ATokenType.ttregistermm || p == ATokenType.ttmemorylocation64;
         }
         #endregion
-        #region isxmm_m32
-        public Boolean isxmm_m32(ATokenType parametertype)
+        #region IsXmm32
+        public Boolean IsXmm32(ATokenType p)
         {
-            var result = (parametertype == ATokenType.ttregisterxmm) || (parametertype == ATokenType.ttmemorylocation32);
-            return result;
+            return p == ATokenType.ttregisterxmm || p == ATokenType.ttmemorylocation32;
         }
         #endregion
-        #region isxmm_m64
-        public Boolean isxmm_m64(ATokenType parametertype)
+        #region IsXmm64
+        public Boolean IsXmm64(ATokenType p)
         {
-            var result = (parametertype == ATokenType.ttregisterxmm) || (parametertype == ATokenType.ttmemorylocation64);
-            return result;
+            return p == ATokenType.ttregisterxmm || p == ATokenType.ttmemorylocation64;
         }
         #endregion
-        #region isxmm_m128
-        public Boolean isxmm_m128(ATokenType parametertype)
+        #region IsXmm128
+        public Boolean IsXmm128(ATokenType p)
         {
-            var result = (parametertype == ATokenType.ttregisterxmm) || (parametertype == ATokenType.ttmemorylocation128);
-            return result;
+            return p == ATokenType.ttregisterxmm || p == ATokenType.ttmemorylocation128;
         }
         #endregion
-        #region eotoreg
-        public int eotoreg(AExtraOpCode eo)
+        #region EoToReg
+        public int EoToReg(AExtraOpCode eo)
         {
             var result = -1;
             switch (eo)
@@ -718,43 +697,43 @@ namespace SputnikAsm.LAssembler
             return result;
         }
         #endregion
-        #region setmod
-        public void setmod(AByteArray modrm, int index, byte i)
+        #region SetMod
+        public void SetMod(AByteArray modrm, int index, Byte i)
         {
             var tmp = modrm[index];
-            setmod(ref tmp, i);
+            SetMod(ref tmp, i);
             modrm[index] = tmp;
         }
-        public void setmod(ref byte modrm, byte i)
+        public void SetMod(ref Byte modrm, Byte i)
         {
             modrm = (Byte)((modrm & 0x3f) | (i << 6));
         }
         #endregion
-        #region getmod
-        public byte getmod(byte modrm)
+        #region GetMod
+        public Byte GetMod(Byte modrm)
         {
             return (Byte)(modrm >> 6);
         }
         #endregion
-        #region setsibscale
-        public void setsibscale(AByteArray sib, int index, byte i)
+        #region SetSibScale
+        public void SetSibScale(AByteArray sib, int index, Byte i)
         {
             var tmp = sib[index];
-            setsibscale(ref tmp, i);
+            SetSibScale(ref tmp, i);
             sib[index] = tmp;
         }
-        public byte setsibscale(ref byte sib, byte i)
+        public Byte SetSibScale(ref Byte sib, Byte i)
         {
             return (Byte)((sib & 0x3f) | (i << 6));
         }
         #endregion
-        #region gettokentype
-        public ATokenType gettokentype(ref string token, string token2)
+        #region GetTokenType
+        public ATokenType GetTokenType(ref String token, String token2)
         {
             var result = ATokenType.ttinvalidtoken;
             if (token.Length == 0)
                 return result;
-            result = tokentoregisterbit(token);
+            result = TokenToRegisterBit(token);
             //filter these 2 words
             token = UStringUtils.Replace(token, "LONG ", "", true);
             token = UStringUtils.Replace(token, "SHORT ", "", true);
@@ -793,7 +772,7 @@ namespace SputnikAsm.LAssembler
                     return result;
                 }
                 //I need the helper param to figure it out
-                switch (tokentoregisterbit(token2))
+                switch (TokenToRegisterBit(token2))
                 {
                     case ATokenType.ttregister8bit:
                     case ATokenType.ttregister8bitwithprefix:
@@ -814,46 +793,46 @@ namespace SputnikAsm.LAssembler
             return result;
         }
         #endregion
-        #region tokenize
-        public Boolean tokenize(String opcode, AStringArray tokens)
+        #region Tokenize
+        public Boolean Tokenize(String opCode, AStringArray tokens)
         {
             int i, j, last;
             Boolean quoted;
-            char quotechar;
-            string t;
+            Char quotechar;
+            String t;
             Boolean ispartial;
             quotechar = '\0';
             tokens.SetLength(0);
-            if (opcode.Length > 0)
-                opcode = opcode.TrimEnd(' ', ',');
+            if (opCode.Length > 0)
+                opCode = opCode.TrimEnd(' ', ',');
             last = 0;
             quoted = false;
-            for (i = 0; i <= opcode.Length; i++)
+            for (i = 0; i <= opCode.Length; i++)
             {
                 //check if this is a quote char
-                if (i < opcode.Length && ((opcode[i] == '\'') || (opcode[i] == '"')))
+                if (i < opCode.Length && ((opCode[i] == '\'') || (opCode[i] == '"')))
                 {
                     if (quoted)  //check if it's the end quote
                     {
-                        if (opcode[i] == quotechar)
+                        if (opCode[i] == quotechar)
                             quoted = false;
                     }
                     else
                     {
                         quoted = true;
-                        quotechar = opcode[i];
+                        quotechar = opCode[i];
                     }
                 }
                 //check if we encounter a token seperator. (space or , )
                 //but only check when it's not inside a quoted string
-                if ((i == opcode.Length) || ((!quoted) && ((opcode[i] == ' ') || (opcode[i] == ','))))
+                if ((i == opCode.Length) || ((!quoted) && ((opCode[i] == ' ') || (opCode[i] == ','))))
                 {
                     tokens.SetLength(tokens.Length + 1);
-                    if (i == opcode.Length)
+                    if (i == opCode.Length)
                         j = i - last + 1;
                     else
                         j = i - last;
-                    tokens.Last = AStringUtils.Copy(opcode, last, j);
+                    tokens.Last = AStringUtils.Copy(opCode, last, j);
                     if ((j > 0) && (tokens.Last[0] != '$') && ((j < 7) || (AStringUtils.Pos("KERNEL_", tokens.Last.ToUpper()) == -1)))  //only uppercase if it's not kernel_
                     {
                         //don't uppercase empty strings, kernel_ strings or strings starting with $
@@ -958,7 +937,7 @@ namespace SputnikAsm.LAssembler
                         if (tokens.Length > 1)
                         {
                             var lastElem = tokens.Last;
-                            rewrite(ref lastElem); //Rewrite
+                            Rewrite(ref lastElem); //Rewrite
                             tokens.Last = lastElem;
                         }
                     }
@@ -979,20 +958,20 @@ namespace SputnikAsm.LAssembler
             return true;
         }
         #endregion
-        #region rewrite
-        public Boolean rewrite(ref string token)
+        #region Rewrite
+        public Boolean Rewrite(ref String token)
         {
             if (token.Length == 0)
                 return false; //empty string
             var tokens = new AStringArray();
-            var quotechar = '\0';
+            var quoteChar = '\0';
             tokens.SetLength(0);
             String temp;
             /* 5.4: special pointer notation case */
             if (token.Length > 4 && token.StartsWith("[[") && token.EndsWith("]]"))
             {
                 //looks like a pointer in a address specifier (idiot user detected...)
-                temp = "[" + AStringUtils.IntToHex(symhandler.getaddressfromname(AStringUtils.Copy(token, 2, token.Length - 4), false, out var haserror), 8) + ']';
+                temp = "[" + AStringUtils.IntToHex(SymHandler.getaddressfromname(AStringUtils.Copy(token, 2, token.Length - 4), false, out var haserror), 8) + ']';
                 if (!haserror)
                     token = temp;
                 else
@@ -1008,13 +987,13 @@ namespace SputnikAsm.LAssembler
                 {
                     if (inquote)
                     {
-                        if (token[i] == quotechar)
+                        if (token[i] == quoteChar)
                             inquote = false;
                     }
                     else
                     {
                         //start of a quote
-                        quotechar = token[i];
+                        quoteChar = token[i];
                         inquote = true;
                     }
                 }
@@ -1048,10 +1027,10 @@ namespace SputnikAsm.LAssembler
                 if (tokens[i].Length > 1 && !AArrayUtils.InArray(tokens[i][0], '[', ']', '+', '-', '*'))  //3/16/2011: 11:15 (replaced or with and)
                 {
                     AStringUtils.Val("0x" + tokens[i], out Int64 _, out var err);
-                    if ((err != 0) && (getreg(tokens[i], false) == -1))     //not a hexadecimal value and not a register
+                    if ((err != 0) && (GetReg(tokens[i], false) == -1))     //not a hexadecimal value and not a register
                     {
-                        temp = AStringUtils.IntToHex(symhandler.getaddressfromname(tokens[i], false, out var haserror), 8);
-                        if (!haserror)
+                        temp = AStringUtils.IntToHex(SymHandler.getaddressfromname(tokens[i], false, out var hasError), 8);
+                        if (!hasError)
                             tokens[i] = temp; //can be rewritten as a hexadecimal
                         else
                         {
@@ -1130,10 +1109,10 @@ namespace SputnikAsm.LAssembler
             return true;
         }
         #endregion
-        #region assmble
-        public Boolean assemble(String opcode, UInt64 address, AByteArray bytes, AAssemblerPreference assemblerPreference = AAssemblerPreference.apnone, Boolean skiprangecheck = false)
+        #region Assemble
+        public Boolean Assemble(String opCode, UInt64 address, AByteArray bytes, AAssemblerPreference aPref = AAssemblerPreference.apnone, Boolean skipRangeCheck = false)
         {
-            var result = singlelineassembler.assemble(opcode, address, bytes, assemblerPreference, skiprangecheck);
+            var result = Assembler.Assemble(opCode, address, bytes, aPref, skipRangeCheck);
             return result;
         }
         #endregion
