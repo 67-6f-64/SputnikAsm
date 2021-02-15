@@ -23,9 +23,8 @@ namespace SputnikAsm
             Console.WriteLine("Bytes:");
             Console.WriteLine(UBinaryUtils.Expand(b.Raw));
 
-             //Console.ReadKey();
-             //Environment.Exit(1);
-
+            //Console.ReadKey();
+            //Environment.Exit(1);
 
             var cc = @"
             [ENABLE]

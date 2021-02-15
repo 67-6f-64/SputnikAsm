@@ -1500,7 +1500,7 @@ namespace SputnikAsm.LAssembler
                 return result;
             startoflist = j;
             endoflist = startoflist;
-            while (endoflist <= Assembler.OpCodeCount && Assembler.OpCodes[endoflist].Mnemonic == tokens[mnemonic])
+            while (endoflist < Assembler.OpCodeCount && Assembler.OpCodes[endoflist].Mnemonic == tokens[mnemonic])
                 endoflist += 1;
             endoflist -= 1;
             try
@@ -1581,7 +1581,7 @@ namespace SputnikAsm.LAssembler
                                     {
                                         //see if there is also a 'opcode imm16' variant
                                         var k = startoflist;
-                                        while ((k <= Assembler.OpCodeCount) && (Assembler.OpCodes[k].Mnemonic == tokens[mnemonic]))
+                                        while ((k < Assembler.OpCodeCount) && (Assembler.OpCodes[k].Mnemonic == tokens[mnemonic]))
                                         {
                                             if (Assembler.OpCodes[k].ParamType1 == AParam.par_imm16)
                                             {
@@ -1597,7 +1597,7 @@ namespace SputnikAsm.LAssembler
                                     {
                                         //see if there is also a 'opcode imm32' variant
                                         var k = startoflist;
-                                        while ((k <= Assembler.OpCodeCount) && (Assembler.OpCodes[k].Mnemonic == tokens[mnemonic]))
+                                        while ((k < Assembler.OpCodeCount) && (Assembler.OpCodes[k].Mnemonic == tokens[mnemonic]))
                                         {
                                             if (Assembler.OpCodes[k].ParamType1 == AParam.par_imm32)
                                             {
@@ -1630,7 +1630,7 @@ namespace SputnikAsm.LAssembler
                                     {
                                         //see if there is also a 'opcode imm32' variant
                                         var k = startoflist;
-                                        while (k <= Assembler.OpCodeCount && Assembler.OpCodes[k].Mnemonic == tokens[mnemonic])
+                                        while (k < Assembler.OpCodeCount && Assembler.OpCodes[k].Mnemonic == tokens[mnemonic])
                                         {
                                             if (Assembler.OpCodes[k].ParamType1 == AParam.par_imm32)
                                             {
@@ -1937,7 +1937,7 @@ namespace SputnikAsm.LAssembler
                                         {
                                             //check if there isn't a rm32,imm8 , since that's less bytes
                                             var k = startoflist;
-                                            while ((k <= Assembler.OpCodeCount) && (Assembler.OpCodes[k].Mnemonic == tokens[mnemonic]))
+                                            while ((k < Assembler.OpCodeCount) && (Assembler.OpCodes[k].Mnemonic == tokens[mnemonic]))
                                             {
                                                 if ((Assembler.OpCodes[k].ParamType1 == AParam.par_rm32) &&
                                                    (Assembler.OpCodes[k].ParamType2 == AParam.par_imm8))
@@ -2180,7 +2180,7 @@ namespace SputnikAsm.LAssembler
                                         {
                                             //search for r16/imm16
                                             var k = startoflist;
-                                            while ((k <= Assembler.OpCodeCount) && (Assembler.OpCodes[k].Mnemonic == tokens[mnemonic]))
+                                            while ((k < Assembler.OpCodeCount) && (Assembler.OpCodes[k].Mnemonic == tokens[mnemonic]))
                                             {
                                                 if ((Assembler.OpCodes[k].ParamType1 == AParam.par_r16) &&
                                                    (Assembler.OpCodes[k].ParamType2 == AParam.par_imm16))
@@ -2250,7 +2250,7 @@ namespace SputnikAsm.LAssembler
                                             {
                                                 //see if there is a //r16,r/m16,imm16
                                                 var k = startoflist;
-                                                while ((k <= Assembler.OpCodeCount) && (Assembler.OpCodes[k].Mnemonic == tokens[mnemonic]))
+                                                while ((k < Assembler.OpCodeCount) && (Assembler.OpCodes[k].Mnemonic == tokens[mnemonic]))
                                                 {
                                                     if ((Assembler.OpCodes[k].ParamType1 == AParam.par_r16) &&
                                                        (Assembler.OpCodes[k].ParamType2 == AParam.par_rm16) &&
@@ -2518,7 +2518,7 @@ namespace SputnikAsm.LAssembler
                                         {
                                             //check if there isn't a rm32,imm8 , since that's less bytes
                                             var k = startoflist;
-                                            while ((k <= Assembler.OpCodeCount) && (Assembler.OpCodes[k].Mnemonic == tokens[mnemonic]))
+                                            while ((k < Assembler.OpCodeCount) && (Assembler.OpCodes[k].Mnemonic == tokens[mnemonic]))
                                             {
                                                 if ((Assembler.OpCodes[k].ParamType1 == AParam.par_rm32) &&
                                                    (Assembler.OpCodes[k].ParamType2 == AParam.par_imm8))
@@ -3258,7 +3258,7 @@ namespace SputnikAsm.LAssembler
                                         {
                                             //see if there is a 32 bit equivalent opcode (notice I dont do rel 16 because that'll completly screw up eip)
                                             var k = startoflist;
-                                            while ((k <= Assembler.OpCodeCount) && (Assembler.OpCodes[k].Mnemonic == tokens[mnemonic]))
+                                            while ((k < Assembler.OpCodeCount) && (Assembler.OpCodes[k].Mnemonic == tokens[mnemonic]))
                                             {
                                                 if ((Assembler.OpCodes[k].ParamType1 == AParam.par_rel32) && (Assembler.OpCodes[k].ParamType2 == AParam.par_noparam))
                                                 {
@@ -3285,7 +3285,7 @@ namespace SputnikAsm.LAssembler
                                             //the user tried to find a relative address out of it's reach
                                             //see if there is a 32 bit version of the opcode
                                             var k = startoflist;
-                                            while ((k <= Assembler.OpCodeCount) && (Assembler.OpCodes[k].Mnemonic == tokens[mnemonic]))
+                                            while ((k < Assembler.OpCodeCount) && (Assembler.OpCodes[k].Mnemonic == tokens[mnemonic]))
                                             {
                                                 if ((Assembler.OpCodes[k].ParamType1 == AParam.par_rel32) && (Assembler.OpCodes[k].ParamType2 == AParam.par_noparam))
                                                 {
