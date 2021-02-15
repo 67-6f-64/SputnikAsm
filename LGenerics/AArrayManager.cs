@@ -1,11 +1,35 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using Sputnik.LGenerics;
 
 namespace SputnikAsm.LGenerics
 {
     public class AArrayManager<T>
     {
+        #region UFunctorComparer
+        internal sealed class UFunctorComparer<T> : IComparer<T>
+        {
+            #region Variable
+            private readonly Comparison<T> _comparison;
+            #endregion
+            #region UFunctorComparer
+            public UFunctorComparer(Comparison<T> c)
+            {
+                _comparison = c;
+            }
+            #endregion
+            #region Compare
+            public int Compare(T x, T y)
+            {
+                return _comparison(x, y);
+            }
+            #endregion
+        }
+        #endregion
+        #region Properties
+        private readonly Object _lock;
+        #endregion
         #region Properties
         public int Length => Raw.Length;
         public T[] Raw { get; private set; }
@@ -31,6 +55,7 @@ namespace SputnikAsm.LGenerics
         public AArrayManager(params T[] tokens)
         {
             Raw = tokens;
+            _lock = new Object();
         }
         #endregion
         #region Clear
@@ -42,14 +67,38 @@ namespace SputnikAsm.LGenerics
         #region SetLength
         public void SetLength(int size)
         {
-            if (size <= 0)
+            lock (_lock)
             {
-                Raw = new T[0];
-                return;
+                if (size <= 0)
+                {
+                    Raw = new T[0];
+                    return;
+                }
+                if (size < Raw.Length)
+                {
+                    var newBuffer = new T[size];
+                    for (var i = 0; i < newBuffer.Length; i++)
+                    {
+                        if (i < Raw.Length)
+                            newBuffer[i] = Raw[i];
+                        else
+                            newBuffer[i] = NextElement(i);
+                    }
+                    Raw = newBuffer;
+                    return;
+                }
+                EnsureCapacity(size);
             }
-            if (size < Raw.Length)
+        }
+        #endregion
+        #region EnsureCapacity
+        public void EnsureCapacity(int capacity)
+        {
+            lock (_lock)
             {
-                var newBuffer = new T[size];
+                if (capacity <= Raw.Length)
+                    return;
+                var newBuffer = new T[capacity];
                 for (var i = 0; i < newBuffer.Length; i++)
                 {
                     if (i < Raw.Length)
@@ -58,25 +107,7 @@ namespace SputnikAsm.LGenerics
                         newBuffer[i] = NextElement(i);
                 }
                 Raw = newBuffer;
-                return;
             }
-            EnsureCapacity(size);
-        }
-        #endregion
-        #region EnsureCapacity
-        public void EnsureCapacity(int capacity)
-        {
-            if (capacity <= Raw.Length)
-                return;
-            var newBuffer = new T[capacity];
-            for (var i = 0; i < newBuffer.Length; i++)
-            {
-                if (i < Raw.Length)
-                    newBuffer[i] = Raw[i];
-                else
-                    newBuffer[i] = NextElement(i);
-            }
-            Raw = newBuffer;
         }
         #endregion
         #region NextElement
@@ -88,26 +119,47 @@ namespace SputnikAsm.LGenerics
         #region Contains
         public Boolean Contains(T item)
         {
-            var comp = EqualityComparer<T>.Default;
-            for (var i = 0; i < Length; ++i)
+            lock (_lock)
             {
-                if (comp.Equals(Raw[i], item))
-                    return true;
+                var comp = EqualityComparer<T>.Default;
+                for (var i = 0; i < Length; ++i)
+                {
+                    if (comp.Equals(Raw[i], item))
+                        return true;
+                }
+                return false;
             }
-            return false;
+        }
+        public Boolean Contains(Predicate<T> match)
+        {
+            lock (_lock)
+            {
+                foreach (var item in Raw)
+                {
+                    if (match(item))
+                        return true;
+                }
+                return false;
+            }
         }
         #endregion
         #region Assign
         public void Assign(params T[] values)
         {
-            Raw = values;
+            lock (_lock)
+            {
+                Raw = values;
+            }
         }
         #endregion
         #region Add
         public void Add(T item)
         {
-            EnsureCapacity(Length + 1);
-            Last = item;
+            lock (_lock)
+            {
+                EnsureCapacity(Length + 1);
+                Last = item;
+            }
         }
         #endregion
         #region AddRange
@@ -125,61 +177,130 @@ namespace SputnikAsm.LGenerics
         #region Get
         public T Get(int index)
         {
-            if (index < 0 || index >= Raw.Length)
-                throw new Exception("outside bounds of array");
-            return Raw[index];
+            lock (_lock)
+            {
+                if (index < 0 || index >= Raw.Length)
+                    throw new Exception("outside bounds of array");
+                return Raw[index];
+            }
         }
         #endregion
         #region Set
         public void Set(int index, T value)
         {
-            if (index < 0 || index >= Raw.Length)
-                throw new Exception("outside bounds of array");
-            Raw[index] = value;
+            lock (_lock)
+            {
+                if (index < 0 || index >= Raw.Length)
+                    throw new Exception("outside bounds of array");
+                Raw[index] = value;
+            }
         }
         #endregion
         #region Remove
         public void Remove(T item)
         {
-            var comp = EqualityComparer<T>.Default;
-            for (var i = 0; i < Length; ++i)
+            lock (_lock)
             {
-                if (comp.Equals(Raw[i], item))
+                var comp = EqualityComparer<T>.Default;
+                for (var i = 0; i < Length; ++i)
                 {
-                    RemoveAt(i);
-                    return;
+                    if (comp.Equals(Raw[i], item))
+                    {
+                        RemoveAt(i);
+                        return;
+                    }
                 }
             }
         }
         public void Remove(int startIndex, int length)
         {
-            if (length <= 0)
-                return;
-            if (startIndex >= Raw.Length)
-                return;
-            var removed = 0;
-            for (var i = startIndex; i < Raw.Length; i++)
+            lock (_lock)
             {
-                if (i < startIndex)
-                    continue;
-                if (i >= startIndex && i < startIndex + length)
-                    removed++;
-                var iOffset = i + length;
-                if (iOffset < 0 || iOffset >= Raw.Length)
-                    continue;
-                Raw[i] = Raw[iOffset];
+                if (length <= 0)
+                    return;
+                if (startIndex >= Raw.Length)
+                    return;
+                var removed = 0;
+                for (var i = startIndex; i < Raw.Length; i++)
+                {
+                    if (i < startIndex)
+                        continue;
+                    if (i >= startIndex && i < startIndex + length)
+                        removed++;
+                    var iOffset = i + length;
+                    if (iOffset < 0 || iOffset >= Raw.Length)
+                        continue;
+                    Raw[i] = Raw[iOffset];
+                }
+                if (removed <= 0)
+                    return;
+                var newBuffer = new T[Raw.Length - removed];
+                Array.Copy(Raw, newBuffer, Raw.Length - removed);
+                Raw = newBuffer;
             }
-            if (removed <= 0)
-                return;
-            var newBuffer = new T[Raw.Length - removed];
-            Array.Copy(Raw, newBuffer, Raw.Length - removed);
-            Raw = newBuffer;
         }
         #endregion
         #region RemoveAt
         public void RemoveAt(int index)
         {
             Remove(index, 1);
+        }
+        #endregion
+        #region RemoveRange
+        public Boolean RemoveRange(int index, int count)
+        {
+            lock (_lock)
+            {
+                if (index < 0 || index >= Raw.Length)
+                    return false;
+                if (index + count > Raw.Length)
+                    return false;
+                //_list.RemoveRange(index, count);
+                if (count < 0)
+                    return false;
+                if (Length - index < count)
+                    return false;
+                if (count <= 0)
+                    return true;
+                var size = Length - count;
+                if (index < size)
+                    Array.Copy(Raw, index + count, Raw, index, size - index);
+                Array.Clear(Raw, size, count);
+                return true;
+            }
+        }
+        #endregion
+        #region RemoveAll
+        public Boolean RemoveAll(T[] values)
+        {
+            lock (_lock)
+            {
+                var removedAny = false;
+                foreach (var item in values)
+                {
+                    Remove(item);
+                    removedAny = true;
+                }
+                return removedAny;
+            }
+        }
+        public Boolean RemoveAll(Predicate<T> match)
+        {
+            lock (_lock)
+            {
+                var removedAny = false;
+                var removeList = new USafeList<T>();
+                foreach (var item in Raw)
+                {
+                    if (!match(item))
+                        continue;
+                    removeList.Add(item);
+                    removedAny = true;
+                }
+                foreach (var item in removeList.Content)
+                    Remove(item);
+                return removedAny;
+            }
         }
         #endregion
         #region Insert
@@ -193,28 +314,248 @@ namespace SputnikAsm.LGenerics
         }
         public void Insert(int index, T[] data, int length)
         {
-            if (index < 0)
-                return;
-            var saved = Raw;
-            EnsureCapacity(Length + data.Length);
-            for (var i = 0; i < length; i++)
-                Raw[index + i] = data[i];
-            for (var i = 0; i < saved.Length; i++)
-                Raw[index + i + data.Length] = saved[i];
+            lock (_lock)
+            {
+                if (index < 0)
+                    return;
+                var saved = Raw;
+                EnsureCapacity(Length + data.Length);
+                for (var i = 0; i < length; i++)
+                    Raw[index + i] = data[i];
+                for (var i = 0; i < saved.Length; i++)
+                    Raw[index + i + data.Length] = saved[i];
+            }
+        }
+        #endregion
+        #region Push
+        public void Push(T value)
+        {
+            lock (_lock)
+            {
+                Add(value);
+            }
+        }
+        #endregion
+        #region Pop
+        public T Pop()
+        {
+            lock (_lock)
+            {
+                T ret;
+                if (Raw.Length > 0)
+                {
+                    ret = Raw[Raw.Length - 1];
+                    RemoveAt(Raw.Length - 1);
+                }
+                else
+                    ret = default;
+                return ret;
+            }
+        }
+        #endregion
+        #region Shift
+        public T Shift()
+        {
+            lock (_lock)
+            {
+                T ret;
+                if (Raw.Length > 0)
+                {
+                    ret = Raw[0];
+                    RemoveAt(0);
+                }
+                else
+                    ret = default;
+                return ret;
+            }
+        }
+        #endregion
+        #region Unshift
+        public Boolean Unshift(T value)
+        {
+            lock (_lock)
+            {
+                Insert(Raw.Length, value);
+                return true;
+            }
+        }
+        #endregion
+        #region Reverse
+        public Boolean Reverse()
+        {
+            lock (_lock)
+            {
+                Array.Reverse(Raw);
+                return true;
+            }
+        }
+        public Boolean Reverse(int index, int count)
+        {
+            lock (_lock)
+            {
+                if (index < 0)
+                    return false;
+                if (count < 0)
+                    return false;
+                if (Length - index < count)
+                    return false;
+                Array.Reverse(Raw, index, count);
+                return true;
+            }
         }
         #endregion
         #region Sort
         public void Sort()
         {
-            Array.Sort(Raw, 0, Length);
+            lock (_lock)
+            {
+                Array.Sort(Raw, 0, Length);
+            }
         }
         public void Sort(IComparer comparer)
         {
-            Array.Sort(Raw, 0, Length, comparer);
+            lock (_lock)
+            {
+                Array.Sort(Raw, 0, Length, comparer);
+            }
         }
         public void Sort(IComparer<T> comparer)
         {
-            Array.Sort(Raw, 0, Length, comparer);
+            lock (_lock)
+            {
+                Array.Sort(Raw, 0, Length, comparer);
+            }
+        }
+        public void Sort(Comparison<T> comparison)
+        {
+            lock (_lock)
+            {
+                if (comparison == null)
+                    return;
+                if (Length <= 1)
+                    return;
+                Array.Sort(Raw, 0, Raw.Length, new UFunctorComparer<T>(comparison));
+            }
+        }
+        #endregion
+        #region Any
+        public Boolean Any(Predicate<T> match)
+        {
+            lock (_lock)
+            {
+                foreach (var item in Raw)
+                {
+                    if (match(item))
+                        return true;
+                }
+                return false;
+            }
+        }
+        #endregion
+        #region CountMatches
+        public int CountMatches(Predicate<T> match)
+        {
+            lock (_lock)
+            {
+                var i = 0;
+                foreach (var item in Raw)
+                {
+                    if (match(item))
+                        i++;
+                }
+                return i;
+            }
+        }
+        #endregion
+        #region FirstOrDefault
+        public T FirstOrDefault(Predicate<T> match)
+        {
+            lock (_lock)
+            {
+                foreach (var item in Raw)
+                {
+                    if (match(item))
+                        return item;
+                }
+                return default;
+            }
+        }
+        #endregion
+        #region LastOrDefault
+        public T LastOrDefault(Predicate<T> match)
+        {
+            lock (_lock)
+            {
+                for (var i = Raw.Length - 1; i >= 0; i--)
+                {
+                    var item = Raw[i];
+                    if (match(item))
+                        return item;
+                }
+                return default;
+            }
+        }
+        #endregion
+        #region Find
+        public T Find(Predicate<T> match)
+        {
+            lock (_lock)
+            {
+                foreach (var item in Raw)
+                {
+                    if (match(item))
+                        return item;
+                }
+                return default;
+            }
+        }
+        #endregion
+        #region FindIndex
+        public int FindIndex(Predicate<T> match)
+        {
+            lock (_lock)
+            {
+                for (var i = 0; i < Raw.Length; i++)
+                {
+                    var item = Raw[i];
+                    if (match(item))
+                        return i;
+                }
+
+                return -1;
+            }
+        }
+        #endregion
+        #region ForEach
+        public void ForEach(Action<T> action)
+        {
+            lock (_lock)
+            {
+                foreach (var item in Raw)
+                    action(item);
+            }
+        }
+        #endregion
+        #region Take
+        public T[] Take(int count)
+        {
+            return Take(0, count);
+        }
+        public T[] Take(int index, int count)
+        {
+            lock (_lock)
+            {
+                var ret = new USafeList<T>();
+                for (var i = index; i < Raw.Length; i++)
+                {
+                    var c = Raw[i];
+                    if (count <= 0)
+                        return ret.Content;
+                    ret.Add(c);
+                    count--;
+                }
+                return ret.Content;
+            }
         }
         #endregion
     }

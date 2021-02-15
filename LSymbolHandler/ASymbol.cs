@@ -17,5 +17,11 @@ namespace SputnikAsm.LSymbolHandler
             Size = 0;
         }
         #endregion
+        #region IsMatch
+        public Boolean IsMatch(String name)
+        {
+            return String.Equals(Name, name, StringComparison.CurrentCultureIgnoreCase);
+        }
+        #endregion
     };
 }

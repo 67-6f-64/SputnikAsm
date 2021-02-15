@@ -574,6 +574,7 @@ namespace SputnikAsm.LSymbolHandler
         private Boolean _isDisposed;
         public Boolean IsX86 => UNativeWin.IsProcessId64Bit(GetId()) == 0;
         public Boolean IsX64 => UNativeWin.IsProcessId64Bit(GetId()) == 1;
+        public int PointerSize => IsX64 ? 8 : 4;
         public Boolean IsDisposed
         {
             get => !IsValid();
@@ -632,7 +633,8 @@ namespace SputnikAsm.LSymbolHandler
         public void Dispose()
         {
             _isDisposed = true;
-            _process.Dispose();
+            _process?.Dispose();
+            _process = null;
         }
         #endregion
         #region IsValid
@@ -902,9 +904,9 @@ namespace SputnikAsm.LSymbolHandler
                 case ReadType.Double:
                     return (Double)0;
                 case ReadType.IntPtr:
-                    return (IntPtr)0;
+                    return IntPtr.Zero;
                 case ReadType.UIntPtr:
-                    return (UIntPtr)0;
+                    return UIntPtr.Zero;
                 case ReadType.StringAscii:
                 case ReadType.StringUtf8:
                     return "";
@@ -957,10 +959,10 @@ namespace SputnikAsm.LSymbolHandler
                     bytes = InternalReadByteArray(address, UMarshalHelper.DoubleSize);
                     return UBitConverter.ToDouble(bytes);
                 case ReadType.IntPtr:
-                    bytes = InternalReadByteArray(address, UMarshalHelper.IntPtrSize);
+                    bytes = InternalReadByteArray(address, PointerSize);
                     return UBitConverter.ToIntPtr(bytes);
                 case ReadType.UIntPtr:
-                    bytes = InternalReadByteArray(address, UMarshalHelper.UIntPtrSize);
+                    bytes = InternalReadByteArray(address, PointerSize);
                     return UBitConverter.ToUIntPtr(bytes);
                 case ReadType.StringAscii:
                     bytes = InternalReadByteArray(address, size);
@@ -1186,6 +1188,12 @@ namespace SputnikAsm.LSymbolHandler
                         case USvType.UInt64:
                             value = sv.ToUInt64();
                             continue;
+                        case USvType.IntPtr:
+                            value = sv.ToIntPtr();
+                            continue;
+                        case USvType.UIntPtr:
+                            value = sv.ToUIntPtr();
+                            continue;
                         case USvType.Float:
                             value = sv.ToFloat();
                             continue;
@@ -1300,6 +1308,50 @@ namespace SputnikAsm.LSymbolHandler
                             iAddress += pBytes.Length;
                             break;
                         }
+                    default:
+                    {
+                        if (value is IntPtr ptr)
+                        {
+                            switch (PointerSize)
+                            {
+                                case 4:
+                                {
+                                    var pBytes = UBitConverter.GetBytes(ptr.ToInt32());
+                                    bytesWritten += InternalWriteByteArray(new IntPtr(iAddress), pBytes);
+                                    iAddress += pBytes.Length;
+                                    break;
+                                }
+                                case 8:
+                                {
+                                    var pBytes = UBitConverter.GetBytes(ptr.ToInt64());
+                                    bytesWritten += InternalWriteByteArray(new IntPtr(iAddress), pBytes);
+                                    iAddress += pBytes.Length;
+                                    break;
+                                }
+                            }
+                        }
+                        if (value is UIntPtr uPtr)
+                        {
+                            switch (PointerSize)
+                            {
+                                case 4:
+                                {
+                                    var pBytes = UBitConverter.GetBytes(uPtr.ToUInt32());
+                                    bytesWritten += InternalWriteByteArray(new IntPtr(iAddress), pBytes);
+                                    iAddress += pBytes.Length;
+                                    break;
+                                }
+                                case 8:
+                                {
+                                    var pBytes = UBitConverter.GetBytes(uPtr.ToUInt64());
+                                    bytesWritten += InternalWriteByteArray(new IntPtr(iAddress), pBytes);
+                                    iAddress += pBytes.Length;
+                                    break;
+                                }
+                            }
+                        }
+                        break;
+                    }
                 }
                 return bytesWritten;
             }
@@ -1372,6 +1424,43 @@ namespace SputnikAsm.LSymbolHandler
         {
             var id = WindowCore.GetWindowProcessId(WindowCore.GetForegroundWindow());
             return (IntPtr)id == _process.GetId();
+        }
+        #endregion
+        #region Alloc
+        public IntPtr Alloc(int size, MemoryProtectionFlags protectionFlags, MemoryAllocationFlags allocFlags)
+        {
+            if (!IsValid())
+                return IntPtr.Zero;
+            return MemoryCore.Allocate(_process.GetSafeHandle(), size, protectionFlags, allocFlags);
+        }
+        #endregion
+        #region Free
+        public Boolean Free(IntPtr pointer)
+        {
+            if (!IsValid())
+                return false;
+            return MemoryCore.Free(_process.GetSafeHandle(), pointer);
+        }
+        #endregion
+        #region GetMainModule
+        public UProcessModule GetMainModule()
+        {
+            if (!IsValid())
+                return null;
+            var mainModule = _process.GetMainModule();
+            return mainModule;
+        }
+        #endregion
+        #region GetModule
+        public UProcessModule GetModule(String moduleName)
+        {
+            if (!IsValid())
+                return null;
+            var mainModule = _process.GetMainModule();
+            if (mainModule.ModuleName == moduleName)
+                return mainModule;
+            var ret = _process.GetModules().FirstOrDefault(m => m.ModuleName == moduleName);
+            return ret;
         }
         #endregion
     }

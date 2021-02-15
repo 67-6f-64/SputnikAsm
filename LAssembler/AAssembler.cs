@@ -1083,7 +1083,7 @@ namespace SputnikAsm.LAssembler
                 }
             }
             token = "";
-            for (i = 0; i <= tokens.Length - 1; i++)
+            for (i = 0; i < tokens.Length; i++)
                 token += tokens[i];
             tokens.SetLength(0);
             return true;

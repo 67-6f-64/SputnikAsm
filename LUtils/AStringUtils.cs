@@ -28,6 +28,11 @@ namespace SputnikAsm.LUtils
         }
         #endregion
         #region Val
+        public static void Val(String str, out UIntPtr v, out int code)
+        {
+            Val(str, out UInt64 vv, out code);
+            v = (UIntPtr)vv;
+        }
         public static void Val(String str, out Int32 v, out int code)
         {
             Val(str, out Int64 vv, out code);

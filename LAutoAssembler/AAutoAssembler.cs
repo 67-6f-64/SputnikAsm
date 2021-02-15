@@ -608,7 +608,7 @@ namespace SputnikAsm.LAutoAssembler
             // and define(structname.element,offset)
             for (i = lastlinenr; i >= linenr; i--)
                 code.RemoveAt(i);
-            for (i = 0; i <= elements.Length - 1; i++)
+            for (i = 0; i < elements.Length; i++)
             {
                 code.Insert(linenr, "define(" + elements[i].Value + ',' + AStringUtils.IntToHex(elements[i].Position, 1) + ')');
                 code.Insert(linenr, "define(" + structname + '.' + elements[i].Value + ',' + AStringUtils.IntToHex(elements[i].Position, 1) + ')');
@@ -637,7 +637,7 @@ namespace SputnikAsm.LAutoAssembler
         public Boolean AutoAssemble(AProcess process, ARefStringArray code, Boolean popUpMessages, Boolean enable, Boolean syntaxCheckOnly, AAllocArray allocArray, AStringArray registeredSymbols, Boolean createScript, ARefStringArray newScript)
         {
             //add line numbers to the code
-            for (var i = 0; i <= code.Length - 1; i++)
+            for (var i = 0; i < code.Length; i++)
                 code[i].Position = i + 1;
             GetEnableAndDisablePos(code, out var enablePos, out var disablePos);
             if (enablePos == -2)
@@ -1369,12 +1369,12 @@ namespace SputnikAsm.LAutoAssembler
                             //replace label references with 00000000 so the assembler check doesn't complain about it
                             if (process.IsX64)
                             {
-                                for (j = 0; j <= labels.Length - 1; j++)
+                                for (j = 0; j < labels.Length; j++)
                                     currentline = ReplaceToken(currentline, labels[j].Name, "ffffffffffffffff");
                             }
                             else
                             {
-                                for (j = 0; j <= labels.Length - 1; j++)
+                                for (j = 0; j < labels.Length; j++)
                                     currentline = ReplaceToken(currentline, labels[j].Name, "00000000");
                             }
                             try
@@ -1654,7 +1654,7 @@ namespace SputnikAsm.LAutoAssembler
                     ok1 = false;
                     if (currentline[currentline.Length - 1] != ':') //if it's not a definition then
                     {
-                        for (j = 0; j <= labels.Length - 1; j++)
+                        for (j = 0; j < labels.Length; j++)
                         {
                             if (!TokenCheck(currentline, labels[j].Name))
                                 continue;
@@ -1872,7 +1872,7 @@ namespace SputnikAsm.LAutoAssembler
                     //check the addsymbollist array and deletesymbollist array
                     //first delete
                     for (i = 0; i < deletesymbollist.Length; i++)
-                        symHandler.DeleteUserdefinedSymbol(deletesymbollist[i]);
+                        symHandler.DeleteUserDefinedSymbol(deletesymbollist[i]);
                     //now scan the addsymbollist array and add them to the userdefined list
                     for (i = 0; i < addsymbollist.Length; i++)
                     {
@@ -1881,7 +1881,7 @@ namespace SputnikAsm.LAutoAssembler
                         {
                             if (String.Equals(addsymbollist[i], allocs[j].Name, StringComparison.CurrentCultureIgnoreCase))
                             {
-                                symHandler.DeleteUserdefinedSymbol(addsymbollist[i]); //delete old one so you can add the new one
+                                symHandler.DeleteUserDefinedSymbol(addsymbollist[i]); //delete old one so you can add the new one
                                 symHandler.AddUserDefinedSymbol(AStringUtils.IntToHex(allocs[j].Address, 8), addsymbollist[i]);
                                 ok1 = true;
                                 break;
@@ -1893,7 +1893,7 @@ namespace SputnikAsm.LAutoAssembler
                             {
                                 if (String.Equals(addsymbollist[i], labels[j].Name, StringComparison.CurrentCultureIgnoreCase))
                                 {
-                                    symHandler.DeleteUserdefinedSymbol(addsymbollist[i]); //delete old one so you can add the new one
+                                    symHandler.DeleteUserDefinedSymbol(addsymbollist[i]); //delete old one so you can add the new one
                                     symHandler.AddUserDefinedSymbol(AStringUtils.IntToHex(labels[j].Address, 8), addsymbollist[i]);
                                     ok1 = true;
                                 }
@@ -1905,7 +1905,7 @@ namespace SputnikAsm.LAutoAssembler
                             {
                                 if (String.Equals(addsymbollist[i], defines[j].Name, StringComparison.CurrentCultureIgnoreCase))
                                 {
-                                    symHandler.DeleteUserdefinedSymbol(addsymbollist[i]); //delete old one so you can add the new one
+                                    symHandler.DeleteUserDefinedSymbol(addsymbollist[i]); //delete old one so you can add the new one
                                     symHandler.AddUserDefinedSymbol(defines[j].Whatever, addsymbollist[i]);
                                     ok1 = true;
                                 }
@@ -1997,14 +1997,14 @@ namespace SputnikAsm.LAutoAssembler
                     if (popUpMessages)
                     {
                         s1 = "";
-                        for (i = 0; i <= globalallocs.Length - 1; i++)
+                        for (i = 0; i < globalallocs.Length; i++)
                             s1 = s1 + "\r\n" + globalallocs[i].Name + '=' + AStringUtils.IntToHex(globalallocs[i].Address, 8);
-                        for (i = 0; i <= allocs.Length - 1; i++)
+                        for (i = 0; i < allocs.Length; i++)
                             s1 = s1 + "\r\n" + allocs[i].Name + '=' + AStringUtils.IntToHex(allocs[i].Address, 8);
                         if (kallocs.Length > 0)
                         {
                             s1 = "\r\n" + rsTheFollowingKernelAddressesWhereAllocated + ':';
-                            for (i = 0; i <= kallocs.Length - 1; i++)
+                            for (i = 0; i < kallocs.Length; i++)
                                 s1 = s1 + "\r\n" + kallocs[i].Name + '=' + AStringUtils.IntToHex(kallocs[i].Address, 8);
                         }
                         MessageBox.Show(rsTheCodeInjectionWasSuccessfull + s1);
