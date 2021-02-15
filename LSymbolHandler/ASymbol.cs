@@ -16,6 +16,12 @@ namespace SputnikAsm.LSymbolHandler
             Address = UIntPtr.Zero;
             Size = 0;
         }
+        public ASymbol(String name, UIntPtr address, UInt32 size)
+        {
+            Name = name;
+            Address = address;
+            Size = size;
+        }
         #endregion
         #region IsMatch
         public Boolean IsMatch(String name)
