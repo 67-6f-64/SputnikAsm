@@ -1514,7 +1514,7 @@ namespace SputnikAsm.LDisassembler
                     LastDisassembleData.SibScaler = 8;
                     break;
             }
-            if ((ss > 0) && (index != 4))
+            if (ss > 0 && index != 4)
                 indexString = indexString + '*' + _colorHex + LastDisassembleData.SibScaler + _endColor;
             if (indexString != "")
             {
@@ -2009,23 +2009,23 @@ namespace SputnikAsm.LDisassembler
         //                    isjumper = true; //call
         //                valuetype = OpCodeToValueType(opcode);
         //                i = pos("[", disassembled);
-        //                if (i > 0)
+        //                if (i != -1)
         //                {
         //                    //it might have an override
-        //                    if (pos("qword ptr", opcode) > 0)
+        //                    if (pos("qword ptr", opcode) != -1)
         //                        valuetype = 4;
-        //                    else if (pos("dword ptr", opcode) > 0) //usually a double
+        //                    else if (pos("dword ptr", opcode) != -1) //usually a double
         //                        valuetype = 2;
-        //                    else if (pos("word ptr", opcode) > 0)
+        //                    else if (pos("word ptr", opcode) != -1)
         //                        valuetype = 1;
-        //                    else if (pos("byte ptr", opcode) > 0)
+        //                    else if (pos("byte ptr", opcode) != -1)
         //                        valuetype = 0;
         //                    else
         //                    {
         //                        //check the register used
         //                        j2 = pos(",[", opcode);
         //                        k = pos("],", opcode);
-        //                        if (j2 > 0)  //register in front
+        //                        if (j2 != -1)  //register in front
         //                        {
         //                            l = pos(" ", opcode);
         //                            ts3 = copy(opcode, l + 1, j2 - l - 1);
@@ -2046,7 +2046,7 @@ namespace SputnikAsm.LDisassembler
         //                            }
         //                        }
         //                        else
-        //                        if (k > 0)   //register after ],
+        //                        if (k != -1)   //register after ],
         //                        {
         //                            l = pos("],", opcode);
         //                            ts3 = copy(opcode, l + 2, length(opcode) - l - 1);

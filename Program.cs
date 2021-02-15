@@ -105,8 +105,10 @@ namespace SputnikAsm
 mov edx, dword ptr[411c88]
 reassemble(40230f);
 reassemble(pacwin.exe+2379);
+cat:
 reassemble(pacwin.exe+237C);
 call messageboxa
+jmp cat
 
 
 400314:

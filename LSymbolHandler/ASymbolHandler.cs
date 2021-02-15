@@ -854,6 +854,10 @@ namespace SputnikAsm.LSymbolHandler
         #region SetUserDefinedSymbolAllocSize
         public void SetUserDefinedSymbolAllocSize(String name, UInt32 size)
         {
+            SetUserDefinedSymbolAllocSize(name, size, UIntPtr.Zero);
+        }
+        public void SetUserDefinedSymbolAllocSize(String name, UInt32 size, UIntPtr preferredAddress)
+        {
             const String PREV_DEC = "The symbol named %s was previously declared with a size of %s instead of %s." +
                                     " all scripts that use this memory must give the same size. " +
                                     "Adjust the size, or delete the old alloc from the userdefined symbol list";
@@ -872,7 +876,10 @@ namespace SputnikAsm.LSymbolHandler
                 }
                 if (UserDefinedSymbols[i].ProcessId != Process.Native.Id)
                 {
-                    p = AMemoryHelper.Allocate(Process.Handle, (int)size).ToUIntPtr();
+                    if (preferredAddress != UIntPtr.Zero)
+                        p = AMemoryHelper.Allocate(Process.Handle, preferredAddress.ToIntPtr(), (int)size).ToUIntPtr();
+                    else
+                        p = AMemoryHelper.Allocate(Process.Handle, (int)size).ToUIntPtr();
                     if (p == UIntPtr.Zero)
                         throw new Exception("Error allocating memory");
                     UserDefinedSymbols[i].Address = p;
@@ -883,7 +890,10 @@ namespace SputnikAsm.LSymbolHandler
                 return; // Redefined the symbol and exit;
             }
             //Still here, symbol Not exists, let's define a new one.
-            p = AMemoryHelper.Allocate(Process.Handle, (int)size).ToUIntPtr();
+            if (preferredAddress != UIntPtr.Zero)
+                p = AMemoryHelper.Allocate(Process.Handle, preferredAddress.ToIntPtr(), (int)size).ToUIntPtr();
+            else
+                p = AMemoryHelper.Allocate(Process.Handle, (int)size).ToUIntPtr();
             if (p == UIntPtr.Zero)
                 throw new Exception("Error allocating memory");
             AddUserDefinedSymbol(AStringUtils.IntToHex(p, 8), name);

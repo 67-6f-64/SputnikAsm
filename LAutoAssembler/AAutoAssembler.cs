@@ -367,7 +367,7 @@ namespace SputnikAsm.LAutoAssembler
                 {
                     if (currentLine == "@@:")
                     {
-                        currentLine = "RandomLabel" +
+                        currentLine = "RandomLabel" + // todo remake this ffs
                                       (Char) ('A' + UMathUtils.RandomByte(26)) +
                                       (Char) ('A' + UMathUtils.RandomByte(26)) +
                                       (Char) ('A' + UMathUtils.RandomByte(26)) +
@@ -975,79 +975,36 @@ namespace SputnikAsm.LAutoAssembler
         #region AutoAssemble2
         public Boolean AutoAssemble2(AProcessSharp process, ARefStringArray code, Boolean popUpMessages, Boolean syntaxCheckOnly, Boolean targetSelf, ADisableInfo disableInfo, Boolean createScript, AScriptBytesArray scriptBytes)
         {
-            var i = 0;
-            var j = 0;
-            var k = 0;
-            var l = 0;
-            var e = 0;
-            String currentline = "";
-            String currentline2 = "";
-            int currentlinenr = 0;
-            var currentaddress = UIntPtr.Zero;
+            var currentLine = "";
+            var currentLineNr = 0;
+            var nops = new AByteArray();
+            var currentAddress = UIntPtr.Zero;
+            int i;
+            int j;
+            int k;
+            int l;
+            Boolean ok1;
+            Boolean ok2;
             var assembled = new AArrayManager<AAssembled>();
-            UIntPtr x = UIntPtr.Zero;
-            UInt32 y = 0;
-            UInt32 op = 0;
-            UInt32 op2 = 0;
-            Boolean ok1 = false;
-            var ok2 = false;
-            var loadbinary = new AArrayManager<ALoadLibrary>();
-            var readmems = new AArrayManager<AReadMems>();
-            var globalallocs = new AAllocArray();
+            var loadBinary = new AArrayManager<ALoadLibrary>();
+            var readMems = new AArrayManager<AReadMems>();
+            var globalAllocs = new AAllocArray();
             var allocs = new AAllocArray();
-            var kallocs = new AAllocArray();
-            var sallocs = new AAllocArray();
-            var tempalloc = new AAlloc();
+            var kAllocs = new AAllocArray();
+            var sAllocs = new AAllocArray();
             var labels = new AArrayManager<ALabels>();
             var defines = new AArrayManager<ADefines>();
-            var fullaccess = new AArrayManager<AFullAccess>();
+            var fullAccess = new AArrayManager<AFullAccess>();
             var dealloc = new AArrayManager<UIntPtr>();
-            var addsymbollist = new AStringArray();
-            var deletesymbollist = new AStringArray();
-            var createthread = new AStringArray();
-            var createthreadandwait = new AArrayManager<ACreateThreadAndWait>();
-            var a = 0;
-            var b = 0;
-            var c = 0;
-            var d = 0;
-            var s1 = "";
-            var s2 = "";
-            var s3 = "";
-            var assemblerlines = new AArrayManager<AAssemblerLine>();
-            var exceptionlist = new AExceptionInfoArray();
-            var varsize = 0;
-            var tokens = new ARefStringArray();
-            var baseaddress = UIntPtr.Zero;
-            var include = new ARefStringArray();
-            var multilineinjection = new AStringArray();
-            var potentiallabels = new AStringArray();
-            var hastryexcept = false;
-            var strictmode = false;
-            var slist = new AStringArray();
-            var sli = 0;
-            var diff = UIntPtr.Zero;
-            var incomment = false;
-            var usesaobscan = false;
-            var createthreadandwaitid = -1;
-            var mustbefar = false;
-            var nops = new AByteArray();
-            UInt32 testdword = 0;
-            UInt32 bw = 0;
-            UInt64 bw2 = 0;
-            var testPtr = UIntPtr.Zero;
-            var bytes = new ATByteArray();
-            var prefered = UIntPtr.Zero;
-            var oldprefered = UIntPtr.Zero;
-            var protection = MemoryProtectionFlags.ExecuteReadWrite;
-            IARemoteThread threadhandle = null;
+            var addSymbolList = new AStringArray();
+            var deleteSymbolList = new AStringArray();
+            var createThread = new AStringArray();
+            var createThreadAndWait = new AArrayManager<ACreateThreadAndWait>();
+            var assemblerLines = new AArrayManager<AAssemblerLine>();
+            var exceptionList = new AExceptionInfoArray();
+            var potentialLabels = new AStringArray();
+            var hasTryExcept = false;
             var result = false;
-            allocs.SetLength(0);
-            kallocs.SetLength(0);
-            globalallocs.SetLength(0);
-            sallocs.SetLength(0);
-            createthread.SetLength(0);
-            createthreadandwait.SetLength(0);
-            currentaddress = UIntPtr.Zero;
             //add all symbols as defined labels
             if (disableInfo != null)
             {
@@ -1069,19 +1026,18 @@ namespace SputnikAsm.LAutoAssembler
             try
             {
                 assembled.SetLength(1);
-                readmems.SetLength(0);
-                kallocs.SetLength(0);
+                readMems.SetLength(0);
+                kAllocs.SetLength(0);
                 allocs.SetLength(0);
                 dealloc.SetLength(0);
-                assemblerlines.SetLength(0);
-                fullaccess.SetLength(0);
-                addsymbollist.SetLength(0);
-                deletesymbollist.SetLength(0);
+                assemblerLines.SetLength(0);
+                fullAccess.SetLength(0);
+                addSymbolList.SetLength(0);
+                deleteSymbolList.SetLength(0);
                 defines.SetLength(0);
-                loadbinary.SetLength(0);
-                exceptionlist.SetLength(0);
-                tokens = new ARefStringArray();
-                incomment = false;
+                loadBinary.SetLength(0);
+                exceptionList.SetLength(0);
+                var tokens = new ARefStringArray();
                 // todo fill this in for additional stuff
                 //if (!targetSelf)
                 //    for (i = 0; i < autoassemblerprologues.Length; i++)
@@ -1097,24 +1053,24 @@ namespace SputnikAsm.LAutoAssembler
                     if (code[i].Value.Trim().ToUpper() == "{$ASM}")
                         code[i].Value = "";
                 }
-                strictmode = false;
+                var strictMode = false;
                 for (i = 0; i < code.Length; i++)
                 {
-                    currentline = code[i].Value.Trim().ToUpper();
-                    if (currentline == "{$STRICT}")
-                        strictmode = true;
-                    if (currentline == "{$TRY}")
-                        hastryexcept = true;
+                    currentLine = code[i].Value.Trim().ToUpper();
+                    if (currentLine == "{$STRICT}")
+                        strictMode = true;
+                    if (currentLine == "{$TRY}")
+                        hasTryExcept = true;
                 }
-                if (hastryexcept)
-                    ParseTryExcept(code, exceptionlist);
+                if (hasTryExcept)
+                    ParseTryExcept(code, exceptionList);
                 RemoveComments(code); //also trims each line
                 UnlabeledLabels(code);
-                if (!strictmode)
-                    GetPotentialLabels(code, potentiallabels);
+                if (!strictMode)
+                    GetPotentialLabels(code, potentialLabels);
                 //6.3: do the aobscans first
                 //this will break scripts that use define(state,33) aobscan(name, 11 22 state 44 55), but really, live with it
-                usesaobscan = AobScans(process, code, syntaxCheckOnly);
+                var usesAobScan = AobScans(process, code, syntaxCheckOnly);
                 // todo fil this in
                 // if not targetself then
                 // for i:= 0 to length(AutoAssemblerProloguesPostAOBSCAN) - 1 do
@@ -1128,51 +1084,52 @@ namespace SputnikAsm.LAutoAssembler
                     {
                         try
                         {
-                            currentline = code[i].Value;
-                            currentlinenr = code[i].Position;
+                            currentLine = code[i].Value;
+                            currentLineNr = code[i].Position;
                             //check if useless
-                            if (currentline.Length == 0)
+                            if (currentLine.Length == 0)
                                 continue;
-                            if (AStringUtils.Copy(currentline, 0, 2) == "//")
+                            if (AStringUtils.Copy(currentLine, 0, 2) == "//")
                                 continue; //skip
                             //do this first. Do not touch register symbol with any kind of define/label/whatsoever
                             #region Command REGISTERSYMBOL()
-                            if (AStringUtils.Copy(currentline, 0, 15).ToUpper() == "REGISTERSYMBOL(")
+                            if (AStringUtils.Copy(currentLine, 0, 15).ToUpper() == "REGISTERSYMBOL(")
                             {
                                 //add this symbol to the register symbol list
-                                a = AStringUtils.Pos("(", currentline);
-                                b = AStringUtils.Pos(")", currentline);
-                                if (a > 0 && b > 0)
+                                var a = AStringUtils.Pos("(", currentLine);
+                                var b = AStringUtils.Pos(")", currentLine);
+                                if (a != -1 && b != -1)
                                 {
-                                    s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
-                                    slist.Assign(s1.Split(',', ' '));
-                                    foreach(var s1v in slist)
+                                    var s1 = AStringUtils.Copy(currentLine, a + 1, b - a - 1).Trim();
+                                    var sList = s1.Split(',', ' ');
+                                    for (var sli = 0; sli < sList.Length; sli++)
                                     {
-                                        addsymbollist.SetLength(addsymbollist.Length + 1);
-                                        addsymbollist.Last = s1v;
+                                        s1 = sList[sli];
+                                        addSymbolList.SetLength(addSymbolList.Length + 1);
+                                        addSymbolList.Last = s1;
                                     }
                                     disableInfo?.RegisteredSymbols?.Add(s1);
                                 }
                                 else
                                     throw new Exception(rsSyntaxError);
-                                assemblerlines.SetLength(assemblerlines.Length - 1);
+                                assemblerLines.SetLength(assemblerLines.Length - 1);
                                 continue;
                             }
                             #endregion
                             #region Command DEFINE()
                             //apply defines (before DEFINE since define(bla, 123) and define(xxx, bla+123) should work
                             //also, do not touch define with any previous define
-                            if (AStringUtils.Copy(currentline, 0, 7).ToUpper() == "DEFINE(")
+                            if (AStringUtils.Copy(currentLine, 0, 7).ToUpper() == "DEFINE(")
                             {
                                 //syntax: define(x,whatever)    x=variable name size=bytes
                                 //allocate memory
-                                a = AStringUtils.Pos("(", currentline);
-                                b = AStringUtils.Pos(",", currentline);
-                                c = AStringUtils.RPos(")", currentline);
-                                if ((a > 0) && (b > 0) && (c > 0))
+                                var a = AStringUtils.Pos("(", currentLine);
+                                var b = AStringUtils.Pos(",", currentLine);
+                                var c = AStringUtils.RPos(")", currentLine);
+                                if (a != -1 && b != -1 && c != -1)
                                 {
-                                    s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
-                                    s2 = AStringUtils.Copy(currentline, b + 1, c - b - 1).Trim();
+                                    var s1 = AStringUtils.Copy(currentLine, a + 1, b - a - 1).Trim();
+                                    var s2 = AStringUtils.Copy(currentLine, b + 1, c - b - 1).Trim();
                                     //apply earlier defines to the second part
                                     for (j = 0; j < defines.Length; j++)
                                         s2 = ReplaceToken(s2, defines[j].Name, defines[j].Whatever);
@@ -1194,39 +1151,39 @@ namespace SputnikAsm.LAutoAssembler
                                     continue;
                                 }
                                 else
-                                    throw new Exception(rsWrongSyntaxDEFINENameWhatever + " Got " + currentline);
+                                    throw new Exception(rsWrongSyntaxDEFINENameWhatever + " Got " + currentLine);
                             }
                             //normal loop code
                             for (j = 0; j < defines.Length; j++)
-                                currentline = ReplaceToken(currentline, defines[j].Name, defines[j].Whatever);
-                            assemblerlines.SetLength(assemblerlines.Length + 1);
-                            assemblerlines.Last.LineNr = currentlinenr;
-                            assemblerlines.Last.Line = currentline;
+                                currentLine = ReplaceToken(currentLine, defines[j].Name, defines[j].Whatever);
+                            assemblerLines.SetLength(assemblerLines.Length + 1);
+                            assemblerLines.Last.LineNr = currentLineNr;
+                            assemblerLines.Last.Line = currentLine;
                             #endregion
                             //if the newline is empty then it has been handled and the plugin doesn't want it to be added for phase2
-                            if (currentline.Length == 0)
+                            if (currentLine.Length == 0)
                             {
-                                assemblerlines.SetLength(assemblerlines.Length - 1);
+                                assemblerLines.SetLength(assemblerLines.Length - 1);
                                 continue;
                             }
                             //otherwise it hasn't been handled, or it has been handled and the string is a compatible string that passes the phase1 tests (so variable names converted to 00000000 and whatever else is needed)
                             //plugins^^^
                             #region Command ASSERT()
-                            if (AStringUtils.Copy(currentline, 0, 7).ToUpper() == "ASSERT(")  //assert(address,aob)
+                            if (AStringUtils.Copy(currentLine, 0, 7).ToUpper() == "ASSERT(")  //assert(address,aob)
                             {
                                 if (!syntaxCheckOnly)
                                 {
-                                    a = AStringUtils.Pos("(", currentline);
-                                    b = AStringUtils.Pos(",", currentline);
-                                    c = AStringUtils.Pos(")", currentline);
+                                    var a = AStringUtils.Pos("(", currentLine);
+                                    var b = AStringUtils.Pos(",", currentLine);
+                                    var c = AStringUtils.Pos(")", currentLine);
                                     if (a != -1 && b != -1 && c != -1)
                                     {
-                                        s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim(); //address
-                                        s2 = AStringUtils.Copy(currentline, b + 1, c - b - 1).Trim(); //aob
+                                        var s1 = AStringUtils.Copy(currentLine, a + 1, b - a - 1).Trim(); //address
+                                        var s2 = AStringUtils.Copy(currentLine, b + 1, c - b - 1).Trim(); //aob
                                         if (createScript)
                                             continue;
-                                        testPtr = symHandler.GetAddressFromName(s1, false);
-                                        bytes.SetLength(0);
+                                        var testPtr = symHandler.GetAddressFromName(s1, false);
+                                        var bytes = new ATByteArray();
                                         try
                                         {
                                             AStringUtils.ConvertStringToBytes(s2, true, bytes);
@@ -1259,7 +1216,7 @@ namespace SputnikAsm.LAutoAssembler
                                     else
                                         throw new Exception(rsWrongSyntaxASSERTAddress1122335566);
                                 }
-                                assemblerlines.SetLength(assemblerlines.Length - 1);
+                                assemblerLines.SetLength(assemblerLines.Length - 1);
                                 continue;
                             }
                             #endregion
@@ -1267,105 +1224,95 @@ namespace SputnikAsm.LAutoAssembler
                             /*
                             if (uppercase(copy(currentline, 1, 12)) == "SHAREDALLOC(")
                             {
-                                a = pos("(", currentline);
-                                b = pos(",", currentline);
-                                c = pos(")", currentline);
-                                if ((a != -1) && (b != -1) && (c != -1))
+                                var a = pos("(", currentline);
+                                var b = pos(",", currentline);
+                                var c = pos(")", currentline);
+                                if (a != -1 && b != -1 && c != -1)
                                 {
-                                    s1 = trim(copy(currentline, a + 1, b - a - 1));
-                                    s2 = trim(copy(currentline, b + 1, c - b - 1));
-
+                                    var s1 = trim(copy(currentline, a + 1, b - a - 1));
+                                    var s2 = trim(copy(currentline, b + 1, c - b - 1));
                                     //try
                                     x = strtoint(s2);
                                     //except
                                     Create(Format(rsIsNotAValidSize, set::of(s2, eos)));
                                     //end;
-
                                     setlength(sallocs, length(sallocs) + 1);
                                     sallocs[length(sallocs) - 1].address = allocateSharedMemoryIntoTargetProcess(s1, x);
                                     sallocs[length(sallocs) - 1].varname = s1;
                                     sallocs[length(sallocs) - 1].size = x;
-
                                     setlength(assemblerlines, length(assemblerlines) - 1);
-                                    continue_;
-
+                                    continue;
                                 }
                                 else
                                     Create(rsWrongSyntaxSHAREDALLOCNameSize);
                             }
                             */
                             #endregion
-                            #region Command GLOBALALLOC() -- todo
-                            /*
-                            if (uppercase(copy(currentline, 1, 12)) == "GLOBALALLOC(")
+                            #region Command GLOBALALLOC()
+                            if (AStringUtils.Copy(currentLine, 0, 12).ToUpper() == "GLOBALALLOC(")
                             {
-                                a = pos("(", currentline);
-                                b = pos(",", currentline);
-                                c = posex(',', currentline, b + 1);
-                                d = pos(")", currentline);
-
-                                if ((a != -1) && (b != -1) && (d != -1))
+                                var a = AStringUtils.Pos("(", currentLine);
+                                var b = AStringUtils.Pos(",", currentLine);
+                                var c = AStringUtils.PosEx(",", currentLine, b + 1);
+                                var d = AStringUtils.Pos(")", currentLine);
+                                if (a != -1 && b != -1 && d != -1)
                                 {
-                                    s1 = trim(copy(currentline, a + 1, b - a - 1));
-
-                                    if (c > 0)
+                                    var s1 = AStringUtils.Copy(currentLine, a + 1, b - a - 1).Trim();
+                                    String s2, s3;
+                                    if (c != -1)
                                     {
-                                        s2 = trim(copy(currentline, b + 1, c - b - 1));
-                                        s3 = trim(copy(currentline, c + 1, d - c - 1));
+                                        s2 = AStringUtils.Copy(currentLine, b + 1, c - b - 1).Trim();
+                                        s3 = AStringUtils.Copy(currentLine, c + 1, d - c - 1).Trim();
                                     }
                                     else
                                     {
-                                        s2 = trim(copy(currentline, b + 1, d - b - 1));
+                                        s2 = AStringUtils.Copy(currentLine, b + 1, d - b - 1).Trim();
                                         s3 = "";
                                     }
-
-
-                                    //try
-                                    x = strtoint(s2);
-                                    //except
-                                    create(format(rsisnotavalidsize, set::of(s2, eos)));
-                                    //end;
-
+                                    var x = 0u;
+                                    try
+                                    {
+                                        x = AStringUtils.StrToDWord(s2);
+                                    }
+                                    catch
+                                    {
+                                        throw new Exception(UStringUtils.Sprintf(rsIsNotAValidSize, s2));
+                                    }
                                     //define it here already
                                     if (s3 != "")
-                                        symhandler.setuserdefinedsymbolallocsize(s1, x, symhandler.getaddressfromname(s3));
+                                        Assembler.SymHandler.SetUserDefinedSymbolAllocSize(s1, x, Assembler.SymHandler.GetAddressFromName(s3));
                                     else
-                                        symhandler.setuserdefinedsymbolallocsize(s1, x);
-
-                                    setlength(globalallocs, length(globalallocs) + 1);
-                                    globalallocs[length(globalallocs) - 1].address = symhandler.getuserdefinedsymbolbyname(s1);
-                                    globalallocs[length(globalallocs) - 1].varname = s1;
-                                    globalallocs[length(globalallocs) - 1].size = x;
-
-
-                                    setlength(assemblerlines, length(assemblerlines) - 1);
-                                    continue_;
-
+                                        Assembler.SymHandler.SetUserDefinedSymbolAllocSize(s1, x);
+                                    globalAllocs.Inc();
+                                    globalAllocs.Last.Address = Assembler.SymHandler.GetUserDefinedSymbolByName(s1);
+                                    globalAllocs.Last.Name = s1;
+                                    globalAllocs.Last.Size = x;
+                                    assemblerLines.Dec();
+                                    continue;
                                 }
-                                else create(rswrongsyntaxglobalallocnamesize);
+                                else
+                                    throw new Exception(rsWrongSyntaxGLOBALALLOCNameSize);
                             }
-                            */
                             #endregion
                             #region Command INCLUDE()
-                            if (AStringUtils.Copy(currentline, 0, 8).ToUpper() == "INCLUDE(")
+                            if (AStringUtils.Copy(currentLine, 0, 8).ToUpper() == "INCLUDE(")
                             {
-                                a = AStringUtils.Pos("(", currentline);
-                                b = AStringUtils.Pos(")", currentline);
+                                var a = AStringUtils.Pos("(", currentLine);
+                                var b = AStringUtils.Pos(")", currentLine);
                                 if (a != -1 && b != -1)
                                 {
-                                    s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
-
+                                    var s1 = AStringUtils.Copy(currentLine, a + 1, b - a - 1).Trim();
                                     if (String.IsNullOrEmpty(UIo.Path.GetExtension(s1)))
                                         s1 += ".cea";
                                     if (!UIo.File.Exists(s1))
                                         throw new Exception(UStringUtils.Sprintf(rsCouldNotBeFound, s1));
-                                    include = new ARefStringArray();
+                                    var include = new ARefStringArray();
                                     include.AddRange(UIo.File.ReadAllLines(s1));
                                     RemoveComments(include);
                                     UnlabeledLabels(include);
                                     for (j = i + 1; j <= (i + 1) + (include.Length - 1); j++)
                                         code.Insert(j, include[j - (i + 1)]);
-                                    assemblerlines.SetLength(assemblerlines.Length - 1);
+                                    assemblerLines.SetLength(assemblerLines.Length - 1);
                                     continue;
                                 }
                                 else
@@ -1373,17 +1320,17 @@ namespace SputnikAsm.LAutoAssembler
                             }
                             #endregion
                             #region Command CREATETHREAD()
-                            if (AStringUtils.Copy(currentline, 0, 13).ToUpper() == "CREATETHREAD(")
+                            if (AStringUtils.Copy(currentLine, 0, 13).ToUpper() == "CREATETHREAD(")
                             {
-                                a = AStringUtils.Pos("(", currentline);
-                                b = AStringUtils.Pos(")", currentline);
+                                var a = AStringUtils.Pos("(", currentLine);
+                                var b = AStringUtils.Pos(")", currentLine);
                                 if (a != -1 && b != -1)
                                 {
-                                    s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
-                                    createthread.SetLength(createthread.Length + 1);
-                                    createthread.Last = s1;
+                                    var s1 = AStringUtils.Copy(currentLine, a + 1, b - a - 1).Trim();
+                                    createThread.SetLength(createThread.Length + 1);
+                                    createThread.Last = s1;
 
-                                    assemblerlines.SetLength(assemblerlines.Length - 1);
+                                    assemblerLines.SetLength(assemblerLines.Length - 1);
                                     continue;
                                 }
                                 else
@@ -1391,19 +1338,19 @@ namespace SputnikAsm.LAutoAssembler
                             }
                             #endregion
                             #region Command CREATETHREADANDWAIT()
-                            if (AStringUtils.Copy(currentline, 0, 20).ToUpper() == "CREATETHREADANDWAIT(")
+                            if (AStringUtils.Copy(currentLine, 0, 20).ToUpper() == "CREATETHREADANDWAIT(")
                             {
-                                a = AStringUtils.Pos("(", currentline);
-                                b = AStringUtils.Pos(")", currentline);
+                                var a = AStringUtils.Pos("(", currentLine);
+                                var b = AStringUtils.Pos(")", currentLine);
                                 if (a != -1 && b != -1)
                                 {
-                                    s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
-                                    slist.Assign(s1.Split(','));
-                                    if (slist.Length == 2)
+                                    var s1 = AStringUtils.Copy(currentLine, a + 1, b - a - 1).Trim();
+                                    var sList = s1.Split(',');
+                                    if (sList.Length == 2)
                                     {
                                         try
                                         {
-                                            j = AStringUtils.StrToInt(slist[1].Trim());
+                                            j = AStringUtils.StrToInt(sList[1].Trim());
                                         }
                                         catch
                                         {
@@ -1412,11 +1359,11 @@ namespace SputnikAsm.LAutoAssembler
                                     }
                                     else
                                         j = 5000;
-                                    createthreadandwait.SetLength(createthreadandwait.Length + 1);
-                                    createthreadandwait.Last.Name = slist[0];
-                                    createthreadandwait.Last.Position = assemblerlines.Length - 1;
-                                    createthreadandwait.Last.Timeout = j;
-                                    assemblerlines.SetLength(assemblerlines.Length - 1);
+                                    createThreadAndWait.SetLength(createThreadAndWait.Length + 1);
+                                    createThreadAndWait.Last.Name = sList[0];
+                                    createThreadAndWait.Last.Position = assemblerLines.Length - 1;
+                                    createThreadAndWait.Last.Timeout = j;
+                                    assemblerLines.SetLength(assemblerLines.Length - 1);
                                     continue;
                                 }
                                 else
@@ -1424,18 +1371,18 @@ namespace SputnikAsm.LAutoAssembler
                             }
                             #endregion
                             #region Command READMEM()
-                            if (AStringUtils.Copy(currentline, 0, 8).ToUpper() == "READMEM(")
+                            if (AStringUtils.Copy(currentLine, 0, 8).ToUpper() == "READMEM(")
                             {
                                 //read memory and place it here (readmem(address,size) )
-                                a = AStringUtils.Pos("(", currentline);
-                                b = AStringUtils.Pos(",", currentline);
-                                c = AStringUtils.Pos(")", currentline);
-                                if ((a != -1) && (b != -1) && (c != -1))
+                                var a = AStringUtils.Pos("(", currentLine);
+                                var b = AStringUtils.Pos(",", currentLine);
+                                var c = AStringUtils.Pos(")", currentLine);
+                                if (a != -1 && b != -1 && c != -1)
                                 {
-                                    s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
-                                    s2 = AStringUtils.Copy(currentline, b + 1, c - b - 1).Trim();
+                                    var s1 = AStringUtils.Copy(currentLine, a + 1, b - a - 1).Trim();
+                                    var s2 = AStringUtils.Copy(currentLine, b + 1, c - b - 1).Trim();
                                     //read memory and replace with lines of DB xx xx xx xx xx xx xx xx
-                                    testPtr = symHandler.GetAddressFromName(s1);
+                                    var testPtr = symHandler.GetAddressFromName(s1);
                                     a = AStringUtils.StrToInt(s2);
                                     if (a == 0)
                                         throw new Exception(rsInvalidSizeForReadMem);
@@ -1449,11 +1396,11 @@ namespace SputnikAsm.LAutoAssembler
                                     else
                                         byteBuf = UBinaryUtils.EmptyArray;
                                     //still here so everything ok
-                                    assemblerlines[assemblerlines.Length - 1].LineNr = currentlinenr;
-                                    assemblerlines[assemblerlines.Length - 1].Line = "<READMEM" + readmems.Length + '>';
-                                    readmems.SetLength(readmems.Length + 1);
-                                    readmems.Last.Length = a;
-                                    readmems.Last.Bytes = new AByteArray(byteBuf);
+                                    assemblerLines[assemblerLines.Length - 1].LineNr = currentLineNr;
+                                    assemblerLines[assemblerLines.Length - 1].Line = "<READMEM" + readMems.Length + '>';
+                                    readMems.SetLength(readMems.Length + 1);
+                                    readMems.Last.Length = a;
+                                    readMems.Last.Bytes = new AByteArray(byteBuf);
                                     byteBuf = null;
                                 }
                                 else
@@ -1462,14 +1409,14 @@ namespace SputnikAsm.LAutoAssembler
                             }
                             #endregion
                             #region Command REASSEMBLE()
-                            if (AStringUtils.Copy(currentline, 0, 11).ToUpper() == "REASSEMBLE(")
+                            if (AStringUtils.Copy(currentLine, 0, 11).ToUpper() == "REASSEMBLE(")
                             {
-                                a = AStringUtils.Pos("(", currentline);
-                                b = AStringUtils.Pos(")", currentline);
-
+                                var a = AStringUtils.Pos("(", currentLine);
+                                var b = AStringUtils.Pos(")", currentLine);
                                 if (a != -1 && b != -1)
                                 {
-                                    s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
+                                    var s1 = AStringUtils.Copy(currentLine, a + 1, b - a - 1).Trim();
+                                    UIntPtr testPtr;
                                     try
                                     {
                                         testPtr = Assembler.SymHandler.GetAddressFromName(s1);
@@ -1483,11 +1430,11 @@ namespace SputnikAsm.LAutoAssembler
                                         disassembler.IsDataOnly = true;
                                         disassembler.Disassemble(ref testPtr, ref s1);
                                         if (syntaxCheckOnly)
-                                            currentline = "nop";
+                                            currentLine = "nop";
                                         else
-                                            currentline = disassembler.LastDisassembleData.Prefix + ' ' + disassembler.LastDisassembleData.OpCode + ' ' + disassembler.LastDisassembleData.Parameters;
-                                        assemblerlines.Last.LineNr = currentlinenr;
-                                        assemblerlines.Last.Line = currentline;
+                                            currentLine = disassembler.LastDisassembleData.Prefix + ' ' + disassembler.LastDisassembleData.OpCode + ' ' + disassembler.LastDisassembleData.Parameters;
+                                        assemblerLines.Last.LineNr = currentLineNr;
+                                        assemblerLines.Last.Line = currentLine;
                                     }
                                 }
                                 else
@@ -1499,20 +1446,16 @@ namespace SputnikAsm.LAutoAssembler
                             if (uppercase(copy(currentline, 1, 12)) == "LOADLIBRARY(")
                             {
                                 //load a library into memory , this one already executes BEFORE the 2nd pass to get addressnames correct
-                                a = pos("(", currentline);
-                                b = pos(")", currentline);
-
-                                if ((a != -1) && (b != -1))
+                                var a = pos("(", currentline);
+                                var b = pos(")", currentline);
+                                if (a != -1 && b != -1)
                                 {
-                                    s1 = trim(copy(currentline, a + 1, b - a - 1));
-
+                                    var s1 = trim(copy(currentline, a + 1, b - a - 1));
                                     if ((length(s1) > 1) && ((s1[1] == '\'') || (s1[1] == '"')))
                                         s1 = ansidequotedstr(s1, s1[1]);
-
                                     if (pos(":", s1) == 0)
                                     {
                                         s2 = extractfilename(s1);
-
                                         if (getconnection == nil)  //no connection, so local. Check if the file can be found locally and if so, set the specific path
                                         {
                                             if (fileexists(cheatenginedir + s2)) s1 = cheatenginedir + s2;
@@ -1521,10 +1464,8 @@ namespace SputnikAsm.LAutoAssembler
                                             else
                                             if (fileexists(cheatenginedir + s1)) s1 = cheatenginedir + s1;
                                         }
-
                                         //else just hope it's in the dll searchpath
                                     } //else direct file path
-
                                     // try
                                     if (symhandler.getmodulebyname(extractfilename(s1), mi) == false)  //check if it's already injected
                                     {
@@ -1535,11 +1476,11 @@ namespace SputnikAsm.LAutoAssembler
                                     //except
                                     create(format(rscouldnotbeinjected, set::of(s1, eos)));
                                     //end;
-
                                     setlength(assemblerlines, length(assemblerlines) - 1);
-                                    continue_;
+                                    continue;
                                 }
-                                else create(rswrongsyntaxloadlibraryfilename);
+                                else
+                                    create(rswrongsyntaxloadlibraryfilename);
                             }
                             */
                             #endregion
@@ -1548,107 +1489,105 @@ namespace SputnikAsm.LAutoAssembler
                             if (uppercase(copy(currentline,1,8))=="LUACALL(") 
                             {
                                 //execute a given lua command
-                                a = pos("(", currentline);
-                                b = length(currentline);
-
-                                if (currentline[b] != ')') b = -1;
-
+                                var a = pos("(", currentline);
+                                var b = length(currentline);
+                                if (currentline[b] != ')')
+                                    b = -1;
                                 if ((a != -1) && (b != -1))
                                 {
                                     s1 = trim(copy(currentline, a + 1, b - a - 1));
-
                                     lua_doscript(s1); //raises an exception on error, which is exactly what we want here
-
                                     setlength(assemblerlines, length(assemblerlines) - 1);
-                                    continue_;
+                                    continue;
                                 }
-                                else create(rswrongsyntaxluacall);
+                                else
+                                    create(rswrongsyntaxluacall);
                             }
                             */
                             #endregion
                             #region Command UNREGISTERSYMBOL()
-                            if (disableInfo != null && AStringUtils.Copy(currentline, 0, 17).ToUpper() == "UNREGISTERSYMBOL(")
+                            if (disableInfo != null && AStringUtils.Copy(currentLine, 0, 17).ToUpper() == "UNREGISTERSYMBOL(")
                             {
                                 //add this symbol to the register symbollist
-                                a = AStringUtils.Pos("(", currentline);
-                                b = AStringUtils.Pos(")", currentline);
+                                var a = AStringUtils.Pos("(", currentLine);
+                                var b = AStringUtils.Pos(")", currentLine);
                                 if (a != -1 && b != -1)
                                 {
-                                    s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
+                                    var s1 = AStringUtils.Copy(currentLine, a + 1, b - a - 1).Trim();
                                     if (s1 == "*")
                                     {
-                                        j = deletesymbollist.Length;
-                                        deletesymbollist.SetLength(j + disableInfo.RegisteredSymbols.Length);
+                                        j = deleteSymbolList.Length;
+                                        deleteSymbolList.SetLength(j + disableInfo.RegisteredSymbols.Length);
 
                                         for (k = 0; k <= disableInfo.RegisteredSymbols.Length - 1; k++)
-                                            deletesymbollist[j + k] = disableInfo.RegisteredSymbols[k];
+                                            deleteSymbolList[j + k] = disableInfo.RegisteredSymbols[k];
                                     }
                                     else
                                     {
-                                        slist.Assign(s1.Split(',', ' '));
-                                        for (sli = 0; sli < slist.Length; sli++)
+                                        var sList = s1.Split(',', ' ');
+                                        for (var sli = 0; sli < sList.Length; sli++)
                                         {
-                                            s1 = slist[sli];
-                                            deletesymbollist.SetLength(deletesymbollist.Length + 1);
-                                            deletesymbollist.Last = s1;
+                                            s1 = sList[sli];
+                                            deleteSymbolList.SetLength(deleteSymbolList.Length + 1);
+                                            deleteSymbolList.Last = s1;
                                         }
                                     }
                                 }
                                 else
                                     throw new Exception(rsSyntaxError);
-                                assemblerlines.SetLength(assemblerlines.Length - 1);
+                                assemblerLines.SetLength(assemblerLines.Length - 1);
                                 continue;
                             }
                             #endregion
                             #region Command STRUCT()
-                            if (AStringUtils.Copy(currentline, 0, 7).ToUpper() == "STRUCT ")
+                            if (AStringUtils.Copy(currentLine, 0, 7).ToUpper() == "STRUCT ")
                             {
                                 ReplaceStructWithDefines(code, i);
-                                assemblerlines.SetLength(assemblerlines.Length - 1);
+                                assemblerLines.SetLength(assemblerLines.Length - 1);
                                 i -= 1; //repeat from this line
                                 continue;
                             }
                             #endregion
                             #region Command FULLACCESS()
-                            if (AStringUtils.Copy(currentline, 0, 11).ToUpper() == "FULLACCESS(")
+                            if (AStringUtils.Copy(currentLine, 0, 11).ToUpper() == "FULLACCESS(")
                             {
-                                a = AStringUtils.Pos("(", currentline);
-                                b = AStringUtils.Pos(",", currentline);
-                                c = AStringUtils.Pos(")", currentline);
+                                var a = AStringUtils.Pos("(", currentLine);
+                                var b = AStringUtils.Pos(",", currentLine);
+                                var c = AStringUtils.Pos(")", currentLine);
                                 if (a != -1 && b != -1 && c != -1)
                                 {
-                                    s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
-                                    s2 = AStringUtils.Copy(currentline, b + 1, c - b - 1).Trim();
-                                    fullaccess.SetLength(fullaccess.Length + 1);
-                                    fullaccess.Last.Address = symHandler.GetAddressFromName(s1);
-                                    fullaccess.Last.Size = AStringUtils.StrToDWord(s2);
+                                    var s1 = AStringUtils.Copy(currentLine, a + 1, b - a - 1).Trim();
+                                    var s2 = AStringUtils.Copy(currentLine, b + 1, c - b - 1).Trim();
+                                    fullAccess.SetLength(fullAccess.Length + 1);
+                                    fullAccess.Last.Address = symHandler.GetAddressFromName(s1);
+                                    fullAccess.Last.Size = AStringUtils.StrToDWord(s2);
                                 }
                                 else
                                     throw new Exception(rsSyntaxErrorFullAccessAddressSize);
-                                assemblerlines.SetLength(assemblerlines.Length - 1);
+                                assemblerLines.SetLength(assemblerLines.Length - 1);
                                 continue;
                             }
                             #endregion
                             #region Command LABEL()
-                            if (AStringUtils.Copy(currentline, 0, 6).ToUpper() == "LABEL(")
+                            if (AStringUtils.Copy(currentLine, 0, 6).ToUpper() == "LABEL(")
                             {
                                 //syntax: label(x)  x=name of the label
                                 //later on in the code there has to be a line with "labelname:"
-                                a = AStringUtils.Pos("(", currentline);
-                                b = AStringUtils.Pos(")", currentline);
+                                var a = AStringUtils.Pos("(", currentLine);
+                                var b = AStringUtils.Pos(")", currentLine);
                                 if (a != -1 && b != -1)
                                 {
-                                    s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
-                                    slist.Assign(s1.Split(',', ' '));
-                                    for (sli = 0; sli < slist.Length; sli++)
+                                    var s1 = AStringUtils.Copy(currentLine, a + 1, b - a - 1).Trim();
+                                    var sList = s1.Split(',', ' ');
+                                    for (var sli = 0; sli < sList.Length; sli++)
                                     {
-                                        s1 = slist[sli];
+                                        s1 = sList[sli];
                                         AStringUtils.Val("$" + s1, out j, out a);
                                         if (a == 0)
                                             throw new Exception(UStringUtils.Sprintf(rsIsNotAValidIdentifier, s1));
-                                        varsize = s1.Length;
+                                        var varSize = s1.Length;
                                         j = 0;
-                                        while (j < labels.Length && labels[j].Name.Length >= varsize)
+                                        while (j < labels.Length && labels[j].Name.Length >= varSize)
                                         {
                                             if (labels[j].Name == s1)
                                                 throw new Exception(UStringUtils.Sprintf(rsIsBeingRedeclared, s1));
@@ -1678,7 +1617,7 @@ namespace SputnikAsm.LAutoAssembler
                                         labels[l].References.SetLength(0);
                                         labels[l].References2.SetLength(0);
                                     }
-                                    assemblerlines.SetLength(assemblerlines.Length - 1);
+                                    assemblerLines.SetLength(assemblerLines.Length - 1);
                                     continue;
                                 }
                                 else
@@ -1686,15 +1625,15 @@ namespace SputnikAsm.LAutoAssembler
                             }
                             #endregion
                             #region Command DEALLOC()
-                            if (disableInfo != null && AStringUtils.Copy(currentline, 0, 8).ToUpper() == "DEALLOC(")
+                            if (disableInfo != null && AStringUtils.Copy(currentLine, 0, 8).ToUpper() == "DEALLOC(")
                             {
                                 //syntax: dealloc(x)  x=name of region to deallocate
                                 //later on in the code there has to be a line with "labelname:"
-                                a = AStringUtils.Pos("(", currentline);
-                                b = AStringUtils.Pos(")", currentline);
-                                if ((a != -1) && (b != -1))
+                                var a = AStringUtils.Pos("(", currentLine);
+                                var b = AStringUtils.Pos(")", currentLine);
+                                if (a != -1 && b != -1)
                                 {
-                                    s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
+                                    var s1 = AStringUtils.Copy(currentLine, a + 1, b - a - 1).Trim();
                                     if (s1 == "*")
                                     {
                                         //everything that the script allocated
@@ -1704,10 +1643,10 @@ namespace SputnikAsm.LAutoAssembler
                                     }
                                     else
                                     {
-                                        slist.Assign(s1.Split(',', ' '));
-                                        for (sli = 0; sli < slist.Length; sli++)
+                                        var sList = s1.Split(',', ' ');
+                                        for (var sli = 0; sli < sList.Length; sli++)
                                         {
-                                            s1 = slist[sli];
+                                            s1 = sList[sli];
                                             //find s1 in the ceallocarray
                                             for (j = 0; j < disableInfo.Allocs.Length; j++)
                                             {
@@ -1719,41 +1658,42 @@ namespace SputnikAsm.LAutoAssembler
                                         }
                                     }
                                 }
-                                assemblerlines.SetLength(assemblerlines.Length - 1);
+                                assemblerLines.SetLength(assemblerLines.Length - 1);
                                 continue;
                             }
                             #endregion
                             #region Command ALLOC()
-                            if (AStringUtils.Copy(currentline, 0, 6).ToUpper() == "ALLOC(")
+                            if (AStringUtils.Copy(currentLine, 0, 6).ToUpper() == "ALLOC(")
                             {
                                 //syntax: alloc(x,size)    x=variable name size=bytes
                                 //or
                                 //syntax: alloc(x,size,prefered region)    x=variable name size=bytes
                                 //allocate memory
-                                a = AStringUtils.Pos("(", currentline);
-                                b = AStringUtils.Pos(",", currentline);
-                                c = AStringUtils.PosEx(",", currentline, b + 1);
-                                d = AStringUtils.Pos(")", currentline);
-                                if (a > 0 && b > 0 && d > 0)
+                                var a = AStringUtils.Pos("(", currentLine);
+                                var b = AStringUtils.Pos(",", currentLine);
+                                var c = AStringUtils.PosEx(",", currentLine, b + 1);
+                                var d = AStringUtils.Pos(")", currentLine);
+                                if (a != -1 && b != -1 && d != -1)
                                 {
-                                    s1 = AStringUtils.Copy(currentline, a + 1, b - a - 1).Trim();
-                                    if (c > 0)
+                                    var s1 = AStringUtils.Copy(currentLine, a + 1, b - a - 1).Trim();
+                                    String s2, s3;
+                                    if (c != -1)
                                     {
-                                        s2 = AStringUtils.Copy(currentline, b + 1, c - b - 1).Trim();
-                                        s3 = AStringUtils.Copy(currentline, c + 1, d - c - 1).Trim();
+                                        s2 = AStringUtils.Copy(currentLine, b + 1, c - b - 1).Trim();
+                                        s3 = AStringUtils.Copy(currentLine, c + 1, d - c - 1).Trim();
                                     }
                                     else
                                     {
-                                        s2 = AStringUtils.Copy(currentline, b + 1, d - b - 1).Trim();
+                                        s2 = AStringUtils.Copy(currentLine, b + 1, d - b - 1).Trim();
                                         s3 = "";
                                     }
                                     AStringUtils.Val("0x" + s1, out j, out a);
                                     if (a == 0)
                                         throw new Exception(UStringUtils.Sprintf(rsIsNotAValidIdentifier, s1));
-                                    varsize = s1.Length;
+                                    var varSize = s1.Length;
                                     //check for duplicate identifiers
                                     j = 0;
-                                    while (j < allocs.Length && allocs[j].Name.Length > varsize)
+                                    while (j < allocs.Length && allocs[j].Name.Length > varSize)
                                     {
                                         if (allocs[j].Name == s1)
                                             throw new Exception(UStringUtils.Sprintf(rsTheIdentifierHasAlreadyBeenDeclared, s1));
@@ -1773,11 +1713,11 @@ namespace SputnikAsm.LAutoAssembler
                                     else
                                         allocs[j].Preferred = UIntPtr.Zero;
                                     allocs[j].Protection = MemoryProtectionFlags.ExecuteReadWrite;
-                                    if (AStringUtils.Copy(currentline, 1, 8).ToUpper() == "ALLOCNX(")
+                                    if (AStringUtils.Copy(currentLine, 1, 8).ToUpper() == "ALLOCNX(")
                                         allocs[j].Protection = MemoryProtectionFlags.ReadWrite;
-                                    else if (AStringUtils.Copy(currentline, 1, 8).ToUpper() == "ALLOCXO(")
+                                    else if (AStringUtils.Copy(currentLine, 1, 8).ToUpper() == "ALLOCXO(")
                                         allocs[j].Protection = MemoryProtectionFlags.ReadOnly;
-                                    assemblerlines.SetLength(assemblerlines.Length - 1);   //don't bother with this in the 2nd pass
+                                    assemblerLines.SetLength(assemblerLines.Length - 1);   //don't bother with this in the 2nd pass
                                     continue;
                                 }
                                 else
@@ -1788,12 +1728,12 @@ namespace SputnikAsm.LAutoAssembler
                             if (process.IsX64)
                             {
                                 for (j = 0; j < allocs.Length; j++)
-                                    currentline = ReplaceToken(currentline, allocs[j].Name, "ffffffffffffffff");
+                                    currentLine = ReplaceToken(currentLine, allocs[j].Name, "ffffffffffffffff");
                             }
                             else
                             {
                                 for (j = 0; j < allocs.Length; j++)
-                                    currentline = ReplaceToken(currentline, allocs[j].Name, "00000000");
+                                    currentLine = ReplaceToken(currentLine, allocs[j].Name, "00000000");
                             }
                             #region Command KALLOC() -- todo
                             /*
@@ -1801,51 +1741,39 @@ namespace SputnikAsm.LAutoAssembler
                             {
                                 if (~DBKReadWrite)
                                     Create(rsNeedToUseKernelmodeReadWriteprocessmemory);
-
                                 if (DBKLoaded == false)
                                     Create(rsSorryButWithoutTheDriverKALLOCWillNotFunction);
-
                                 //syntax: kalloc(x,size)    x=variable name size=bytes
                                 //kallocate memory
-                                a = pos("(", currentline);
-                                b = pos(",", currentline);
-                                c = pos(")", currentline);
-
-                                if ((a > 0) && (b > 0) && (c > 0))
+                                var a = pos("(", currentline);
+                                var b = pos(",", currentline);
+                                var c = pos(")", currentline);
+                                if (a != -1 && b != -1 && c != -1)
                                 {
-                                    s1 = trim(copy(currentline, a + 1, b - a - 1));
-                                    s2 = trim(copy(currentline, b + 1, c - b - 1));
-
+                                    var s1 = trim(copy(currentline, a + 1, b - a - 1));
+                                    var s2 = trim(copy(currentline, b + 1, c - b - 1));
                                     val(string('$') + s1, j, a);
                                     if (a == 0)
                                         Create(Format(rsIsNotAValidIdentifier, set::of(s1, eos)));
-
                                     varsize = length(s1);
-
                                     //check for duplicate identifiers
                                     j = 0;
                                     while ((j < length(kallocs)) && (length(kallocs[j].varname) > varsize))
                                     {
                                         if (kallocs[j].varname == s1)
                                             Create(Format(rsTheIdentifierHasAlreadyBeenDeclared, set::of(s1, eos)));
-
                                         j += 1;
                                     }
-
                                     j = length(kallocs);//quickfix
-
                                     setlength(kallocs, length(kallocs) + 1);
-
                                     //longest varnames first so the rename of a shorter matching var wont override the longer one
                                     //move up the other kallocs so I can inser this element (A linked list might have been better)
                                     for (k = length(kallocs) - 1; k >= j + 1; k--)
                                         kallocs[k] = kallocs[k - 1];
-
                                     kallocs[j].varname = s1;
                                     kallocs[j].size = StrToInt(s2);
-
                                     setlength(assemblerlines, length(assemblerlines) - 1);   //don't bother with this in the 2nd pass
-                                    continue_;
+                                    continue;
                                 }
                                 else
                                     Create(rsWrongSyntaxKallocIdentifierSizeinbytes);
@@ -1855,26 +1783,26 @@ namespace SputnikAsm.LAutoAssembler
                             //replace KALLOC identifiers with values so the assemble error check doesnt crash on that
                             if (process.IsX64)
                             {
-                                for (j = 0; j < kallocs.Length; j++)
-                                    currentline = ReplaceToken(currentline, kallocs[j].Name, "ffffffffffffffff");
+                                for (j = 0; j < kAllocs.Length; j++)
+                                    currentLine = ReplaceToken(currentLine, kAllocs[j].Name, "ffffffffffffffff");
                             }
                             else
                             {
-                                for (j = 0; j < kallocs.Length; j++)
-                                    currentline = ReplaceToken(currentline, kallocs[j].Name, "00000000");
+                                for (j = 0; j < kAllocs.Length; j++)
+                                    currentLine = ReplaceToken(currentLine, kAllocs[j].Name, "00000000");
                             }
                             //check for assembler errors
                             //address
-                            if (currentline[currentline.Length - 1] == ':')
+                            if (currentLine[currentLine.Length - 1] == ':')
                             {
                                 try
                                 {
                                     ok1 = false;
                                     for (j = 0; j < labels.Length; j++)
                                     {
-                                        if (currentline != labels[j].Name + ':')
+                                        if (currentLine != labels[j].Name + ':')
                                             continue;
-                                        labels[j].AssemblerLine = assemblerlines.Length - 1;
+                                        labels[j].AssemblerLine = assemblerLines.Length - 1;
                                         ok1 = true;
                                         break;
                                     }
@@ -1885,31 +1813,31 @@ namespace SputnikAsm.LAutoAssembler
                                     {
                                         //replace tokens with registered symbols from the enable part
                                         for (j = 0; j < disableInfo.RegisteredSymbols.Length; j++)
-                                            currentline = ReplaceToken(currentline, disableInfo.RegisteredSymbols[j], "00000000");
+                                            currentLine = ReplaceToken(currentLine, disableInfo.RegisteredSymbols[j], "00000000");
                                     }
                                     try
                                     {
                                         // todo is this ok as just an int?!?!?
-                                        s1 = AStringUtils.Copy(currentline, 0, currentline.Length - 1);
+                                        var s1 = AStringUtils.Copy(currentLine, 0, currentLine.Length - 1);
                                         if (!String.IsNullOrEmpty(s1))
-                                            testPtr = symHandler.GetAddressFromName(s1);
+                                            symHandler.GetAddressFromName(s1);
                                     }
                                     catch
                                     {
-                                        currentline = AStringUtils.IntToHex(symHandler.GetAddressFromName(AStringUtils.Copy(currentline, 1, currentline.Length - 1)), 8) + ':';
-                                        assemblerlines[assemblerlines.Length - 1].LineNr = currentlinenr;
-                                        assemblerlines[assemblerlines.Length - 1].Line = currentline;
+                                        currentLine = AStringUtils.IntToHex(symHandler.GetAddressFromName(AStringUtils.Copy(currentLine, 1, currentLine.Length - 1)), 8) + ':';
+                                        assemblerLines[assemblerLines.Length - 1].LineNr = currentLineNr;
+                                        assemblerLines[assemblerLines.Length - 1].Line = currentLine;
                                     }
                                 }
                                 catch
                                 {
-                                    if (potentiallabels.IndexOf(AStringUtils.Copy(currentline, 0, currentline.Length - 1)) == -1)
+                                    if (potentialLabels.IndexOf(AStringUtils.Copy(currentLine, 0, currentLine.Length - 1)) == -1)
                                         throw new Exception(rsThisAddressSpecifierIsNotValid);
 
                                     j = labels.Length;
                                     labels.SetLength(j + 1);
-                                    labels[j].Name = AStringUtils.Copy(currentline, 0, currentline.Length - 1);
-                                    labels[j].AssemblerLine = assemblerlines.Length - 1;
+                                    labels[j].Name = AStringUtils.Copy(currentLine, 0, currentLine.Length - 1);
+                                    labels[j].AssemblerLine = assemblerLines.Length - 1;
                                     labels[j].Defined = false;
                                     labels[j].References.SetLength(0);
                                     labels[j].References2.SetLength(0);
@@ -1920,12 +1848,12 @@ namespace SputnikAsm.LAutoAssembler
                             if (process.IsX64)
                             {
                                 for (j = 0; j < labels.Length; j++)
-                                    currentline = ReplaceToken(currentline, labels[j].Name, "ffffffffffffffff");
+                                    currentLine = ReplaceToken(currentLine, labels[j].Name, "ffffffffffffffff");
                             }
                             else
                             {
                                 for (j = 0; j < labels.Length; j++)
-                                    currentline = ReplaceToken(currentline, labels[j].Name, "00000000");
+                                    currentLine = ReplaceToken(currentLine, labels[j].Name, "00000000");
                             }
                             try
                             {
@@ -1933,7 +1861,7 @@ namespace SputnikAsm.LAutoAssembler
                                 ok1 = false;
                                 try
                                 {
-                                    ok1 = Assembler.Assemble(currentline, currentaddress.ToUInt64(), assembled[0].Bytes, AAssemblerPreference.None, true);
+                                    ok1 = Assembler.Assemble(currentLine, currentAddress.ToUInt64(), assembled[0].Bytes, AAssemblerPreference.None, true);
                                 }
                                 catch
                                 {
@@ -1943,21 +1871,21 @@ namespace SputnikAsm.LAutoAssembler
                                 {
                                     //try potential labels
                                     ok1 = false;
-                                    for (j = 0; j < potentiallabels.Length; j++)
+                                    for (j = 0; j < potentialLabels.Length; j++)
                                     {
                                         if (process.IsX64)
-                                            currentline = ReplaceToken(currentline, potentiallabels[j], "ffffffffffffffff");
+                                            currentLine = ReplaceToken(currentLine, potentialLabels[j], "ffffffffffffffff");
                                         else
-                                            currentline = ReplaceToken(currentline, potentiallabels[j], "00000000");
+                                            currentLine = ReplaceToken(currentLine, potentialLabels[j], "00000000");
                                         try
                                         {
-                                            ok1 = Assembler.Assemble(currentline, currentaddress.ToUInt64(), assembled[0].Bytes, AAssemblerPreference.None, true);
+                                            ok1 = Assembler.Assemble(currentLine, currentAddress.ToUInt64(), assembled[0].Bytes, AAssemblerPreference.None, true);
                                             if (ok1)
                                             {
                                                 //define this potential label as a full label
                                                 k = labels.Length;
                                                 labels.SetLength(k + 1);
-                                                labels[k].Name = potentiallabels[j];
+                                                labels[k].Name = potentialLabels[j];
                                                 labels[k].Defined = false;
                                                 labels[k].AfterCCode = false;
                                                 labels[k].References.SetLength(0);
@@ -2024,19 +1952,19 @@ namespace SputnikAsm.LAutoAssembler
                     }
                     catch (Exception ex)
                     {
-                        throw new Exception(UStringUtils.Sprintf(rsErrorInLine, currentlinenr, currentline, ex.Message));
+                        throw new Exception(UStringUtils.Sprintf(rsErrorInLine, currentLineNr, currentLine, ex.Message));
                     }
                 }
                 #region Sanity Check (Symbols)
-                if (addsymbollist.Length > 0)
+                if (addSymbolList.Length > 0)
                 {
                     //now scan the addsymbollist entries for allocs and labels and see if they exist
-                    for (i = 0; i < addsymbollist.Length; i++)
+                    for (i = 0; i < addSymbolList.Length; i++)
                     {
                         ok1 = false;
                         for (j = 0; j < allocs.Length; j++) //scan allocs
                         {
-                            if (String.Equals(addsymbollist[i], allocs[j].Name, StringComparison.CurrentCultureIgnoreCase))
+                            if (String.Equals(addSymbolList[i], allocs[j].Name, StringComparison.CurrentCultureIgnoreCase))
                             {
                                 ok1 = true;
                                 break;
@@ -2046,7 +1974,7 @@ namespace SputnikAsm.LAutoAssembler
                         {
                             for (j = 0; j < labels.Length; j++)
                             {
-                                if (String.Equals(addsymbollist[i], labels[j].Name, StringComparison.CurrentCultureIgnoreCase))
+                                if (String.Equals(addSymbolList[i], labels[j].Name, StringComparison.CurrentCultureIgnoreCase))
                                 {
                                     ok1 = true;
                                     break;
@@ -2057,7 +1985,7 @@ namespace SputnikAsm.LAutoAssembler
                         {
                             for (j = 0; j < defines.Length; j++)
                             {
-                                if (String.Equals(addsymbollist[i], defines[j].Name, StringComparison.CurrentCultureIgnoreCase))
+                                if (String.Equals(addSymbolList[i], defines[j].Name, StringComparison.CurrentCultureIgnoreCase))
                                 {
                                     ok1 = true;
                                     break;
@@ -2065,19 +1993,19 @@ namespace SputnikAsm.LAutoAssembler
                             }
                         }
                         if (!ok1)
-                            throw new Exception(UStringUtils.Sprintf(rsWasSupposedToBeAddedToTheSymbollistButItIsnTDeclar, addsymbollist[i]));
+                            throw new Exception(UStringUtils.Sprintf(rsWasSupposedToBeAddedToTheSymbollistButItIsnTDeclar, addSymbolList[i]));
                     }
                 }
                 #endregion
                 #region Sanity Check (Create Thread)
-                if (createthread.Length > 0)
+                if (createThread.Length > 0)
                 {
-                    for (i = 0; i < createthread.Length; i++)
+                    for (i = 0; i < createThread.Length; i++)
                     {
                         ok1 = true;
                         try
                         {
-                            testPtr = symHandler.GetAddressFromName(createthread[i]);
+                            symHandler.GetAddressFromName(createThread[i]);
                         }
                         catch
                         {
@@ -2087,7 +2015,7 @@ namespace SputnikAsm.LAutoAssembler
                         {
                             for (j = 0; j < labels.Length; j++)
                             {
-                                if (String.Equals(labels[j].Name, createthread[i], StringComparison.CurrentCultureIgnoreCase))
+                                if (String.Equals(labels[j].Name, createThread[i], StringComparison.CurrentCultureIgnoreCase))
                                 {
                                     ok1 = true;
                                     break;
@@ -2098,7 +2026,7 @@ namespace SputnikAsm.LAutoAssembler
                         {
                             for (j = 0; j < allocs.Length; j++)
                             {
-                                if (String.Equals(allocs[j].Name, createthread[i], StringComparison.CurrentCultureIgnoreCase))
+                                if (String.Equals(allocs[j].Name, createThread[i], StringComparison.CurrentCultureIgnoreCase))
                                 {
                                     ok1 = true;
                                     break;
@@ -2107,9 +2035,9 @@ namespace SputnikAsm.LAutoAssembler
                         }
                         if (!ok1)
                         {
-                            for (j = 0; j < kallocs.Length; j++)
+                            for (j = 0; j < kAllocs.Length; j++)
                             {
-                                if (String.Equals(kallocs[j].Name, createthread[i], StringComparison.CurrentCultureIgnoreCase))
+                                if (String.Equals(kAllocs[j].Name, createThread[i], StringComparison.CurrentCultureIgnoreCase))
                                 {
                                     ok1 = true;
                                     break;
@@ -2120,11 +2048,11 @@ namespace SputnikAsm.LAutoAssembler
                         {
                             for (j = 0; j < defines.Length; j++)
                             {
-                                if (String.Equals(defines[j].Name, createthread[i], StringComparison.CurrentCultureIgnoreCase))
+                                if (String.Equals(defines[j].Name, createThread[i], StringComparison.CurrentCultureIgnoreCase))
                                 {
                                     try
                                     {
-                                        testPtr = symHandler.GetAddressFromName(defines[j].Whatever);
+                                        symHandler.GetAddressFromName(defines[j].Whatever);
                                         ok1 = true;
                                     }
                                     catch
@@ -2136,19 +2064,19 @@ namespace SputnikAsm.LAutoAssembler
                             }
                         }
                         if (!ok1)
-                            throw new Exception(UStringUtils.Sprintf(rsTheAddressInCreatethreadIsNotValid, createthread[i]));
+                            throw new Exception(UStringUtils.Sprintf(rsTheAddressInCreatethreadIsNotValid, createThread[i]));
                     }
                 }
                 #endregion
                 #region Sanity Check (Create Thread And Wait)
-                if (createthreadandwait.Length > 0)
+                if (createThreadAndWait.Length > 0)
                 {
-                    for (i = 0; i < createthreadandwait.Length; i++)
+                    for (i = 0; i < createThreadAndWait.Length; i++)
                     {
                         ok1 = true;
                         try
                         {
-                            testPtr = symHandler.GetAddressFromName(createthreadandwait[i].Name);
+                            symHandler.GetAddressFromName(createThreadAndWait[i].Name);
                         }
                         catch
                         {
@@ -2158,7 +2086,7 @@ namespace SputnikAsm.LAutoAssembler
                         {
                             for (j = 0; j < labels.Length; j++)
                             {
-                                if (String.Equals(labels[j].Name, createthreadandwait[i].Name, StringComparison.CurrentCultureIgnoreCase))
+                                if (String.Equals(labels[j].Name, createThreadAndWait[i].Name, StringComparison.CurrentCultureIgnoreCase))
                                 {
                                     ok1 = true;
                                     break;
@@ -2169,7 +2097,7 @@ namespace SputnikAsm.LAutoAssembler
                         {
                             for (j = 0; j < allocs.Length; j++)
                             {
-                                if (String.Equals(allocs[j].Name, createthreadandwait[i].Name, StringComparison.CurrentCultureIgnoreCase))
+                                if (String.Equals(allocs[j].Name, createThreadAndWait[i].Name, StringComparison.CurrentCultureIgnoreCase))
                                 {
                                     ok1 = true;
                                     break;
@@ -2178,9 +2106,9 @@ namespace SputnikAsm.LAutoAssembler
                         }
                         if (!ok1)
                         {
-                            for (j = 0; j < kallocs.Length; j++)
+                            for (j = 0; j < kAllocs.Length; j++)
                             {
-                                if (String.Equals(kallocs[j].Name, createthreadandwait[i].Name, StringComparison.CurrentCultureIgnoreCase))
+                                if (String.Equals(kAllocs[j].Name, createThreadAndWait[i].Name, StringComparison.CurrentCultureIgnoreCase))
                                 {
                                     ok1 = true;
                                     break;
@@ -2191,11 +2119,11 @@ namespace SputnikAsm.LAutoAssembler
                         {
                             for (j = 0; j < defines.Length; j++)
                             {
-                                if (String.Equals(defines[j].Name, createthreadandwait[i].Name, StringComparison.CurrentCultureIgnoreCase))
+                                if (String.Equals(defines[j].Name, createThreadAndWait[i].Name, StringComparison.CurrentCultureIgnoreCase))
                                 {
                                     try
                                     {
-                                        testPtr = symHandler.GetAddressFromName(defines[j].Whatever);
+                                        symHandler.GetAddressFromName(defines[j].Whatever);
                                         ok1 = true;
                                     }
                                     catch
@@ -2207,7 +2135,7 @@ namespace SputnikAsm.LAutoAssembler
                             }
                         }
                         if (!ok1)
-                            throw new Exception(UStringUtils.Sprintf(rsTheAddressInCreatethreadAndWaitIsNotValid, createthreadandwait[i].Name));
+                            throw new Exception(UStringUtils.Sprintf(rsTheAddressInCreatethreadAndWaitIsNotValid, createThreadAndWait[i].Name));
                     }
                 }
                 #endregion
@@ -2266,10 +2194,10 @@ namespace SputnikAsm.LAutoAssembler
                 //    }
                 //}
                 #endregion
-                if (popUpMessages & process.IsX64 & usesaobscan & (allocs.Length > 0))
+                if (popUpMessages & process.IsX64 & usesAobScan & (allocs.Length > 0))
                 {
                     //check if a preferred address is used
-                    prefered = UIntPtr.Zero;
+                    var prefered = UIntPtr.Zero;
                     for (i = 0; i < allocs.Length; i++)
                     {
                         if (allocs[i].Preferred != UIntPtr.Zero)
@@ -2301,18 +2229,18 @@ namespace SputnikAsm.LAutoAssembler
                         if (allocs[i].Name.StartsWith("ceinternal_autofree"))
                         {
                             //move it to the back
-                            tempalloc = allocs[i];
+                            var tempAlloc = allocs[i];
                             for (j = i; j < allocs.Length - 1; j++)
                                 allocs[j] = allocs[j + 1];
-                            allocs[allocs.Length - 1] = tempalloc;
+                            allocs[allocs.Length - 1] = tempAlloc;
                             k -= 1;
                         }
                         else
                             i += 1;
                     }
                     j = 0; //entry to go from
-                    prefered = allocs[0].Preferred;
-                    protection = allocs[0].Protection;
+                    var preferred = allocs[0].Preferred;
+                    var protection = allocs[0].Protection;
                     var allocSz = allocs[0].Size;
                     for (i = 1; i <= allocs.Length - 1; i++)
                     {
@@ -2320,10 +2248,10 @@ namespace SputnikAsm.LAutoAssembler
                         if (allocs[i].Preferred != UIntPtr.Zero || allocs[i].Protection != MemoryProtectionFlags.ExecuteReadWrite)
                         {
                             //if yes, is it the same as the previous entry? (or was the previous one that doesn't care?)
-                            if (prefered == UIntPtr.Zero)
-                                prefered = allocs[i].Preferred;
+                            if (preferred == UIntPtr.Zero)
+                                preferred = allocs[i].Preferred;
                             //if yes, is it the same as the previous entry? (or was the previous one that doesn't care?)
-                            if (prefered != allocs[i].Preferred && protection != allocs[i].Protection)
+                            if (preferred != allocs[i].Preferred && protection != allocs[i].Protection)
                             {
                                 //different preferred address or protection
                                 if (allocSz > 0)  //it has some previous entries with compatible locations
@@ -2333,25 +2261,25 @@ namespace SputnikAsm.LAutoAssembler
                                     while (k > 0 && allocs[j].Address == UIntPtr.Zero)
                                     {
                                         //try allocating until a memory region has been found (e.g due to quick allocating by the game)
-                                        if (prefered == UIntPtr.Zero && j > 0)  //if not a preferred address but there is a previous alloc, allocate near there
-                                            prefered = allocs[j - 1].Address;
-                                        oldprefered = prefered;
-                                        prefered = AMemoryHelper.FindFreeBlockForRegion(process.Handle, prefered.ToIntPtr(), (int)x).ToUIntPtr();
-                                        if (prefered == UIntPtr.Zero && oldprefered != UIntPtr.Zero)
-                                            prefered = oldprefered;
+                                        if (preferred == UIntPtr.Zero && j > 0)  //if not a preferred address but there is a previous alloc, allocate near there
+                                            preferred = allocs[j - 1].Address;
+                                        var oldPreferred = preferred;
+                                        preferred = AMemoryHelper.FindFreeBlockForRegion(process.Handle, preferred.ToIntPtr(), (int)allocSz).ToUIntPtr();
+                                        if (preferred == UIntPtr.Zero && oldPreferred != UIntPtr.Zero)
+                                            preferred = oldPreferred;
                                         // todo save old protection!
-                                        allocs[j].Address = AMemoryHelper.Allocate(process.Handle, prefered.ToIntPtr(), (int)allocSz, MemoryProtectionFlags.ExecuteReadWrite, MemoryAllocationFlags.Reserve | MemoryAllocationFlags.Commit).ToUIntPtr();
+                                        allocs[j].Address = AMemoryHelper.Allocate(process.Handle, preferred.ToIntPtr(), (int)allocSz, MemoryProtectionFlags.ExecuteReadWrite, MemoryAllocationFlags.Reserve | MemoryAllocationFlags.Commit).ToUIntPtr();
                                         if (allocs[j].Address == UIntPtr.Zero)
                                         {
                                             OutputDebugString(rsFailureToAllocateMemory + " 1");
-                                            prefered += 65536;
+                                            preferred += 65536;
                                         }
                                         k -= 1;
                                     }
                                     if (allocs[j].Address == UIntPtr.Zero)
-                                        allocs[j].Address = AMemoryHelper.LastChanceAllocPreferred(process.Handle, prefered.ToIntPtr(), (int)x, protection).ToUIntPtr();
+                                        allocs[j].Address = AMemoryHelper.LastChanceAllocPreferred(process.Handle, preferred.ToIntPtr(), (int)allocSz, protection).ToUIntPtr();
                                     if (allocs[j].Address == UIntPtr.Zero)
-                                        throw new Exception(UStringUtils.Sprintf(rsFailureAlloc, prefered));
+                                        throw new Exception(UStringUtils.Sprintf(rsFailureAlloc, preferred));
                                     if (allocs[j].Address == UIntPtr.Zero)
                                         OutputDebugString(rsFailureToAllocateMemory + " 2");
                                     //adjust the addresses of entries that are part of this block
@@ -2361,7 +2289,7 @@ namespace SputnikAsm.LAutoAssembler
                                 }
                                 //new preferred address
                                 j = i;
-                                prefered = allocs[i].Preferred;
+                                preferred = allocs[i].Preferred;
                                 protection = allocs[i].Protection;
                             }
                         }
@@ -2376,8 +2304,8 @@ namespace SputnikAsm.LAutoAssembler
                         while (k > 0 && allocs[j].Address == UIntPtr.Zero)
                         {
                             i = 0;
-                            prefered = AMemoryHelper.FindFreeBlockForRegion(process.Handle, prefered.ToIntPtr(), (int)allocSz).ToUIntPtr();
-                            allocs[j].Address = AMemoryHelper.Allocate(process.Handle, prefered.ToIntPtr(), (int)allocSz, MemoryProtectionFlags.ExecuteReadWrite, MemoryAllocationFlags.Reserve | MemoryAllocationFlags.Commit).ToUIntPtr();
+                            preferred = AMemoryHelper.FindFreeBlockForRegion(process.Handle, preferred.ToIntPtr(), (int)allocSz).ToUIntPtr();
+                            allocs[j].Address = AMemoryHelper.Allocate(process.Handle, preferred.ToIntPtr(), (int)allocSz, MemoryProtectionFlags.ExecuteReadWrite, MemoryAllocationFlags.Reserve | MemoryAllocationFlags.Commit).ToUIntPtr();
                             if (allocs[j].Address == UIntPtr.Zero)
                                 OutputDebugString(rsFailureToAllocateMemory + " 3");
                             k -= 1;
@@ -2395,34 +2323,34 @@ namespace SputnikAsm.LAutoAssembler
                 //-----------------------2nd pass------------------------
                 //assemblerlines only contains label specifiers and assembler instructions
                 assembled.SetLength(0);
-                currentlinenr = 0;
+                currentLineNr = 0;
                 try
                 {
-                    for (i = 0; i < assemblerlines.Length; i++)
+                    for (i = 0; i < assemblerLines.Length; i++)
                     {
-                        currentline = assemblerlines[i].Line;
-                        currentlinenr = assemblerlines[i].LineNr;
-                        createthreadandwaitid = -1;
-                        for (j = 0; j < createthreadandwait.Length; j++) //there can be multiple at the time of assembly.  All entries up to the higest value will be picked at a blockwrite (and made 0 so next blockwrite won't do them)
+                        currentLine = assemblerLines[i].Line;
+                        currentLineNr = assemblerLines[i].LineNr;
+                        var createThreadAndWaitId = -1;
+                        for (j = 0; j < createThreadAndWait.Length; j++) //there can be multiple at the time of assembly.  All entries up to the higest value will be picked at a blockwrite (and made 0 so next blockwrite won't do them)
                         {
-                            if (i > createthreadandwait[j].Position || i == assemblerlines.Length - 1)  //if it's the last line, then do all remaining
-                                createthreadandwaitid = j;
+                            if (i > createThreadAndWait[j].Position || i == assemblerLines.Length - 1)  //if it's the last line, then do all remaining
+                                createThreadAndWaitId = j;
                         }
-                        Tokenize(currentline, tokens);
+                        Tokenize(currentLine, tokens);
                         //if alloc then replace with the address
                         for (j = 0; j < allocs.Length; j++)
-                            currentline = ReplaceToken(currentline, allocs[j].Name, AStringUtils.IntToHex(allocs[j].Address, 8));
+                            currentLine = ReplaceToken(currentLine, allocs[j].Name, AStringUtils.IntToHex(allocs[j].Address, 8));
                         //if kalloc then replace with the address
-                        for (j = 0; j < kallocs.Length; j++)
-                            currentline = ReplaceToken(currentline, kallocs[j].Name, AStringUtils.IntToHex(kallocs[j].Address, 8));
+                        for (j = 0; j < kAllocs.Length; j++)
+                            currentLine = ReplaceToken(currentLine, kAllocs[j].Name, AStringUtils.IntToHex(kAllocs[j].Address, 8));
                         for (j = 0; j < defines.Length; j++)
-                            currentline = ReplaceToken(currentline, defines[j].Name, defines[j].Whatever);
+                            currentLine = ReplaceToken(currentLine, defines[j].Name, defines[j].Whatever);
                         ok1 = false;
-                        if (currentline[currentline.Length - 1] != ':')  //if it's not a definition then
+                        if (currentLine[currentLine.Length - 1] != ':')  //if it's not a definition then
                         {
                             for (j = 0; j < labels.Length; j++)
                             {
-                                if (!TokenCheck(currentline, labels[j].Name))
+                                if (!TokenCheck(currentLine, labels[j].Name))
                                     continue;
                                 if (!labels[j].Defined)
                                 {
@@ -2430,7 +2358,7 @@ namespace SputnikAsm.LAutoAssembler
                                     //this is the part that causes those nops after a short jump below the current instruction
                                     //problem: The size of these instructions determine where this label will be defined
                                     //close
-                                    s1 = ReplaceToken(currentline, labels[j].Name, AStringUtils.IntToHex(currentaddress, 8));
+                                    var s1 = ReplaceToken(currentLine, labels[j].Name, AStringUtils.IntToHex(currentAddress, 8));
                                     //far and big
                                     // todo add back when arm is added
                                     //if (processhandler.systemarchitecture == archarm)
@@ -2441,51 +2369,53 @@ namespace SputnikAsm.LAutoAssembler
                                         {
                                             //check if between here and the definition of labels[j].labelname is an write pointer change specifier to a region too far away from currentaddress, if not, LONG will suffice
                                             //tip: you 'could' disassemble everything inbetween and see if a small jmp is possible as well (just a lot slower)
-                                            mustbefar = false;
-                                            for (l = i + 1; l < assemblerlines.Length; l++)
+                                            var mustBeFar = false;
+                                            for (l = i + 1; l < assemblerLines.Length; l++)
                                             {
-                                                currentline2 = assemblerlines[l].Line;
-                                                if (currentline2 == labels[j].Name + ':')
+                                                var currentLine2 = assemblerLines[l].Line;
+                                                if (currentLine2 == labels[j].Name + ':')
                                                     break; //reached the label
-                                                if (currentline2[currentline2.Length - 1] == ':')
+                                                if (currentLine2[currentLine2.Length - 1] == ':')
                                                 {
                                                     //check if it's just a label or alloc in the same group
                                                     for (k = 0; k < defines.Length; k++)
-                                                        currentline2 = ReplaceToken(currentline2, defines[k].Name, defines[k].Whatever);
-                                                    s2 = AStringUtils.Copy(currentline2, 0, currentline2.Length - 1);
+                                                        currentLine2 = ReplaceToken(currentLine2, defines[k].Name, defines[k].Whatever);
+                                                    var s2 = AStringUtils.Copy(currentLine2, 0, currentLine2.Length - 1);
                                                     for (k = 0; k < allocs.Length; k++)
                                                     {
                                                         if (allocs[k].Name == s2)
                                                         {
-                                                            if (currentaddress.ToUInt64() > allocs[k].Address.ToUInt64())
-                                                                diff = (UIntPtr)(currentaddress.ToUInt64() - allocs[k].Address.ToUInt64());
+                                                            var diff = UIntPtr.Zero;
+                                                            if (currentAddress.ToUInt64() > allocs[k].Address.ToUInt64())
+                                                                diff = (UIntPtr)(currentAddress.ToUInt64() - allocs[k].Address.ToUInt64());
                                                             else
-                                                                diff = (UIntPtr)(allocs[k].Address.ToUInt64() - currentaddress.ToUInt64());
+                                                                diff = (UIntPtr)(allocs[k].Address.ToUInt64() - currentAddress.ToUInt64());
                                                             if (diff.ToUInt64() >= 0x80000000)
                                                             {
-                                                                mustbefar = true;
+                                                                mustBeFar = true;
                                                                 break;
                                                             }
                                                         }
                                                     }
-                                                    if (mustbefar)
+                                                    if (mustBeFar)
                                                         break;
-                                                    for (k = 0; k < kallocs.Length; k++)
+                                                    for (k = 0; k < kAllocs.Length; k++)
                                                     {
-                                                        if (kallocs[k].Name == s2)
+                                                        if (kAllocs[k].Name == s2)
                                                         {
-                                                            if (currentaddress.ToUInt64() > kallocs[k].Address.ToUInt64())
-                                                                diff = (UIntPtr)(currentaddress.ToUInt64() - kallocs[k].Address.ToUInt64());
+                                                            var diff = UIntPtr.Zero;
+                                                            if (currentAddress.ToUInt64() > kAllocs[k].Address.ToUInt64())
+                                                                diff = (UIntPtr)(currentAddress.ToUInt64() - kAllocs[k].Address.ToUInt64());
                                                             else
-                                                                diff = (UIntPtr)(kallocs[k].Address.ToUInt64() - currentaddress.ToUInt64());
+                                                                diff = (UIntPtr)(kAllocs[k].Address.ToUInt64() - currentAddress.ToUInt64());
                                                             if (diff.ToUInt64() >= 0x80000000)
                                                             {
-                                                                mustbefar = true;
+                                                                mustBeFar = true;
                                                                 break;
                                                             }
                                                         }
                                                     }
-                                                    if (mustbefar)
+                                                    if (mustBeFar)
                                                         break;
                                                     //if it's a label it's ok
                                                     ok1 = false;
@@ -2501,57 +2431,58 @@ namespace SputnikAsm.LAutoAssembler
                                                         continue; //it's a label, no need to do a heavy symbol lookupl // not an alloc or kalloc
                                                     try
                                                     {
-                                                        var testptr = symHandler.GetAddressFromName(AStringUtils.Copy(currentline2, 0, currentline2.Length - 1));
-                                                        if (currentaddress.ToUInt64() > testptr.ToUInt64())
-                                                            diff = (UIntPtr)(currentaddress.ToUInt64() - testptr.ToUInt64());
+                                                        var testPtr = symHandler.GetAddressFromName(AStringUtils.Copy(currentLine2, 0, currentLine2.Length - 1));
+                                                        var diff = UIntPtr.Zero;
+                                                        if (currentAddress.ToUInt64() > testPtr.ToUInt64())
+                                                            diff = (UIntPtr)(currentAddress.ToUInt64() - testPtr.ToUInt64());
                                                         else
-                                                            diff = (UIntPtr)(testptr.ToUInt64() - currentaddress.ToUInt64());
+                                                            diff = (UIntPtr)(testPtr.ToUInt64() - currentAddress.ToUInt64());
                                                         if (diff.ToUInt64() >= 0x80000000)
                                                         {
-                                                            mustbefar = true;
+                                                            mustBeFar = true;
                                                             break;
                                                         }
                                                     }
                                                     catch
                                                     {
-                                                        mustbefar = true;
+                                                        mustBeFar = true;
                                                     }
-                                                    if (mustbefar)
+                                                    if (mustBeFar)
                                                         break;
                                                 }
                                             }
-                                            if (mustbefar)
-                                                currentline = ReplaceToken(currentline, labels[j].Name, AStringUtils.IntToHex(currentaddress + 0xfffff, 8));
+                                            if (mustBeFar)
+                                                currentLine = ReplaceToken(currentLine, labels[j].Name, AStringUtils.IntToHex(currentAddress + 0xfffff, 8));
                                             else
-                                                currentline = ReplaceToken(currentline, labels[j].Name, AStringUtils.IntToHex(currentaddress + 0xfffff, 8));
+                                                currentLine = ReplaceToken(currentLine, labels[j].Name, AStringUtils.IntToHex(currentAddress + 0xfffff, 8));
                                         }
                                         else
-                                            currentline = ReplaceToken(currentline, labels[j].Name, AStringUtils.IntToHex(currentaddress + 0xfffff, 8));
+                                            currentLine = ReplaceToken(currentLine, labels[j].Name, AStringUtils.IntToHex(currentAddress + 0xfffff, 8));
                                     }
                                     assembled.Inc();
-                                    assembled.Last.CreateThreadAndWait = createthreadandwaitid;
-                                    assembled.Last.Address = currentaddress;
-                                    Assembler.Assemble(currentline, currentaddress.ToUInt64(), assembled.Last.Bytes, AAssemblerPreference.None, true);
-                                    a = assembled.Last.Bytes.Length;
-                                    Assembler.Assemble(s1, currentaddress.ToUInt64(), assembled.Last.Bytes, AAssemblerPreference.None, true);
-                                    b = assembled.Last.Bytes.Length;
+                                    assembled.Last.CreateThreadAndWait = createThreadAndWaitId;
+                                    assembled.Last.Address = currentAddress;
+                                    Assembler.Assemble(currentLine, currentAddress.ToUInt64(), assembled.Last.Bytes, AAssemblerPreference.None, true);
+                                    var a = assembled.Last.Bytes.Length;
+                                    Assembler.Assemble(s1, currentAddress.ToUInt64(), assembled.Last.Bytes, AAssemblerPreference.None, true);
+                                    var b = assembled.Last.Bytes.Length;
                                     if (a > b)  //pick the biggest one
-                                        Assembler.Assemble(currentline, currentaddress.ToUInt64(), assembled.Last.Bytes);
+                                        Assembler.Assemble(currentLine, currentAddress.ToUInt64(), assembled.Last.Bytes);
                                     labels[j].References.Inc();
                                     labels[j].References.Last = (Byte)(assembled.Length - 1);
                                     labels[j].References2.Inc();
                                     labels[j].References2.Last = (Byte)i;
-                                    currentaddress += assembled.Last.Bytes.Length;
+                                    currentAddress += assembled.Last.Bytes.Length;
                                     ok1 = true;
                                 }
                                 else
-                                    currentline = ReplaceToken(currentline, labels[j].Name, AStringUtils.IntToHex(labels[j].Address, 8));
+                                    currentLine = ReplaceToken(currentLine, labels[j].Name, AStringUtils.IntToHex(labels[j].Address, 8));
                                 //break;
                             }
                         }
                         if (ok1)
                             continue;
-                        if (currentline[currentline.Length - 1] == ':')
+                        if (currentLine[currentLine.Length - 1] == ':')
                         {
                             ok1 = false;
                             for (j = 0; j < labels.Length; j++)
@@ -2559,23 +2490,23 @@ namespace SputnikAsm.LAutoAssembler
                                 if (i != labels[j].AssemblerLine)
                                     continue;
                                 if (labels[j].Defined)
-                                    currentaddress = labels[j].Address;
+                                    currentAddress = labels[j].Address;
                                 else
                                 {
-                                    labels[j].Address = currentaddress;
+                                    labels[j].Address = currentAddress;
                                     labels[j].Defined = true;
                                 }
                                 ok1 = true;
                                 //reassemble the instructions that had no target
                                 for (k = 0; k < labels[j].References.Length; k++)
                                 {
-                                    a = assembled[labels[j].References[k]].Bytes.Length; //original size of the assembled code
-                                    s1 = ReplaceToken(assemblerlines[labels[j].References2[k]].Line, labels[j].Name, AStringUtils.IntToHex(labels[j].Address, 8));
+                                    var a = assembled[labels[j].References[k]].Bytes.Length; //original size of the assembled code
+                                    var s1 = ReplaceToken(assemblerLines[labels[j].References2[k]].Line, labels[j].Name, AStringUtils.IntToHex(labels[j].Address, 8));
                                     if (process.IsX64)
                                         Assembler.Assemble(s1, assembled[labels[j].References[k]].Address.ToUInt64(), assembled[labels[j].References[k]].Bytes);
                                     else
                                         Assembler.Assemble(s1, assembled[labels[j].References[k]].Address.ToUInt64(), assembled[labels[j].References[k]].Bytes, AAssemblerPreference.None);
-                                    b = assembled[labels[j].References[k]].Bytes.Length; //new size
+                                    var b = assembled[labels[j].References[k]].Bytes.Length; //new size
                                     assembled[labels[j].References[k]].Bytes.SetLength(a); //original size (original size is always bigger or equal than newsize)
                                     if (b < a && a < 12)  //try to grow the instruction as some people cry about nops (unless it was a megajmp/call as those are less efficient)
                                     {
@@ -2608,7 +2539,7 @@ namespace SputnikAsm.LAutoAssembler
                                 continue;
                             try
                             {
-                                currentaddress = symHandler.GetAddressFromName(AStringUtils.Copy(currentline, 0, currentline.Length - 1));
+                                currentAddress = symHandler.GetAddressFromName(AStringUtils.Copy(currentLine, 0, currentLine.Length - 1));
                                 continue; //next line
                             }
                             catch
@@ -2618,38 +2549,38 @@ namespace SputnikAsm.LAutoAssembler
                             }
                         }
                         assembled.Inc();
-                        assembled.Last.Address = currentaddress;
-                        assembled.Last.CreateThreadAndWait = createthreadandwaitid;
-                        if ((currentline != "") && (currentline[1] == '<'))  //special assembler instruction
+                        assembled.Last.Address = currentAddress;
+                        assembled.Last.CreateThreadAndWait = createThreadAndWaitId;
+                        if ((currentLine != "") && (currentLine[1] == '<'))  //special assembler instruction
                         {
-                            if (AStringUtils.Copy(currentline, 0, 8).ToUpper() == "<READMEM")
+                            if (AStringUtils.Copy(currentLine, 0, 8).ToUpper() == "<READMEM")
                             {
                                 //lets try this for once
-                                l = UStringUtils.Atoi(currentline, 8);
-                                assembled.Last.Bytes.SetLength(readmems[l].Length);
-                                AArrayUtils.CopyMemory(assembled.Last.Bytes, readmems[l].Bytes, readmems[l].Length);
+                                l = UStringUtils.Atoi(currentLine, 8);
+                                assembled.Last.Bytes.SetLength(readMems[l].Length);
+                                AArrayUtils.CopyMemory(assembled.Last.Bytes, readMems[l].Bytes, readMems[l].Length);
                             }
                             else
-                                Assembler.Assemble(currentline, currentaddress.ToUInt64(), assembled.Last.Bytes);
+                                Assembler.Assemble(currentLine, currentAddress.ToUInt64(), assembled.Last.Bytes);
                         }
                         else
-                            Assembler.Assemble(currentline, currentaddress.ToUInt64(), assembled.Last.Bytes);
-                        currentaddress += assembled.Last.Bytes.Length;
+                            Assembler.Assemble(currentLine, currentAddress.ToUInt64(), assembled.Last.Bytes);
+                        currentAddress += assembled.Last.Bytes.Length;
                     }
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception(currentlinenr + ':' + ex.Message);
+                    throw new Exception(currentLineNr + ':' + ex.Message);
                 }
                 ok2 = true;
                 #endregion
                 //unprotectmemory
-                for (i = 0; i < fullaccess.Length; i++)
+                for (i = 0; i < fullAccess.Length; i++)
                 {
                     if (createScript)
-                        scriptBytes.Add(AScriptObjectType.FullAccess, fullaccess[i].Address, new AByteArray());
+                        scriptBytes.Add(AScriptObjectType.FullAccess, fullAccess[i].Address, new AByteArray());
                     else
-                        AMemoryHelper.FullAccess(process.Handle, fullaccess[i].Address.ToIntPtr(), (int)fullaccess[i].Size);
+                        AMemoryHelper.FullAccess(process.Handle, fullAccess[i].Address.ToIntPtr(), (int)fullAccess[i].Size);
                 }
                 #region Load Binaries -- todo
                 //load binaries
@@ -2793,7 +2724,7 @@ namespace SputnikAsm.LAutoAssembler
                 {
                     if (assembled[i].Bytes.Length == 0)
                         continue;
-                    testPtr = assembled[i].Address;
+                    var testPtr = assembled[i].Address;
                     if (createScript)
                     {
                         scriptBytes.Add(AScriptObjectType.Poke, testPtr, new AByteArray(assembled[i].Bytes.TakeAll()));
@@ -2813,28 +2744,29 @@ namespace SputnikAsm.LAutoAssembler
                         //create threads
                         for (j = 0; j <= assembled[i].CreateThreadAndWait; j++)
                         {
-                            if (createthreadandwait[j].Position != -1)
+                            if (createThreadAndWait[j].Position != -1)
                             {
                                 //create the thread and wait for it's result
-                                testPtr = GetAddressFromScript(createthreadandwait[j].Name, targetSelf, labels, allocs, kallocs, defines);
-                                threadhandle = process.ThreadFactory.Create(testPtr.ToIntPtr());
-                                ok2 = threadhandle.Id != 0;
+                                testPtr = GetAddressFromScript(createThreadAndWait[j].Name, targetSelf, labels, allocs, kAllocs, defines);
+                                var threadHandle = process.ThreadFactory.Create(testPtr.ToIntPtr());
+                                ok2 = threadHandle.Id != 0;
                                 if (ok2)
                                 {
                                     try
                                     {
-                                        k = createthreadandwait[j].Timeout;
+                                        k = createThreadAndWait[j].Timeout;
+                                        var y = 0u;
                                         if (k <= 0)
                                             y = 0;
                                         else
                                             y = (uint)k;
                                         var epoch = UDateTime.EpochMil();
-                                        while (threadhandle.IsAlive)
+                                        while (threadHandle.IsAlive)
                                         {
                                             if (y > 0 && UDateTime.EpochMil(epoch) > y)
                                             {
-                                                threadhandle.Terminate();
-                                                threadhandle.Dispose();
+                                                threadHandle.Terminate();
+                                                threadHandle.Dispose();
                                                 break;
                                             }
                                             UDateTime.Sleep(10);
@@ -2842,10 +2774,10 @@ namespace SputnikAsm.LAutoAssembler
                                     }
                                     catch
                                     {
-                                        threadhandle?.Dispose();
+                                        threadHandle?.Dispose();
                                     }
                                 }
-                                createthreadandwait[j].Position = -1; //mark it as handled
+                                createThreadAndWait[j].Position = -1; //mark it as handled
                             }
                         }
                     }
@@ -2885,10 +2817,6 @@ namespace SputnikAsm.LAutoAssembler
                         }
                         if (dealloc.Length > 0 && (dealloc.Length == disableInfo.Allocs.Length))  //free everything
                         {
-                            if (Assembler.Is64Bit)
-                                baseaddress = (UIntPtr)0xFFFFFFFFFFFFFFFF;
-                            else
-                                baseaddress = (UIntPtr)0xffffffff;
                             for (i = 0; i < disableInfo.Allocs.Length; i++)
                             {
                                 AMemoryHelper.Free(process.Handle, dealloc[i].ToIntPtr());
@@ -2917,21 +2845,21 @@ namespace SputnikAsm.LAutoAssembler
                     #endregion
                     //check the addsymbollist array and deletesymbollist array
                     //first delete
-                    for (i = 0; i < deletesymbollist.Length; i++)
-                        symHandler.DeleteUserDefinedSymbol(deletesymbollist[i]);
+                    for (i = 0; i < deleteSymbolList.Length; i++)
+                        symHandler.DeleteUserDefinedSymbol(deleteSymbolList[i]);
                     //now scan the addsymbollist array and add them to the userdefined list
-                    for (i = 0; i < addsymbollist.Length; i++)
+                    for (i = 0; i < addSymbolList.Length; i++)
                     {
                         ok1 = false;
                         for (j = 0; j < allocs.Length; j++)
                         {
 
-                            if (String.Equals(addsymbollist[i], allocs[j].Name, StringComparison.CurrentCultureIgnoreCase))
+                            if (String.Equals(addSymbolList[i], allocs[j].Name, StringComparison.CurrentCultureIgnoreCase))
                             {
                                 try
                                 {
-                                    symHandler.DeleteUserDefinedSymbol(addsymbollist[i]); //delete old one so you can add the new one
-                                    symHandler.AddUserDefinedSymbol(AStringUtils.IntToHex(allocs[j].Address, 8), addsymbollist[i]);
+                                    symHandler.DeleteUserDefinedSymbol(addSymbolList[i]); //delete old one so you can add the new one
+                                    symHandler.AddUserDefinedSymbol(AStringUtils.IntToHex(allocs[j].Address, 8), addSymbolList[i]);
                                     ok1 = true;
                                 }
                                 catch
@@ -2945,12 +2873,12 @@ namespace SputnikAsm.LAutoAssembler
                         {
                             for (j = 0; j < labels.Length; j++)
                             {
-                                if (String.Equals(addsymbollist[i], labels[j].Name, StringComparison.CurrentCultureIgnoreCase))
+                                if (String.Equals(addSymbolList[i], labels[j].Name, StringComparison.CurrentCultureIgnoreCase))
                                 {
                                     try
                                     {
-                                        symHandler.DeleteUserDefinedSymbol(addsymbollist[i]); //delete old one so you can add the new one
-                                        symHandler.AddUserDefinedSymbol(AStringUtils.IntToHex(labels[j].Address, 8), addsymbollist[i]);
+                                        symHandler.DeleteUserDefinedSymbol(addSymbolList[i]); //delete old one so you can add the new one
+                                        symHandler.AddUserDefinedSymbol(AStringUtils.IntToHex(labels[j].Address, 8), addSymbolList[i]);
                                         ok1 = true;
                                     }
                                     catch
@@ -2965,12 +2893,12 @@ namespace SputnikAsm.LAutoAssembler
                         {
                             for (j = 0; j < defines.Length; j++)
                             {
-                                if (String.Equals(addsymbollist[i], defines[j].Name, StringComparison.CurrentCultureIgnoreCase))
+                                if (String.Equals(addSymbolList[i], defines[j].Name, StringComparison.CurrentCultureIgnoreCase))
                                 {
                                     try
                                     {
-                                        symHandler.DeleteUserDefinedSymbol(addsymbollist[i]); //delete old one so you can add the new one
-                                        symHandler.AddUserDefinedSymbol(defines[j].Whatever, addsymbollist[i]);
+                                        symHandler.DeleteUserDefinedSymbol(addSymbolList[i]); //delete old one so you can add the new one
+                                        symHandler.AddUserDefinedSymbol(defines[j].Whatever, addSymbolList[i]);
                                         ok1 = true;
                                     }
                                     catch
@@ -2983,14 +2911,15 @@ namespace SputnikAsm.LAutoAssembler
                     }
                     #region Create Threads
                     //still here, so create threads if needed
-                    if (createthread.Length > 0)
+                    if (createThread.Length > 0)
                     {
-                        for (i = 0; i < createthread.Length; i++)
+                        for (i = 0; i < createThread.Length; i++)
                         {
                             ok1 = true;
+                            var testPtr = UIntPtr.Zero;
                             try
                             {
-                                testPtr = symHandler.GetAddressFromName(createthread[i]);
+                                testPtr = symHandler.GetAddressFromName(createThread[i]);
                             }
                             catch
                             {
@@ -3000,7 +2929,7 @@ namespace SputnikAsm.LAutoAssembler
                             {
                                 for (j = 0; j < labels.Length; j++)
                                 {
-                                    if (String.Equals(labels[j].Name, createthread[i], StringComparison.CurrentCultureIgnoreCase))
+                                    if (String.Equals(labels[j].Name, createThread[i], StringComparison.CurrentCultureIgnoreCase))
                                     {
                                         ok1 = true;
                                         testPtr = labels[j].Address;
@@ -3012,7 +2941,7 @@ namespace SputnikAsm.LAutoAssembler
                             {
                                 for (j = 0; j < allocs.Length; j++)
                                 {
-                                    if (String.Equals(kallocs[j].Name, createthread[i], StringComparison.CurrentCultureIgnoreCase))
+                                    if (String.Equals(kAllocs[j].Name, createThread[i], StringComparison.CurrentCultureIgnoreCase))
                                     {
                                         ok1 = true;
                                         testPtr = allocs[j].Address;
@@ -3022,12 +2951,12 @@ namespace SputnikAsm.LAutoAssembler
                             }
                             if (!ok1)
                             {
-                                for (j = 0; j < kallocs.Length; j++)
+                                for (j = 0; j < kAllocs.Length; j++)
                                 {
-                                    if (String.Equals(kallocs[j].Name, createthread[i], StringComparison.CurrentCultureIgnoreCase))
+                                    if (String.Equals(kAllocs[j].Name, createThread[i], StringComparison.CurrentCultureIgnoreCase))
                                     {
                                         ok1 = true;
-                                        testPtr = kallocs[j].Address;
+                                        testPtr = kAllocs[j].Address;
                                         break;
                                     }
                                 }
@@ -3036,7 +2965,7 @@ namespace SputnikAsm.LAutoAssembler
                             {
                                 for (j = 0; j < defines.Length; j++)
                                 {
-                                    if (String.Equals(defines[j].Name, createthread[i], StringComparison.CurrentCultureIgnoreCase))
+                                    if (String.Equals(defines[j].Name, createThread[i], StringComparison.CurrentCultureIgnoreCase))
                                     {
                                         try
                                         {
@@ -3055,11 +2984,11 @@ namespace SputnikAsm.LAutoAssembler
                             {
                                 try
                                 {
-                                    threadhandle = process.ThreadFactory.Create(testPtr.ToIntPtr());
+                                    var threadHandle = process.ThreadFactory.Create(testPtr.ToIntPtr());
                                     // todo why are we closing the thread?
-                                    ok2 = threadhandle.Id != 0;
+                                    ok2 = threadHandle.Id != 0;
                                     if (ok2)
-                                        threadhandle.Dispose(); // lose control of the thread and let it run wild
+                                        threadHandle.Dispose(); // lose control of the thread and let it run wild
                                 }
                                 catch
                                 {
@@ -3076,25 +3005,24 @@ namespace SputnikAsm.LAutoAssembler
                             disableInfo.AllSymbols.Add(new ARefString(labels[i].Name, labels[i].Address));
                         for (i = 0; i < allocs.Length; i++)
                             disableInfo.AllSymbols.Add(new ARefString(allocs[i].Name, allocs[i].Address));
-                        for (i = 0; i < kallocs.Length; i++)
-                            disableInfo.AllSymbols.Add(new ARefString(kallocs[i].Name, kallocs[i].Address));
+                        for (i = 0; i < kAllocs.Length; i++)
+                            disableInfo.AllSymbols.Add(new ARefString(kAllocs[i].Name, kAllocs[i].Address));
                         for (i = 0; i < defines.Length; i++)
                         {
-                            testPtr = symHandler.GetAddressFromName(defines[j].Whatever, false, out ok1);
+                            var testPtr = symHandler.GetAddressFromName(defines[j].Whatever, false, out ok1);
                             if (ok1 == false)
                                 disableInfo.AllSymbols.Add(new ARefString(defines[i].Name, testPtr));
                         }
                     }
                     if (popUpMessages)
                     {
-                        testPtr = UIntPtr.Zero;
-                        s1 = "";
-                        for (i = 0; i < globalallocs.Length; i++)
+                        var testPtr = UIntPtr.Zero;
+                        var s1 = "";
+                        for (i = 0; i < globalAllocs.Length; i++)
                         {
                             if (testPtr == UIntPtr.Zero)
-                                testPtr = globalallocs[i].Address;
-
-                            s1 = s1 + "\r\n" + globalallocs[i].Name + '=' + AStringUtils.IntToHex(globalallocs[i].Address, 8);
+                                testPtr = globalAllocs[i].Address;
+                            s1 = s1 + "\r\n" + globalAllocs[i].Name + '=' + AStringUtils.IntToHex(globalAllocs[i].Address, 8);
                         }
                         for (i = 0; i < allocs.Length; i++)
                         {
@@ -3104,13 +3032,13 @@ namespace SputnikAsm.LAutoAssembler
                                 testPtr = allocs[i].Address;
                             s1 = s1 + "\r\n" + allocs[i].Name + '=' + AStringUtils.IntToHex(allocs[i].Address, 8);
                         }
-                        if (kallocs.Length > 0)
+                        if (kAllocs.Length > 0)
                         {
                             if (testPtr == UIntPtr.Zero)
-                                testPtr = kallocs[i].Address;
+                                testPtr = kAllocs[i].Address;
                             s1 = "\r\n" + rsTheFollowingKernelAddressesWhereAllocated + ':';
-                            for (i = 0; i < kallocs.Length; i++)
-                                s1 = s1 + "\r\n" + kallocs[i].Name + '=' + AStringUtils.IntToHex(kallocs[i].Address, 8);
+                            for (i = 0; i < kAllocs.Length; i++)
+                                s1 = s1 + "\r\n" + kAllocs[i].Name + '=' + AStringUtils.IntToHex(kAllocs[i].Address, 8);
                         }
                         MessageBox.Show(rsTheCodeInjectionWasSuccessfull + s1);
                     }
