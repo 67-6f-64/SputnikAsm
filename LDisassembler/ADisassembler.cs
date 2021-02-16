@@ -22,7 +22,7 @@ using SputnikAsm.LUtils;
 
 namespace SputnikAsm.LDisassembler
 {
-    public partial class ADisassembler : IUDisposable
+    public class ADisassembler : IUDisposable
     {
         #region Internal Classes
         #region ADecodeValue
@@ -53,27 +53,27 @@ namespace SputnikAsm.LDisassembler
         const int BIT_REX_B = 1;
         #endregion
         #region Properties
-        public Boolean RexB => _opCodeFlags.B;
-        public Boolean RexX => _opCodeFlags.X;
-        public Boolean RexR => _opCodeFlags.R;
-        public Boolean RexW => _opCodeFlags.W;
+        public Boolean RexB => OpCodeFlags.B;
+        public Boolean RexX => OpCodeFlags.X;
+        public Boolean RexR => OpCodeFlags.R;
+        public Boolean RexW => OpCodeFlags.W;
         public AProcessSharp Proc => SymbolHandler.Process;
         public Boolean IsDisposed { get; set; }
         #endregion
         #region Variables
-        private UBytePtr _memory;
-        private AOpCodeFlags _opCodeFlags;
-        private APrefix _prefix;
-        private APrefix _prefix2;
-        private Boolean _hasVex;
-        private Boolean _ripRelative;
-        private String _colorHex;
-        private String _colorReg;
-        private String _colorSymbol;
-        private String _endColor;
-        private Boolean _aggressiveAlignment;
-        private ATmrPos _modRmPosition;
-        private Byte _rexPrefix;
+        public UBytePtr Memory;
+        public AOpCodeFlags OpCodeFlags;
+        public APrefix Prefix;
+        public APrefix Prefix2;
+        public Boolean HasVex;
+        public Boolean RipRelative;
+        public String ColorHex;
+        public String ColorReg;
+        public String ColorSymbol;
+        public String EndColor;
+        public ATmrPos ModRmPosition;
+        public Byte RexPrefix;
+        public Boolean AggressiveAlignment;
         public ALastDisassembleData LastDisassembleData;
         public Boolean Debug;
         public Boolean ShowSymbols;
@@ -93,22 +93,22 @@ namespace SputnikAsm.LDisassembler
         {
             IsDisposed = false;
             SymbolHandler = symbolHandler;
-            _rexPrefix = 0;
-            _colorHex = "";
-            _colorReg = "";
-            _colorSymbol = "";
-            _endColor = "";
-            _opCodeFlags = new AOpCodeFlags();
+            RexPrefix = 0;
+            ColorHex = "";
+            ColorReg = "";
+            ColorSymbol = "";
+            EndColor = "";
+            OpCodeFlags = new AOpCodeFlags();
             LastDisassembleData = new ALastDisassembleData();
             Debug = false;
             SyntaxHighlighting = false;
-            _modRmPosition = ATmrPos.None;
-            _aggressiveAlignment = false;
-            _memory = new UBytePtr(64);
-            _hasVex = false;
-            _ripRelative = false;
-            _prefix = new APrefix();
-            _prefix2 = new APrefix();
+            ModRmPosition = ATmrPos.None;
+            AggressiveAlignment = false;
+            Memory = new UBytePtr(64);
+            HasVex = false;
+            RipRelative = false;
+            Prefix = new APrefix();
+            Prefix2 = new APrefix();
             ShowSymbols = false;
             ShowModules = false;
             ShowSections = false;
@@ -130,7 +130,7 @@ namespace SputnikAsm.LDisassembler
         }
         #endregion
         #region RegNrToStr
-        private String RegNrToStr(ARegisterType listType, int nr)
+        public String RegNrToStr(ARegisterType listType, int nr)
         {
             var result = "Error";
             switch (listType)
@@ -143,10 +143,10 @@ namespace SputnikAsm.LDisassembler
                             case 1: result = "cl"; break;
                             case 2: result = "dl"; break;
                             case 3: result = "bl"; break;
-                            case 4: result = _rexPrefix == 0 ? "ah" : "spl"; break;
-                            case 5: result = _rexPrefix == 0 ? "ch" : "bpl"; break;
-                            case 6: result = _rexPrefix == 0 ? "dh" : "sil"; break;
-                            case 7: result = _rexPrefix == 0 ? "bh" : "dil"; break;
+                            case 4: result = RexPrefix == 0 ? "ah" : "spl"; break;
+                            case 5: result = RexPrefix == 0 ? "ch" : "bpl"; break;
+                            case 6: result = RexPrefix == 0 ? "dh" : "sil"; break;
+                            case 7: result = RexPrefix == 0 ? "bh" : "dil"; break;
                             case 8: result = "r8l"; break;
                             case 9: result = "r9l"; break;
                             case 10: result = "r10l"; break;
@@ -378,7 +378,7 @@ namespace SputnikAsm.LDisassembler
         }
         #endregion
         #region Rd
-        private String Rd(Byte bt)
+        public String Rd(Byte bt)
         {
             String result;
             if (RexB)
@@ -414,12 +414,12 @@ namespace SputnikAsm.LDisassembler
                 using (var p = new UCharPtr(result))
                     p[0] = 'r'; //replace eax,ebx with rax,rbx...
             }
-            result = _colorReg + result + _endColor;
+            result = ColorReg + result + EndColor;
             return result;
         }
         #endregion
         #region Rd8
-        private String Rd8(Byte bt)
+        public String Rd8(Byte bt)
         {
             String result;
             if (RexB)
@@ -430,10 +430,10 @@ namespace SputnikAsm.LDisassembler
                 case 1: result = "cl"; break;
                 case 2: result = "dl"; break;
                 case 3: result = "bl"; break;
-                case 4: result = _rexPrefix == 0 ? "ah" : "spl"; break;
-                case 5: result = _rexPrefix == 0 ? "ch" : "bpl"; break;
-                case 6: result = _rexPrefix == 0 ? "dh" : "sil"; break;
-                case 7: result = _rexPrefix == 0 ? "bh" : "dil"; break;
+                case 4: result = RexPrefix == 0 ? "ah" : "spl"; break;
+                case 5: result = RexPrefix == 0 ? "ch" : "bpl"; break;
+                case 6: result = RexPrefix == 0 ? "dh" : "sil"; break;
+                case 7: result = RexPrefix == 0 ? "bh" : "dil"; break;
                 case 8: result = "r8l"; break;
                 case 9: result = "r9l"; break;
                 case 10: result = "r10l"; break;
@@ -444,12 +444,12 @@ namespace SputnikAsm.LDisassembler
                 case 15: result = "r15l"; break;
                 default: result = ""; break;
             }
-            result = _colorReg + result + _endColor;
+            result = ColorReg + result + EndColor;
             return result;
         }
         #endregion
         #region Rd16
-        private String Rd16(Byte bt)
+        public String Rd16(Byte bt)
         {
             String result;
             if (RexB)
@@ -474,12 +474,12 @@ namespace SputnikAsm.LDisassembler
                 case 15: result = "r15w"; break;
                 default: result = ""; break;
             }
-            result = _colorReg + result + _endColor;
+            result = ColorReg + result + EndColor;
             return result;
         }
         #endregion
         #region GetReg
-        private Byte GetReg(Byte bt)
+        public Byte GetReg(Byte bt)
         {
             var result = (bt >> 3) & 7;
             if (RexR)
@@ -488,7 +488,7 @@ namespace SputnikAsm.LDisassembler
         }
         #endregion
         #region GetSegmentOverride
-        private String GetSegmentOverride(APrefix prefix)
+        public String GetSegmentOverride(APrefix prefix)
         {
             var result = "";
             if (prefix.Contains(0x2e))
@@ -507,101 +507,101 @@ namespace SputnikAsm.LDisassembler
         }
         #endregion
         #region GetBitOf
-        private Byte GetBitOf(UInt64 bt, int bit)
+        public Byte GetBitOf(UInt64 bt, int bit)
         {
             var result = ABitUtils.GetBit(bit, bt);
             return (Byte)result;
         }
         #endregion
         #region GetMod
-        private Byte GetMod(Byte bt)
+        public Byte GetMod(Byte bt)
         {
             var result = (bt >> 6) & 3;
             return (Byte) result;
         }
         #endregion
         #region R8
-        private String R8(Byte bt)
+        public String R8(Byte bt)
         {
             var regNr = GetReg(bt);
-            var result = _colorReg + RegNrToStr(ARegisterType.Rt8, regNr) + _endColor;
+            var result = ColorReg + RegNrToStr(ARegisterType.Rt8, regNr) + EndColor;
             return result;
         }
         #endregion
         #region R16
-        private String R16(Byte bt)
+        public String R16(Byte bt)
         {
             var regNr = GetReg(bt);
-            var result = _colorReg + RegNrToStr(ARegisterType.Rt16, regNr) + _endColor;
+            var result = ColorReg + RegNrToStr(ARegisterType.Rt16, regNr) + EndColor;
             return result;
         }
         #endregion
         #region R32
-        private String R32(Byte bt)
+        public String R32(Byte bt)
         {
             var regNr = GetReg(bt);
             String result;
             if (RexW)
-                result = _colorReg + RegNrToStr(ARegisterType.Rt64, regNr) + _endColor;
+                result = ColorReg + RegNrToStr(ARegisterType.Rt64, regNr) + EndColor;
             else
-                result = _colorReg + RegNrToStr(ARegisterType.Rt32, regNr) + _endColor;
+                result = ColorReg + RegNrToStr(ARegisterType.Rt32, regNr) + EndColor;
             return result;
         }
         #endregion
         #region R64
-        private String R64(Byte bt)
+        public String R64(Byte bt)
         {
             var regNr = GetReg(bt);
-            var result = _colorReg + RegNrToStr(ARegisterType.Rt64, regNr) + _endColor;
+            var result = ColorReg + RegNrToStr(ARegisterType.Rt64, regNr) + EndColor;
             return result;
         }
         #endregion
         #region Xmm
-        private String Xmm(Byte bt)
+        public String Xmm(Byte bt)
         {
             var regNr = GetReg(bt);
             String result;
-            if (_opCodeFlags.L)
-                result = _colorReg + RegNrToStr(ARegisterType.RtYmm, regNr) + _endColor;
+            if (OpCodeFlags.L)
+                result = ColorReg + RegNrToStr(ARegisterType.RtYmm, regNr) + EndColor;
             else
-                result = _colorReg + RegNrToStr(ARegisterType.RtXmm, regNr) + _endColor;
+                result = ColorReg + RegNrToStr(ARegisterType.RtXmm, regNr) + EndColor;
             return result;
         }
         #endregion
         #region Mm
-        private String Mm(Byte bt)
+        public String Mm(Byte bt)
         {
             var regNr = GetReg(bt);
-            var result = _colorReg + RegNrToStr(ARegisterType.RtMm, regNr) + _endColor;
+            var result = ColorReg + RegNrToStr(ARegisterType.RtMm, regNr) + EndColor;
             return result;
         }
         #endregion
         #region SReg
-        private String SReg(Byte bt)
+        public String SReg(Byte bt)
         {
             var regNr = GetReg(bt);
-            var result = _colorReg + RegNrToStr(ARegisterType.RtSegment, regNr) + _endColor;
+            var result = ColorReg + RegNrToStr(ARegisterType.RtSegment, regNr) + EndColor;
             return result;
         }
         #endregion
         #region Cr
-        private String Cr(Byte bt)
+        public String Cr(Byte bt)
         {
             var regNr = GetReg(bt);
-            var result = _colorReg + RegNrToStr(ARegisterType.RtControlRegister, regNr) + _endColor;
+            var result = ColorReg + RegNrToStr(ARegisterType.RtControlRegister, regNr) + EndColor;
             return result;
         }
         #endregion
         #region Dr
-        private String Dr(Byte bt)
+        public String Dr(Byte bt)
         {
             var regNr = GetReg(bt);
-            var result = _colorReg + RegNrToStr(ARegisterType.RtDebugRegister, regNr) + _endColor;
+            var result = ColorReg + RegNrToStr(ARegisterType.RtDebugRegister, regNr) + EndColor;
             return result;
         }
         #endregion
         #region GetRm
-        private Byte GetRm(Byte bt)
+        public Byte GetRm(Byte bt)
         {
             var result = bt & 7;
             //if this instruction does NOT have a SIB byte, only then apply the rex_B bit
@@ -612,12 +612,12 @@ namespace SputnikAsm.LDisassembler
         }
         #endregion
         #region ModRm
-        private String ModRm(UBytePtr memory, APrefix prefix, int modRmByte, int inst, ref UInt32 last, int operandSize, int addressSize = 0, ATmrPos position = ATmrPos.Left)
+        public String ModRm(UBytePtr memory, APrefix prefix, int modRmByte, int inst, ref UInt32 last, int operandSize, int addressSize = 0, ATmrPos position = ATmrPos.Left)
         {
             var result  = ModRm2(memory, prefix, modRmByte, inst, ref last, operandSize, addressSize, position);
             return result;
         }
-        private String ModRm(UBytePtr memory, APrefix prefix, int modRmByte, int inst,  ref UInt32 last, ATmrPos position = ATmrPos.Left)
+        public String ModRm(UBytePtr memory, APrefix prefix, int modRmByte, int inst,  ref UInt32 last, ATmrPos position = ATmrPos.Left)
         {
             switch (inst)
             {
@@ -642,11 +642,11 @@ namespace SputnikAsm.LDisassembler
         }
         #endregion
         #region ModRm2
-        private String ModRm2(UBytePtr memory, APrefix prefix, int modRmByte, int inst, ref UInt32 last, int operandSize = 0, int addressSize = 0, ATmrPos position = ATmrPos.Left)
+        public String ModRm2(UBytePtr memory, APrefix prefix, int modRmByte, int inst, ref UInt32 last, int operandSize = 0, int addressSize = 0, ATmrPos position = ATmrPos.Left)
         {
-            _modRmPosition = position;
+            ModRmPosition = position;
             var result = "";
-            var showExtraReg = _hasVex & (_opCodeFlags.SkipExtraReg == false);
+            var showExtraReg = HasVex & (OpCodeFlags.SkipExtraReg == false);
             var regPrefix = Is64Bit ? 'r' : 'e';
             var ep = "";
             String preStr;
@@ -711,21 +711,21 @@ namespace SputnikAsm.LDisassembler
                 {
                     case 0:
                         {
-                            if (showExtraReg & _opCodeFlags.SkipExtraRegOnMemoryAccess)
+                            if (showExtraReg & OpCodeFlags.SkipExtraRegOnMemoryAccess)
                                 showExtraReg = false;
                             switch (GetRm(memory[modRmByte]))
                             {
                                 case 0:
-                                    result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "ax" + _endColor + ']';
+                                    result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "ax" + EndColor + ']';
                                     break;
                                 case 1:
-                                    result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "cx" + _endColor + ']';
+                                    result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "cx" + EndColor + ']';
                                     break;
                                 case 2:
-                                    result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "dx" + _endColor + ']';
+                                    result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "dx" + EndColor + ']';
                                     break;
                                 case 3:
-                                    result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "bx" + _endColor + ']';
+                                    result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "bx" + EndColor + ']';
                                     break;
                                 case 4:
                                     //has an sib
@@ -737,7 +737,7 @@ namespace SputnikAsm.LDisassembler
                                         if (Is64Bit)
                                         {
                                             var value = (UIntPtr)memory.ReadUInt64(modRmByte + 1);
-                                            _ripRelative = true;
+                                            RipRelative = true;
                                             result = GetSegmentOverride(prefix) + '[' + IntToHexSignedWithoutSymbols(value, 8) + ']';
                                             LastDisassembleData.ModRmValueType = ADisassemblerValueType.Address;
                                             LastDisassembleData.ModRmValue = value;
@@ -755,34 +755,34 @@ namespace SputnikAsm.LDisassembler
                                     }
                                     break;
                                 case 6:
-                                    result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "si" + _endColor + ']';
+                                    result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "si" + EndColor + ']';
                                     break;
                                 case 7:
-                                    result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "di" + _endColor + ']';
+                                    result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "di" + EndColor + ']';
                                     break;
                                 case 8:
-                                    result = GetSegmentOverride(prefix) + '[' + _colorReg + "r8" + _endColor + ']';
+                                    result = GetSegmentOverride(prefix) + '[' + ColorReg + "r8" + EndColor + ']';
                                     break;
                                 case 9:
-                                    result = GetSegmentOverride(prefix) + '[' + _colorReg + "r9" + _endColor + ']';
+                                    result = GetSegmentOverride(prefix) + '[' + ColorReg + "r9" + EndColor + ']';
                                     break;
                                 case 10:
-                                    result = GetSegmentOverride(prefix) + '[' + _colorReg + "r10" + _endColor + ']';
+                                    result = GetSegmentOverride(prefix) + '[' + ColorReg + "r10" + EndColor + ']';
                                     break;
                                 case 11:
-                                    result = GetSegmentOverride(prefix) + '[' + _colorReg + "r11" + _endColor + ']';
+                                    result = GetSegmentOverride(prefix) + '[' + ColorReg + "r11" + EndColor + ']';
                                     break;
                                 case 12:
-                                    result = GetSegmentOverride(prefix) + '[' + _colorReg + "r12" + _endColor + ']';
+                                    result = GetSegmentOverride(prefix) + '[' + ColorReg + "r12" + EndColor + ']';
                                     break;
                                 case 13:
-                                    result = GetSegmentOverride(prefix) + '[' + _colorReg + "r13" + _endColor + ']';
+                                    result = GetSegmentOverride(prefix) + '[' + ColorReg + "r13" + EndColor + ']';
                                     break;
                                 case 14:
-                                    result = GetSegmentOverride(prefix) + '[' + _colorReg + "r14" + _endColor + ']';
+                                    result = GetSegmentOverride(prefix) + '[' + ColorReg + "r14" + EndColor + ']';
                                     break;
                                 case 15:
-                                    result = GetSegmentOverride(prefix) + '[' + _colorReg + "r15" + _endColor + ']';
+                                    result = GetSegmentOverride(prefix) + '[' + ColorReg + "r15" + EndColor + ']';
                                     break;
                             }
                             if (operandSize != 0)
@@ -792,7 +792,7 @@ namespace SputnikAsm.LDisassembler
                         break;
                     case 1:
                         {
-                            if (showExtraReg & _opCodeFlags.SkipExtraRegOnMemoryAccess)
+                            if (showExtraReg & OpCodeFlags.SkipExtraRegOnMemoryAccess)
                                 showExtraReg = false;
                             if (GetRm(memory[modRmByte]) != 4)
                             {
@@ -803,27 +803,27 @@ namespace SputnikAsm.LDisassembler
                             {
                                 case 0:
                                     if ((SByte)memory[modRmByte + 1] >= 0)
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "ax" + _endColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "ax" + EndColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "ax" + _endColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "ax" + EndColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     break;
                                 case 1:
                                     if ((SByte)memory[modRmByte + 1] >= 0)
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "cx" + _endColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "cx" + EndColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "cx" + _endColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "cx" + EndColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     break;
                                 case 2:
                                     if ((SByte)memory[modRmByte + 1] >= 0)
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "dx" + _endColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "dx" + EndColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "dx" + _endColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "dx" + EndColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     break;
                                 case 3:
                                     if ((SByte)memory[modRmByte + 1] >= 0)
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "bx" + _endColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "bx" + EndColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "bx" + _endColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "bx" + EndColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     break;
                                 case 4:
                                     result = GetSegmentOverride(prefix) + '[' + Sib(memory, modRmByte + 1, ref last, addressSize) + ']';
@@ -831,69 +831,69 @@ namespace SputnikAsm.LDisassembler
                                     break;
                                 case 5:
                                     if ((SByte)memory[modRmByte + 1] >= 0)
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "bp" + _endColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "bp" + EndColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "bp" + _endColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2, true, 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "bp" + EndColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2, true, 2) + ']';
                                     break;
                                 case 6:
                                     if ((SByte)memory[modRmByte + 1] >= 0)
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "si" + _endColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "si" + EndColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "si" + _endColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2, true, 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "si" + EndColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2, true, 2) + ']';
                                     break;
                                 case 7:
                                     if ((SByte)memory[modRmByte + 1] >= 0)
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "di" + _endColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "di" + EndColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "di" + _endColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2, true, 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "di" + EndColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2, true, 2) + ']';
                                     break;
                                 case 8:
                                     if ((SByte)memory[modRmByte + 1] >= 0)
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r8" + _endColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + "r8" + EndColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r8" + _endColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2, true, 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + "r8" + EndColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2, true, 2) + ']';
                                     break;
                                 case 9:
                                     if ((SByte)memory[modRmByte + 1] >= 0)
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r9" + _endColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + "r9" + EndColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r9" + _endColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2, true, 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + "r9" + EndColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2, true, 2) + ']';
                                     break;
                                 case 10:
                                     if ((SByte)memory[modRmByte + 1] >= 0)
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r10" + _endColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + "r10" + EndColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r10" + _endColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2, true, 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + "r10" + EndColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2, true, 2) + ']';
                                     break;
                                 case 11:
                                     if ((SByte)memory[modRmByte + 1] >= 0)
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r11" + _endColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + "r11" + EndColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r11" + _endColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2, true, 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + "r11" + EndColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2, true, 2) + ']';
                                     break;
                                 case 12:
                                     if ((SByte)memory[modRmByte + 1] >= 0)
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r12" + _endColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + "r12" + EndColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r12" + _endColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2, true, 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + "r12" + EndColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2, true, 2) + ']';
                                     break;
                                 case 13:
                                     if ((SByte)memory[modRmByte + 1] >= 0)
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r13" + _endColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + "r13" + EndColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r13" + _endColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2, true, 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + "r13" + EndColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2, true, 2) + ']';
                                     break;
                                 case 14:
                                     if ((SByte)memory[modRmByte + 1] >= 0)
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r14" + _endColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + "r14" + EndColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r14" + _endColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2, true, 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + "r14" + EndColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2, true, 2) + ']';
                                     break;
                                 case 15:
                                     if ((SByte)memory[modRmByte + 1] >= 0)
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r15" + _endColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + "r15" + EndColor + '+' + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r15" + _endColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2, true, 2) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + "r15" + EndColor + IntToHexSigned((UIntPtr)memory[modRmByte + 1], 2, true, 2) + ']';
                                     break;
                             }
                             last += 1;
@@ -904,7 +904,7 @@ namespace SputnikAsm.LDisassembler
                     case 2:
                         {
                             var value = (UIntPtr)memory.ReadUInt32(modRmByte + 1);
-                            if (showExtraReg & _opCodeFlags.SkipExtraRegOnMemoryAccess)
+                            if (showExtraReg & OpCodeFlags.SkipExtraRegOnMemoryAccess)
                                 showExtraReg = false;
                             if (GetRm(memory[modRmByte]) != 4)
                             {
@@ -915,29 +915,29 @@ namespace SputnikAsm.LDisassembler
                             {
                                 case 0:
                                     if ((int)value >= 0)
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "ax" + _endColor + '+' + IntToHexSigned(value, 8) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "ax" + EndColor + '+' + IntToHexSigned(value, 8) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "ax" + _endColor + '-' + IntToHexSigned((UIntPtr)(-(int)value), 8) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "ax" + EndColor + '-' + IntToHexSigned((UIntPtr)(-(int)value), 8) + ']';
                                     break;
 
                                 case 1:
                                     if ((int)value >= 0)
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "cx" + _endColor + '+' + IntToHexSigned(value, 8) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "cx" + EndColor + '+' + IntToHexSigned(value, 8) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "cx" + _endColor + '-' + IntToHexSigned((UIntPtr)(-(int)value), 8) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "cx" + EndColor + '-' + IntToHexSigned((UIntPtr)(-(int)value), 8) + ']';
                                     break;
 
                                 case 2:
                                     if ((int)value >= 0)
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "dx" + _endColor + '+' + IntToHexSigned(value, 8) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "dx" + EndColor + '+' + IntToHexSigned(value, 8) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "dx" + _endColor + '-' + IntToHexSigned((UIntPtr)(-(int)value), 8) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "dx" + EndColor + '-' + IntToHexSigned((UIntPtr)(-(int)value), 8) + ']';
                                     break;
                                 case 3:
                                     if ((int)value >= 0)
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "bx" + _endColor + '+' + IntToHexSigned(value, 8) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "bx" + EndColor + '+' + IntToHexSigned(value, 8) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "bx" + _endColor + '-' + IntToHexSigned((UIntPtr)(-(int)value), 8) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "bx" + EndColor + '-' + IntToHexSigned((UIntPtr)(-(int)value), 8) + ']';
                                     break;
                                 case 4:
                                     result = GetSegmentOverride(prefix) + '[' + Sib(memory, modRmByte + 1, ref last, addressSize) + ']';
@@ -945,70 +945,70 @@ namespace SputnikAsm.LDisassembler
                                     break;
                                 case 5:
                                     if ((int)value >= 0)
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "bp" + _endColor + '+' + IntToHexSigned(value, 8) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "bp" + EndColor + '+' + IntToHexSigned(value, 8) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "bp" + _endColor + '-' + IntToHexSigned((UIntPtr)(-(int)value), 8) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "bp" + EndColor + '-' + IntToHexSigned((UIntPtr)(-(int)value), 8) + ']';
                                     break;
                                 case 6:
                                     if ((int)value >= 0)
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "si" + _endColor + '+' + IntToHexSigned(value, 8) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "si" + EndColor + '+' + IntToHexSigned(value, 8) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "si" + _endColor + '-' + IntToHexSigned((UIntPtr)(-(int)value), 8) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "si" + EndColor + '-' + IntToHexSigned((UIntPtr)(-(int)value), 8) + ']';
                                     break;
                                 case 7:
                                     if ((int)value >= 0)
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "di" + _endColor + '+' + IntToHexSigned(value, 8) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "di" + EndColor + '+' + IntToHexSigned(value, 8) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + regPrefix + "di" + _endColor + '-' + IntToHexSigned((UIntPtr)(-(int)value), 8) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + regPrefix + "di" + EndColor + '-' + IntToHexSigned((UIntPtr)(-(int)value), 8) + ']';
                                     break;
                                 case 8:
                                     if ((int)value >= 0)
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r8" + _endColor + '+' + IntToHexSigned(value, 8) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + "r8" + EndColor + '+' + IntToHexSigned(value, 8) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r8" + _endColor + '-' + IntToHexSigned((UIntPtr)(-(int)value), 8) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + "r8" + EndColor + '-' + IntToHexSigned((UIntPtr)(-(int)value), 8) + ']';
                                     break;
                                 case 9:
                                     if ((int)value >= 0)
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r9" + _endColor + '+' + IntToHexSigned(value, 8) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + "r9" + EndColor + '+' + IntToHexSigned(value, 8) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r9" + _endColor + '-' + IntToHexSigned((UIntPtr)(-(int)value), 8) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + "r9" + EndColor + '-' + IntToHexSigned((UIntPtr)(-(int)value), 8) + ']';
                                     break;
                                 case 10:
                                     if ((int)value >= 0)
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r10" + _endColor + '+' + IntToHexSigned(value, 8) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + "r10" + EndColor + '+' + IntToHexSigned(value, 8) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r10" + _endColor + '-' + IntToHexSigned((UIntPtr)(-(int)value), 8) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + "r10" + EndColor + '-' + IntToHexSigned((UIntPtr)(-(int)value), 8) + ']';
                                     break;
                                 case 11:
                                     if ((int)value >= 0)
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r11" + _endColor + '+' + IntToHexSigned(value, 8) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + "r11" + EndColor + '+' + IntToHexSigned(value, 8) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r11" + _endColor + '-' + IntToHexSigned((UIntPtr)(-(int)value), 8) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + "r11" + EndColor + '-' + IntToHexSigned((UIntPtr)(-(int)value), 8) + ']';
                                     break;
                                 case 12:
                                     if ((int)value >= 0)
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r12" + _endColor + '+' + IntToHexSigned(value, 8) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + "r12" + EndColor + '+' + IntToHexSigned(value, 8) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r12" + _endColor + '-' + IntToHexSigned((UIntPtr)(-(int)value), 8) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + "r12" + EndColor + '-' + IntToHexSigned((UIntPtr)(-(int)value), 8) + ']';
                                     break;
                                 case 13:
                                     if ((int)value >= 0)
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r13" + _endColor + '+' + IntToHexSigned(value, 8) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + "r13" + EndColor + '+' + IntToHexSigned(value, 8) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r13" + _endColor + '-' + IntToHexSigned((UIntPtr)(-(int)value), 8) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + "r13" + EndColor + '-' + IntToHexSigned((UIntPtr)(-(int)value), 8) + ']';
                                     break;
 
                                 case 14:
                                     if ((int)value >= 0)
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r14" + _endColor + '+' + IntToHexSigned(value, 8) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + "r14" + EndColor + '+' + IntToHexSigned(value, 8) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r14" + _endColor + '-' + IntToHexSigned((UIntPtr)(-(int)value), 8) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + "r14" + EndColor + '-' + IntToHexSigned((UIntPtr)(-(int)value), 8) + ']';
                                     break;
                                 case 15:
                                     if ((int)value >= 0)
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r15" + _endColor + '+' + IntToHexSigned(value, 8) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + "r15" + EndColor + '+' + IntToHexSigned(value, 8) + ']';
                                     else
-                                        result = GetSegmentOverride(prefix) + '[' + _colorReg + "r15" + _endColor + '-' + IntToHexSigned((UIntPtr)(-(int)value), 8) + ']';
+                                        result = GetSegmentOverride(prefix) + '[' + ColorReg + "r15" + EndColor + '-' + IntToHexSigned((UIntPtr)(-(int)value), 8) + ']';
                                     break;
                             }
                             last += 4;
@@ -1037,7 +1037,7 @@ namespace SputnikAsm.LDisassembler
                                             result = "mm0";
                                             break;
                                         case 4:
-                                            result = _opCodeFlags.L ? "ymm0" : "xmm0";
+                                            result = OpCodeFlags.L ? "ymm0" : "xmm0";
                                             break;
                                     }
                                     break;
@@ -1057,7 +1057,7 @@ namespace SputnikAsm.LDisassembler
                                             result = "mm1";
                                             break;
                                         case 4:
-                                            result = _opCodeFlags.L ? "ymm1" : "xmm1";
+                                            result = OpCodeFlags.L ? "ymm1" : "xmm1";
                                             break;
                                     }
                                     break;
@@ -1077,7 +1077,7 @@ namespace SputnikAsm.LDisassembler
                                             result = "mm2";
                                             break;
                                         case 4:
-                                            result = _opCodeFlags.L ? "ymm2" : "xmm2";
+                                            result = OpCodeFlags.L ? "ymm2" : "xmm2";
                                             break;
                                     }
                                     break;
@@ -1097,7 +1097,7 @@ namespace SputnikAsm.LDisassembler
                                             result = "mm3";
                                             break;
                                         case 4:
-                                            result = _opCodeFlags.L ? "ymm3" : "xmm3";
+                                            result = OpCodeFlags.L ? "ymm3" : "xmm3";
                                             break;
                                     }
                                     break;
@@ -1111,13 +1111,13 @@ namespace SputnikAsm.LDisassembler
                                             result = "sp";
                                             break;
                                         case 2:
-                                            result = _rexPrefix != 0 ? "spl" : "ah";
+                                            result = RexPrefix != 0 ? "spl" : "ah";
                                             break;
                                         case 3:
                                             result = "mm4";
                                             break;
                                         case 4:
-                                            result = _opCodeFlags.L ? "ymm4" : "xmm4";
+                                            result = OpCodeFlags.L ? "ymm4" : "xmm4";
                                             break;
                                     }
                                     break;
@@ -1131,13 +1131,13 @@ namespace SputnikAsm.LDisassembler
                                             result = "bp";
                                             break;
                                         case 2:
-                                            result = _rexPrefix != 0 ? "bpl" : "ch";
+                                            result = RexPrefix != 0 ? "bpl" : "ch";
                                             break;
                                         case 3:
                                             result = "mm5";
                                             break;
                                         case 4:
-                                            result = _opCodeFlags.L ? "ymm5" : "xmm5";
+                                            result = OpCodeFlags.L ? "ymm5" : "xmm5";
                                             break;
                                     }
                                     break;
@@ -1151,13 +1151,13 @@ namespace SputnikAsm.LDisassembler
                                             result = "si";
                                             break;
                                         case 2:
-                                            result = _rexPrefix != 0 ? "sil" : "dh";
+                                            result = RexPrefix != 0 ? "sil" : "dh";
                                             break;
                                         case 3:
                                             result = "mm6";
                                             break;
                                         case 4:
-                                            result = _opCodeFlags.L ? "ymm6" : "xmm6";
+                                            result = OpCodeFlags.L ? "ymm6" : "xmm6";
                                             break;
                                     }
                                     break;
@@ -1171,13 +1171,13 @@ namespace SputnikAsm.LDisassembler
                                             result = "di";
                                             break;
                                         case 2:
-                                            result = _rexPrefix != 0 ? "dil" : "bh";
+                                            result = RexPrefix != 0 ? "dil" : "bh";
                                             break;
                                         case 3:
                                             result = "mm7";
                                             break;
                                         case 4:
-                                            result = _opCodeFlags.L ? "ymm7" : "xmm7";
+                                            result = OpCodeFlags.L ? "ymm7" : "xmm7";
                                             break;
                                     }
                                     break;
@@ -1197,7 +1197,7 @@ namespace SputnikAsm.LDisassembler
                                             result = "mm8";
                                             break;
                                         case 4:
-                                            result = _opCodeFlags.L ? "ymm8" : "xmm8";
+                                            result = OpCodeFlags.L ? "ymm8" : "xmm8";
                                             break;
                                     }
                                     break;
@@ -1217,7 +1217,7 @@ namespace SputnikAsm.LDisassembler
                                             result = "mm9";
                                             break;
                                         case 4:
-                                            result = _opCodeFlags.L ? "ymm9" : "xmm9";
+                                            result = OpCodeFlags.L ? "ymm9" : "xmm9";
                                             break;
                                     }
                                     break;
@@ -1237,7 +1237,7 @@ namespace SputnikAsm.LDisassembler
                                             result = "mm10";
                                             break;
                                         case 4:
-                                            result = _opCodeFlags.L ? "ymm10" : "xmm10";
+                                            result = OpCodeFlags.L ? "ymm10" : "xmm10";
                                             break;
                                     }
                                     break;
@@ -1257,7 +1257,7 @@ namespace SputnikAsm.LDisassembler
                                             result = "mm11";
                                             break;
                                         case 4: 
-                                            result = _opCodeFlags.L ? "ymm11" : "xmm11";
+                                            result = OpCodeFlags.L ? "ymm11" : "xmm11";
                                             break;
                                     }
                                     break;
@@ -1273,7 +1273,7 @@ namespace SputnikAsm.LDisassembler
                                             break;
                                         case 3: result = "mm12";
                                             break;
-                                        case 4: result = _opCodeFlags.L ? "ymm12" : "xmm12";
+                                        case 4: result = OpCodeFlags.L ? "ymm12" : "xmm12";
                                             break;
                                     }
                                     break;
@@ -1293,7 +1293,7 @@ namespace SputnikAsm.LDisassembler
                                             result = "mm13";
                                             break;
                                         case 4:
-                                            result = _opCodeFlags.L ? "ymm13" : "xmm13";
+                                            result = OpCodeFlags.L ? "ymm13" : "xmm13";
                                             break;
                                     }
                                     break;
@@ -1313,7 +1313,7 @@ namespace SputnikAsm.LDisassembler
                                             result = "mm14";
                                             break;
                                         case 4:
-                                            result = _opCodeFlags.L ? "ymm14" : "xmm14";
+                                            result = OpCodeFlags.L ? "ymm14" : "xmm14";
                                             break;
                                     }
                                     break;
@@ -1329,12 +1329,12 @@ namespace SputnikAsm.LDisassembler
                                             result = "r15l"; break;
                                         case 3:
                                             result = "mm15"; break;
-                                        case 4: result = _opCodeFlags.L ? "ymm15" : "xmm15";
+                                        case 4: result = OpCodeFlags.L ? "ymm15" : "xmm15";
                                             break;
                                     }
                                     break;
                             }
-                            result = _colorReg + result + _endColor;
+                            result = ColorReg + result + EndColor;
                         }
                         break;
                 }
@@ -1343,29 +1343,29 @@ namespace SputnikAsm.LDisassembler
                     switch (inst)
                     {
                         case 0:
-                            ep = RegNrToStr(RexW ? ARegisterType.Rt64 : ARegisterType.Rt32, ~_opCodeFlags.Vvvv & 0xf);
+                            ep = RegNrToStr(RexW ? ARegisterType.Rt64 : ARegisterType.Rt32, ~OpCodeFlags.Vvvv & 0xf);
                             break;
                         case 1:
-                            ep = RegNrToStr(ARegisterType.Rt16, ~_opCodeFlags.Vvvv & 0xf);
+                            ep = RegNrToStr(ARegisterType.Rt16, ~OpCodeFlags.Vvvv & 0xf);
                             break;
                         case 2:
-                            ep = RegNrToStr(ARegisterType.Rt8, ~_opCodeFlags.Vvvv & 0xf);
+                            ep = RegNrToStr(ARegisterType.Rt8, ~OpCodeFlags.Vvvv & 0xf);
                             break;
                         case 3:
-                            ep = RegNrToStr(ARegisterType.RtMm, ~_opCodeFlags.Vvvv & 0xf);
+                            ep = RegNrToStr(ARegisterType.RtMm, ~OpCodeFlags.Vvvv & 0xf);
                             break;
                         case 4:
-                            ep = RegNrToStr(_opCodeFlags.L ? ARegisterType.RtYmm : ARegisterType.RtXmm, ~_opCodeFlags.Vvvv & 0xf);
+                            ep = RegNrToStr(OpCodeFlags.L ? ARegisterType.RtYmm : ARegisterType.RtXmm, ~OpCodeFlags.Vvvv & 0xf);
                             break;
                     }
                     switch (position)
                     {
                         case ATmrPos.Left:
                         case ATmrPos.None:
-                            result = result + ',' + _colorReg + ep + _endColor;
+                            result = result + ',' + ColorReg + ep + EndColor;
                             break;
                         case ATmrPos.Right:
-                            result = _colorReg + ep + _endColor + ',' + result;
+                            result = ColorReg + ep + EndColor + ',' + result;
                             break;
                     }
                 }
@@ -1380,7 +1380,7 @@ namespace SputnikAsm.LDisassembler
         }
         #endregion
         #region Sib
-        private String Sib(UBytePtr memory, int sibByte, ref UInt32 last, int addressSize = 0)
+        public String Sib(UBytePtr memory, int sibByte, ref UInt32 last, int addressSize = 0)
         {
             var result = "";
             last += 1;  //sib byte
@@ -1454,7 +1454,7 @@ namespace SputnikAsm.LDisassembler
                     result = "r" + result.Substring(1); //quick replace
             }
             if (result != "")
-                result = _colorReg + result + _endColor;
+                result = ColorReg + result + EndColor;
             String indexString;
             switch (index)
             {
@@ -1516,7 +1516,7 @@ namespace SputnikAsm.LDisassembler
                     indexString = "r" + indexString.Substring(1); //quick replace
             }
             if (indexString != "")
-                indexString = _colorReg + indexString + _endColor;
+                indexString = ColorReg + indexString + EndColor;
             if ((Is64Bit) & ((mBase & 7) == 5) && (index == 4) && (mod == 0))  //disp32
             {
                 //special case for 64-bit
@@ -1544,7 +1544,7 @@ namespace SputnikAsm.LDisassembler
                     break;
             }
             if (ss > 0 && index != 4)
-                indexString = indexString + '*' + _colorHex + LastDisassembleData.SibScaler + _endColor;
+                indexString = indexString + '*' + ColorHex + LastDisassembleData.SibScaler + EndColor;
             if (indexString != "")
             {
                 if (result == "")
@@ -1621,7 +1621,7 @@ namespace SputnikAsm.LDisassembler
         }
         #endregion
         #region OpCode4Fst
-        private int OpCode4Fst(String opCode)
+        public int OpCode4Fst(String opCode)
         {
             var result = 3; //float
             if (opCode.Length >= 4)
@@ -1639,7 +1639,7 @@ namespace SputnikAsm.LDisassembler
         }
         #endregion
         #region OpCode3Fn
-        private int OpCode3Fn(String opCode)
+        public int OpCode3Fn(String opCode)
         {
             var result = 3; //float
             if (opCode.Length < 3)
@@ -1654,7 +1654,7 @@ namespace SputnikAsm.LDisassembler
         }
         #endregion
         #region OpCode3Fs
-        private int OpCode3Fs(String opCode)
+        public int OpCode3Fs(String opCode)
         {
             var result = 3; //float
             if (opCode.Length < 3)
@@ -1669,7 +1669,7 @@ namespace SputnikAsm.LDisassembler
         }
         #endregion
         #region OpCode2F
-        private int OpCode2F(String opCode)
+        public int OpCode2F(String opCode)
         {
             var result = 3;
             if (opCode.Length < 2)
@@ -1688,7 +1688,7 @@ namespace SputnikAsm.LDisassembler
         }
         #endregion
         #region OpCodeToValueType
-        private int OpCodeToValueType(String opCode)
+        public int OpCodeToValueType(String opCode)
         {
             var result = 2;
             if (opCode.Length < 1)
@@ -1703,7 +1703,7 @@ namespace SputnikAsm.LDisassembler
         }
         #endregion
         #region GetLastByteString
-        private String GetLastByteString()
+        public String GetLastByteString()
         {
             var cloaked = false;
             var changed = false;
@@ -1815,8 +1815,8 @@ namespace SputnikAsm.LDisassembler
         #region PreviousOpCode
         public UIntPtr PreviousOpCode(UIntPtr address)
         {
-            var aggressive = _aggressiveAlignment;
-            _aggressiveAlignment = true;
+            var aggressive = AggressiveAlignment;
+            AggressiveAlignment = true;
             var x = PreviousOpCodeHelp(address, 80, out var result);
             if (x != address)
             {
@@ -1851,7 +1851,7 @@ namespace SputnikAsm.LDisassembler
                     }
                 }
             }
-            _aggressiveAlignment = aggressive;
+            AggressiveAlignment = aggressive;
             return result;
         }
         #endregion
@@ -1871,7 +1871,7 @@ namespace SputnikAsm.LDisassembler
         }
         #endregion
         #region IntToHexSigned
-        private String IntToHexSigned(UIntPtr value, int chars, Boolean signed = false, int signedSize = 0)
+        public String IntToHexSigned(UIntPtr value, int chars, Boolean signed = false, int signedSize = 0)
         {
             if (ShowSymbols || ShowModules)
                 return IntToHexSignedWithSymbols(value, chars, signed, signedSize);
@@ -1879,7 +1879,7 @@ namespace SputnikAsm.LDisassembler
         }
         #endregion
         #region IntToHexSignedWithoutSymbols
-        private String IntToHexSignedWithoutSymbols(UIntPtr value, int chars, Boolean signed = false, int signedSize = 0)
+        public String IntToHexSignedWithoutSymbols(UIntPtr value, int chars, Boolean signed = false, int signedSize = 0)
         {
             String result;
             if (chars == 2)
@@ -1894,39 +1894,39 @@ namespace SputnikAsm.LDisassembler
                     case 2:
                     {
                         if ((SByte)value < 0)
-                            result = _colorHex + '-' + AStringUtils.IntToHex(-(SByte)value, chars) + _endColor;
+                            result = ColorHex + '-' + AStringUtils.IntToHex(-(SByte)value, chars) + EndColor;
                         else
-                            result = _colorHex + AStringUtils.IntToHex((SByte)value, chars) + _endColor;
+                            result = ColorHex + AStringUtils.IntToHex((SByte)value, chars) + EndColor;
                         break;
                     }
                     case 4:
                     {
                         if ((Int16)value < 0)
-                            result = _colorHex + '-' + AStringUtils.IntToHex(-(Int16)value, chars) + _endColor;
+                            result = ColorHex + '-' + AStringUtils.IntToHex(-(Int16)value, chars) + EndColor;
                         else
-                            result = _colorHex + AStringUtils.IntToHex((Int16)value, chars) + _endColor;
+                            result = ColorHex + AStringUtils.IntToHex((Int16)value, chars) + EndColor;
                         break;
                     }
                     case 8:
                     {
                         if ((Int64)value < 0)
-                            result = _colorHex + '-' + AStringUtils.IntToHex(-(Int64)value, chars) + _endColor;
+                            result = ColorHex + '-' + AStringUtils.IntToHex(-(Int64)value, chars) + EndColor;
                         else
-                            result = _colorHex + AStringUtils.IntToHex((Int64)value, chars) + _endColor;
+                            result = ColorHex + AStringUtils.IntToHex((Int64)value, chars) + EndColor;
                         break;
                     }
                     default:
-                        result = _colorHex + AStringUtils.IntToHex(value, chars) + _endColor;
+                        result = ColorHex + AStringUtils.IntToHex(value, chars) + EndColor;
                         break;
                 }
             }
             else
-                result = _colorHex + AStringUtils.IntToHex(value, chars) + _endColor;
+                result = ColorHex + AStringUtils.IntToHex(value, chars) + EndColor;
             return result;
         }
         #endregion
         #region IntToHexSignedWithSymbols
-        private String IntToHexSignedWithSymbols(UIntPtr value, int chars, Boolean signed = false, int signedSize = 0)
+        public String IntToHexSignedWithSymbols(UIntPtr value, int chars, Boolean signed = false, int signedSize = 0)
         {
             String result;
             if ((ShowSymbols | ShowModules | ShowSections) & (chars >= 8))
@@ -1950,9 +1950,9 @@ namespace SputnikAsm.LDisassembler
                 if (SyntaxHighlighting)
                 {
                     if (!found)
-                        result = _colorHex + result + _endColor;
+                        result = ColorHex + result + EndColor;
                     else
-                        result = _colorSymbol + result + _endColor;
+                        result = ColorSymbol + result + EndColor;
                 }
             }
             else
@@ -2277,14 +2277,14 @@ namespace SputnikAsm.LDisassembler
                         parameterCount += 1;
                     if (LastDisassembleData.ModRmValueType == ADisassemblerValueType.Address)
                     {
-                        if ((parameterCount > 1) && _modRmPosition == ATmrPos.Right)
+                        if ((parameterCount > 1) && ModRmPosition == ATmrPos.Right)
                             values[1].Value = LastDisassembleData.ModRmValue;
                         else
                             values[0].Value = LastDisassembleData.ModRmValue;
                     }
                     if (LastDisassembleData.ParameterValueType != ADisassemblerValueType.None)
                     {
-                        if (parameterCount > 1 && _modRmPosition != ATmrPos.Right)
+                        if (parameterCount > 1 && ModRmPosition != ATmrPos.Right)
                             values[1].Value = LastDisassembleData.ParameterValue;
                         else
                             values[0].Value = LastDisassembleData.ParameterValue;
@@ -2393,23 +2393,23 @@ namespace SputnikAsm.LDisassembler
             SyntaxHighlighting = state;
             if (state)
             {
-                _endColor = "{N}";
-                _colorHex = "{H}";
-                _colorReg = "{R}";
-                _colorSymbol = "{S}";
+                EndColor = "{N}";
+                ColorHex = "{H}";
+                ColorReg = "{R}";
+                ColorSymbol = "{S}";
             }
             else
             {
                 //no color codes
-                _endColor = "";
-                _colorHex = "";
-                _colorReg = "";
-                _colorSymbol = "";
+                EndColor = "";
+                ColorHex = "";
+                ColorReg = "";
+                ColorSymbol = "";
             }
         }
         #endregion
         #region ReadMemory
-        private int ReadMemory(UIntPtr address, UIntPtr destination, int size)
+        public int ReadMemory(UIntPtr address, UIntPtr destination, int size)
         {
             // todo handle cloak support
             //readprocessmemorywithcloaksupport(processhandle, (pointer)(address), destination, size, actualread);
@@ -2504,7 +2504,7 @@ namespace SputnikAsm.LDisassembler
                 //    LastDisassembleData = armdisassembler.LastDisassembleData;
                 //    return result;
                 //}
-                _modRmPosition = ATmrPos.None;
+                ModRmPosition = ATmrPos.None;
                 var last = 0U;
                 var tempResult = "";
                 LastDisassembleData.Bytes.SetLength(0);
@@ -2551,20 +2551,20 @@ namespace SputnikAsm.LDisassembler
                 //         }
                 //     }
                 // }
-                _ripRelative = false;
+                RipRelative = false;
                 if (IsDataOnly)
                     result = "";
                 else
                     result = AStringUtils.IntToHex(offset, 8) + " - ";
                 var isPrefix = true;
-                _prefix = new APrefix(0xf0, 0xf2, 0xf3, 0x2e, 0x36, 0x3e, 0x26, 0x64, 0x65, 0x66, 0x67);
-                _prefix2 = new APrefix();
+                Prefix = new APrefix(0xf0, 0xf2, 0xf3, 0x2e, 0x36, 0x3e, 0x26, 0x64, 0x65, 0x66, 0x67);
+                Prefix2 = new APrefix();
                 var startOffset = offset;
                 var initialOffset = offset;
                 for (i = 32; i <= 63; i++) //debug code
-                    _memory[i] = 0xce;
-                var actualRead = ReadMemory(offset, _memory.ToIntPtr().ToUIntPtr(), 32);
-                var memory = _memory.Shift(0);
+                    Memory[i] = 0xce;
+                var actualRead = ReadMemory(offset, Memory.ToIntPtr().ToUIntPtr(), 32);
+                var memory = Memory.Shift(0);
                 if (actualRead > 0)
                 {
                     //{$ifndef jni}
@@ -2580,7 +2580,7 @@ namespace SputnikAsm.LDisassembler
                     while (isPrefix)
                     {
                         offset += 1; //offset will always inc by 1
-                        if (_prefix.Contains(memory[0]))
+                        if (Prefix.Contains(memory[0]))
                         {
                             if (LastDisassembleData.Bytes.Length > 10)
                             {
@@ -2594,7 +2594,7 @@ namespace SputnikAsm.LDisassembler
                                 result = result + IntToHexSigned((UIntPtr)memory[0], 2) + ' ';
                             isPrefix = true;
                             startOffset += 1;
-                            _prefix2.Add(memory[0]);
+                            Prefix2.Add(memory[0]);
                             memory = memory.Shift(1);
                             if (offset.ToUInt64() > initialOffset.ToUInt64() + 24)  //too long
                             {
@@ -2609,40 +2609,40 @@ namespace SputnikAsm.LDisassembler
                             isPrefix = false;
                     }
                     var noVexPossible = false;
-                    if (_prefix2.Contains(0xf0))
+                    if (Prefix2.Contains(0xf0))
                     {
                         tempResult = "lock ";
                         noVexPossible = true;
                     }
-                    if (_prefix2.Contains(0xf2))
+                    if (Prefix2.Contains(0xf2))
                     {
                         tempResult += "repne ";
                         noVexPossible = true;
                     }
-                    if (_prefix2.Contains(0xf3))
+                    if (Prefix2.Contains(0xf3))
                     {
                         tempResult += "repe ";
                         noVexPossible = true;
                     }
                     LastDisassembleData.Prefix = tempResult;
-                    _opCodeFlags.Clear();
-                    _rexPrefix = 0;
+                    OpCodeFlags.Clear();
+                    RexPrefix = 0;
                     if (Is64Bit)
                     {
                         if (AMathUtils.InRange(memory[0], 0x40, 0x4f))  //does it start with a rex prefix ?
                         {
                             LastDisassembleData.Bytes.Inc();
                             LastDisassembleData.Bytes.Last = memory[0];
-                            _rexPrefix = memory[0];
-                            _opCodeFlags.B = (_rexPrefix & BIT_REX_B) == BIT_REX_B;
-                            _opCodeFlags.X = (_rexPrefix & BIT_REX_X) == BIT_REX_X;
-                            _opCodeFlags.R = (_rexPrefix & BIT_REX_R) == BIT_REX_R;
-                            _opCodeFlags.W = (_rexPrefix & BIT_REX_W) == BIT_REX_W;
+                            RexPrefix = memory[0];
+                            OpCodeFlags.B = (RexPrefix & BIT_REX_B) == BIT_REX_B;
+                            OpCodeFlags.X = (RexPrefix & BIT_REX_X) == BIT_REX_X;
+                            OpCodeFlags.R = (RexPrefix & BIT_REX_R) == BIT_REX_R;
+                            OpCodeFlags.W = (RexPrefix & BIT_REX_W) == BIT_REX_W;
                             if (!IsDataOnly)
-                                result = result + IntToHexSigned((UIntPtr)_rexPrefix, 2) + ' ';
+                                result = result + IntToHexSigned((UIntPtr)RexPrefix, 2) + ' ';
                             offset += 1;
                             startOffset += 1;
-                            _prefix2.Add(_rexPrefix);
+                            Prefix2.Add(RexPrefix);
                             memory = memory.Shift(1);
                             noVexPossible = true;
                             if (offset.ToUInt64() > initialOffset.ToUInt64() + 24)
@@ -2658,18 +2658,18 @@ namespace SputnikAsm.LDisassembler
                     LastDisassembleData.PrefixSize = prefixSize;
                     if (noVexPossible == false && AMathUtils.InRange(memory[0], 0xc4, 0xc5))
                     {
-                        _hasVex = true;
+                        HasVex = true;
                         int bytesToMove;
                         if (memory[0] == 0xc5)
                         {
                             //2 byte VEX
                             prefixSize += 2;
                             var vex2 = new AVex2Byte(memory.ToIntPtr(1));
-                            _opCodeFlags.Pp = vex2.Pp;
-                            _opCodeFlags.L = vex2.L == 1;
-                            _opCodeFlags.Vvvv = vex2.Vvvv;
-                            _opCodeFlags.R = vex2.R == 0;
-                            _opCodeFlags.Mmmmm = 1;
+                            OpCodeFlags.Pp = vex2.Pp;
+                            OpCodeFlags.L = vex2.L == 1;
+                            OpCodeFlags.Vvvv = vex2.Vvvv;
+                            OpCodeFlags.R = vex2.R == 0;
+                            OpCodeFlags.Mmmmm = 1;
                             i = LastDisassembleData.Bytes.Length;
                             LastDisassembleData.Bytes.SetLength(i + 2);
                             LastDisassembleData.Bytes[i] = memory[0];
@@ -2684,14 +2684,14 @@ namespace SputnikAsm.LDisassembler
                             //3 byte vex
                             prefixSize += 3;
                             var vex3 = new AVex3Byte(memory.ToIntPtr(1));
-                            _opCodeFlags.Pp = vex3.Pp;
-                            _opCodeFlags.L = vex3.L == 1;
-                            _opCodeFlags.Vvvv = vex3.Vvvv;
-                            _opCodeFlags.W = vex3.W == 1; //this one is NOT inverted
-                            _opCodeFlags.Mmmmm = vex3.Mmmmm;
-                            _opCodeFlags.B = vex3.B == 0;
-                            _opCodeFlags.X = vex3.X == 0;
-                            _opCodeFlags.R = vex3.R == 0;
+                            OpCodeFlags.Pp = vex3.Pp;
+                            OpCodeFlags.L = vex3.L == 1;
+                            OpCodeFlags.Vvvv = vex3.Vvvv;
+                            OpCodeFlags.W = vex3.W == 1; //this one is NOT inverted
+                            OpCodeFlags.Mmmmm = vex3.Mmmmm;
+                            OpCodeFlags.B = vex3.B == 0;
+                            OpCodeFlags.X = vex3.X == 0;
+                            OpCodeFlags.R = vex3.R == 0;
                             i = LastDisassembleData.Bytes.Length;
                             LastDisassembleData.Bytes.SetLength(i + 3);
                             LastDisassembleData.Bytes[i] = memory[0];
@@ -2705,7 +2705,7 @@ namespace SputnikAsm.LDisassembler
                             00100-11111: Reserved for future use (will #UD)
                             */
                             bytesToMove = 3; //number of bytes to shift
-                            switch (_opCodeFlags.Mmmmm)
+                            switch (OpCodeFlags.Mmmmm)
                             {
                                 case 1:
                                     {
@@ -2731,32 +2731,32 @@ namespace SputnikAsm.LDisassembler
                             memory = memory.Shift(bytesToMove);
                             offset += bytesToMove;
                         }
-                        switch (_opCodeFlags.Pp)
+                        switch (OpCodeFlags.Pp)
                         {
                             case 1:
-                                _prefix2.Add(0x66);
+                                Prefix2.Add(0x66);
                                 break;
                             case 2:
-                                _prefix2.Add(0xf3);
+                                Prefix2.Add(0xf3);
                                 break;
                             case 3:
-                                _prefix2.Add(0xf2);
+                                Prefix2.Add(0xf2);
                                 break;
                         }
                     }
                     else
-                        _hasVex = false;
+                        HasVex = false;
                     //compatibility fix for code that still checks for rex.* or sets it as a temporary flag replacement
-                    _rexPrefix = (Byte)(_opCodeFlags.B ? _rexPrefix | BIT_REX_B : _rexPrefix);
-                    _rexPrefix = (Byte)(_opCodeFlags.X ? _rexPrefix | BIT_REX_X : _rexPrefix);
-                    _rexPrefix = (Byte)(_opCodeFlags.R ? _rexPrefix | BIT_REX_R : _rexPrefix);
-                    _rexPrefix = (Byte)(_opCodeFlags.W ? _rexPrefix | BIT_REX_W : _rexPrefix);
+                    RexPrefix = (Byte)(OpCodeFlags.B ? RexPrefix | BIT_REX_B : RexPrefix);
+                    RexPrefix = (Byte)(OpCodeFlags.X ? RexPrefix | BIT_REX_X : RexPrefix);
+                    RexPrefix = (Byte)(OpCodeFlags.R ? RexPrefix | BIT_REX_R : RexPrefix);
+                    RexPrefix = (Byte)(OpCodeFlags.W ? RexPrefix | BIT_REX_W : RexPrefix);
                     if (
-                        !DisassembleProcess1(memory, ref offset, ref prefixSize, ref last, ref description) &&
-                        !DisassembleProcess2(memory, ref offset, ref prefixSize, ref last, ref description) &&
-                        !DisassembleProcess3(memory, ref offset, ref prefixSize, ref last, ref description) &&
-                        !DisassembleProcess4(memory, ref offset, ref prefixSize, ref last, ref description) &&
-                        !DisassembleProcess5(memory, ref offset, ref prefixSize, ref last, ref description)
+                        !ADisassemblerCases1.Process(this, memory, ref offset, ref prefixSize, ref last, ref description) &&
+                        !ADisassemblerCases2.Process(this, memory, ref offset, ref prefixSize, ref last, ref description) &&
+                        !ADisassemblerCases3.Process(this, memory, ref offset, ref prefixSize, ref last, ref description) &&
+                        !ADisassemblerCases4.Process(this, memory, ref offset, ref prefixSize, ref last, ref description) &&
+                        !ADisassemblerCases5.Process(this, memory, ref offset, ref prefixSize, ref last, ref description)
                         )
                     {
                         LastDisassembleData.OpCode = "db";
@@ -2782,7 +2782,7 @@ namespace SputnikAsm.LDisassembler
                         try
                         {
                             using (var p1 = new UBytePtr(LastDisassembleData.Bytes.Buffer))
-                                AArrayUtils.CopyMemory(p1, k, _memory.ToIntPtr(), k, (int)td);
+                                AArrayUtils.CopyMemory(p1, k, Memory.ToIntPtr(), k, (int)td);
                         }
                         catch
                         {
@@ -2801,7 +2801,7 @@ namespace SputnikAsm.LDisassembler
                             LastDisassembleData.RipRelative += prefixSize;
                     }
                     //  result:=result+'- '+tempResult;
-                    if (_ripRelative)
+                    if (RipRelative)
                     {
                         //add the current offset to the code between []
                         LastDisassembleData.ModRmValue = (UIntPtr)(offset.ToUInt64() + ((UIntPtr)((int)LastDisassembleData.ModRmValue)).ToUInt64()); //sign extended increase
