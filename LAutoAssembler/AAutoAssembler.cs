@@ -999,18 +999,14 @@ namespace SputnikAsm.LAutoAssembler
             var potentialLabels = new AStringArray();
             var hasTryExcept = false;
             var result = false;
-            //add all symbols as defined labels
+            //add all symbols as defines
             if (disableInfo != null)
             {
-                labels.SetLength(disableInfo.RegisteredSymbols.Length);
-                for (i = 0; i < disableInfo.RegisteredSymbols.Length; i++)
+                defines.SetLength(disableInfo.AllSymbols.Length);
+                for (i = 0; i < disableInfo.AllSymbols.Length; i++)
                 {
-                    labels[i].Name = disableInfo.RegisteredSymbols[i];
-                    labels[i].Defined = true;
-                    labels[i].Address = UIntPtr.Zero;
-                    labels[i].AssemblerLine = 0;
-                    labels[i].References.SetLength(0);
-                    labels[i].References2.SetLength(0);
+                    defines[i].Name = disableInfo.AllSymbols[i].Value;
+                    defines[i].Whatever = AStringUtils.IntToHex(disableInfo.AllSymbols[i].Pointer, 8);
                 }
             }
             var symHandler = Assembler.SymbolHandler;
@@ -1031,6 +1027,7 @@ namespace SputnikAsm.LAutoAssembler
                 defines.SetLength(0);
                 loadBinary.SetLength(0);
                 exceptionList.SetLength(0);
+                defines.SetLength(0);
                 var tokens = new ARefStringArray();
                 // todo fill this in for additional stuff
                 //if (!targetSelf)
@@ -2827,15 +2824,15 @@ namespace SputnikAsm.LAutoAssembler
                             disableInfo.Allocs[i] = allocs[i];
                     }
                     #region Exceptions
-                    //if (disableInfo.Exceptions.Length > 0 & AutoAssemblerExceptionHandlerHasEntries())
+                    //if ((length(disableinfo.exceptions) > 0) & (autoassemblerexceptionhandlerhasentries))
                     //{
-                    //    for (i = 0; i < disableInfo.Exceptions.Length; i++)
-                    //        AutoAssemblerExceptionHandlerRemoveExceptionRange(disableInfo.Exceptions[i]);
-                    //    AutoAssemblerExceptionHandlerApplyChanges();
+                    //    for (i = 0; i <= length(disableinfo.exceptions) - 1; i++)
+                    //        autoassemblerexceptionhandlerremoveexceptionrange(disableinfo.exceptions[i]);
+                    //    autoassemblerexceptionhandlerapplychanges;
                     //}
-                    //disableInfo.Exceptions.SetLength(exceptionlist.Length);
-                    //for (i = 0; i < disableInfo.Exceptions.Length; i++)
-                    //    disableInfo.Exceptions[i] = GetAddressFromScript(exceptionlist[i].TryLabel, targetSelf, labels, allocs, kallocs, defines);
+                    //setlength(disableinfo.exceptions, length(exceptionlist));
+                    //for (i = 0; i <= length(disableinfo.exceptions) - 1; i++)
+                    //    disableinfo.exceptions[i] = getaddressfromscript(exceptionlist[i].trylabel);
                     #endregion
                     //check the addsymbollist array and deletesymbollist array
                     //first delete
@@ -3003,7 +3000,7 @@ namespace SputnikAsm.LAutoAssembler
                             disableInfo.AllSymbols.Add(new ARefString(kAllocs[i].Name, kAllocs[i].Address));
                         for (i = 0; i < defines.Length; i++)
                         {
-                            var testPtr = symHandler.GetAddressFromName(defines[j].Whatever, false, out ok1);
+                            var testPtr = symHandler.GetAddressFromName(defines[i].Whatever, false, out ok1);
                             if (ok1 == false)
                                 disableInfo.AllSymbols.Add(new ARefString(defines[i].Name, testPtr));
                         }
