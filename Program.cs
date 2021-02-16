@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using Sputnik.LBinary;
 using Sputnik.LMarshal;
 using Sputnik.LUtils;
@@ -25,11 +26,64 @@ using SputnikWin.LFeatures.LWindows;
 
 namespace SputnikAsm
 {
+    public static class test
+    {
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        public delegate int ITest(int a);
+        public static ITest iTest;
+        public static void a()
+        {
+            UTokenSp.Activate();
+            AAsmTools.InitTools(new ASymbolHandler());
+            var m = AAsmTools.SelfSymbolHandler.Process;
+            AAsmTools.SymbolHandler.Process = m;
+            var aa = AAsmTools.AutoAssembler;
+
+            var cc = @"
+[ENABLE]
+alloc(func, $1000)
+registersymbol(func)
+
+func:
+mov eax, ecx
+add dword ptr[data], eax
+mov eax, dword ptr[data]
+ret
+
+data:
+    db 00 00 00 00
+
+[DISABLE]
+unregistersymbol(func)
+            ".Trim();
+            var code = new ARefStringArray();
+            code.Assign(UStringUtils.GetLines(cc).ToArray());
+            aa.RemoveComments(code);
+            var scr = new AScriptBytesArray();
+            var info = new ADisableInfo();
+            var ret = aa.AutoAssemble(m, code, false, true, false, false, info, false, scr);
+            Console.WriteLine("Result: " + ret);
+
+            var procAddress = AAsmTools.SymbolHandler.GetUserDefinedSymbolByName("func");
+            Console.WriteLine("Symbol: " + procAddress.ToUInt64().ToString("X"));
+
+            iTest = (ITest)Marshal.GetDelegateForFunctionPointer(procAddress.ToIntPtr(), typeof(ITest));
+
+            for (var i = 0; i < 1000000; i++)
+            {
+                Console.WriteLine(iTest.Invoke(1));
+            }
+
+
+            Console.ReadKey();
+            Environment.Exit(1);
+        }
+    }
     class Program
     {
         static void Main(string[] args)
         {
-
+            //test.a();
             //var Brackets = new ACharArray('(', ')', '[', ']', '{', '}');
             //var StdWordDelims = new ACharArray(',', '.', ';', '/', '\\', ':', '\'', '"', '`', '(', ')', '[', ']', '{', '}');
             //StdWordDelims.AddRange(Brackets.TakeAll());

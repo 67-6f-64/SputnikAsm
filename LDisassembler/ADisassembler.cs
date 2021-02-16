@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Deployment.Internal;
 using System.Windows.Forms;
 using Sputnik.LBinary;
 using Sputnik.LInterfaces;
@@ -8,8 +7,6 @@ using Sputnik.LString;
 using Sputnik.LUtils;
 using SputnikAsm.LAssembler.LEnums;
 using SputnikAsm.LBinary;
-using SputnikAsm.LBinary.LByteInterpreter;
-using SputnikAsm.LCollections;
 using SputnikAsm.LDisassembler.LEnums;
 using SputnikAsm.LExtensions;
 using SputnikAsm.LGenerics;

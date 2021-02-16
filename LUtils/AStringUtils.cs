@@ -446,13 +446,13 @@ namespace SputnikAsm.LUtils
             s = s.Trim();
             if (s.Length == 0)
                 return 0;
-            UInt64 result = 0;
+            UInt64 result;
             switch (s[0] == '-')
             {
                 case true:
                     result = (UInt64)StrToInt64(s);
                     break;
-                case false:
+                default:
                     result = StrToQWord(s);
                     break;
             }

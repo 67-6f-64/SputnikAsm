@@ -1,4 +1,5 @@
 ﻿using System;
+using Sputnik;
 using SputnikAsm.LAssembler;
 using SputnikAsm.LAutoAssembler;
 using SputnikAsm.LBinary.LByteInterpreter;
@@ -12,6 +13,7 @@ namespace SputnikAsm
     public static class AAsmTools
     {
         #region Static Variables
+        public static UOsCheck.Platform OsType = UOsCheck.RunningPlatform();
         public static ASymbolHandler SelfSymbolHandler;
         public static ASymbolHandler SymbolHandler;
         public static AAssembler Assembler;
