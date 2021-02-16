@@ -1,12 +1,16 @@
 ﻿using System;
 using System.Globalization;
+using System.Text;
 using Sputnik.LBinary;
 using Sputnik.LInterfaces;
 using Sputnik.LUtils;
 using SputnikAsm.LBinary.LByteInterpreter.LEnums;
+using SputnikAsm.LCollections;
 using SputnikAsm.LExtensions;
+using SputnikAsm.LGenerics;
 using SputnikAsm.LMemScan.LEnums;
 using SputnikAsm.LProcess;
+using SputnikAsm.LProcess.LNative;
 using SputnikAsm.LProcess.Utilities;
 using SputnikAsm.LSymbolHandler;
 using SputnikAsm.LUtils;
@@ -287,7 +291,6 @@ namespace SputnikAsm.LBinary.LByteInterpreter
         #endregion
         #region DataToString
         public String DataToString(UBytePtr buf, int size, AVariableType varType, Boolean clean = false)
-            /*note: If type is of string unicode, the last 2 bytes will get set to 0, so watch what you're calling*/
         {
             String result;
             switch (varType)
@@ -384,6 +387,97 @@ namespace SputnikAsm.LBinary.LByteInterpreter
                 }
             }
             return result;
+        }
+        #endregion
+        #region ParseStringAndWriteToAddress
+        public void ParseStringAndWriteToAddress(String value, UIntPtr address, AVariableType variableType, Boolean hexadecimal = false)
+        {
+            var v = 0UL;
+            var s = 0.0f;
+            var d = 0.0;
+            var x = UIntPtr.Zero;
+            if (hexadecimal && (variableType == AVariableType.Single || variableType == AVariableType.Double))
+            {
+                if (variableType == AVariableType.Single)
+                    variableType = AVariableType.DWord;
+                else
+                    variableType = AVariableType.QWord;
+            }
+            if (variableType == AVariableType.ByteArray)
+            {
+                var b = new ATByteArray();
+                AStringUtils.ConvertStringToBytes(value, hexadecimal, b);
+                for (var i = 0; i < b.Length; i++)
+                    Proc.Memory.Write(UIntPtr.Add(address, i).ToIntPtr(), (Byte)b[i]);
+            }
+            else
+            {
+                if (variableType == AVariableType.Single || variableType == AVariableType.Double)
+                {
+                    d = UStringUtils.StringToDouble(value);
+                    s = UStringUtils.StringToFloat(value);
+                }
+                else
+                {
+                    if (!(variableType == AVariableType.String || variableType == AVariableType.UnicodeString))
+                    {
+                        if (hexadecimal)
+                            value = "0x" + value;
+                        v = AStringUtils.StrToQWordEx(value);
+                        // todo make custom work
+                        //if ((variableType == AVariableType.Custom) && (customtype != nil) & customtype.scriptusesfloat)
+                            //s = UStringUtils.StringToFloat(value);
+                    }
+                }
+                switch (variableType)
+                {
+                    case AVariableType.Byte:
+                        Proc.Memory.Write(address.ToIntPtr(), (Byte)v);
+                        break;
+                    case AVariableType.Word:
+                        Proc.Memory.Write(address.ToIntPtr(), (UInt16)v);
+                        break;
+                    case AVariableType.DWord:
+                        Proc.Memory.Write(address.ToIntPtr(), (UInt32)v);
+                        break;
+                    case AVariableType.QWord:
+                        Proc.Memory.Write(address.ToIntPtr(), v);
+                        break;
+                    case AVariableType.Single:
+                        Proc.Memory.Write(address.ToIntPtr(), s);
+                        break;
+                    case AVariableType.Double:
+                        Proc.Memory.Write(address.ToIntPtr(), d);
+                        break;
+                    case AVariableType.String:
+                        Proc.Memory.Write(address.ToIntPtr(), value, Encoding.ASCII);
+                        break;
+                    case AVariableType.UnicodeString:
+                        Proc.Memory.Write(address.ToIntPtr(), value, Encoding.UTF8);
+                        break;
+                    case AVariableType.Custom: // todo make custom work
+                        //{
+                        //    if (customtype != nil)
+                        //    {
+                        //        getmem(ba, customtype.bytesize);
+                        //        //try
+                        //        if (readprocessmemory(processhandle, (pointer)(address), ba, customtype.bytesize, x))
+                        //        {
+                        //            if (customtype.scriptusesfloat)
+                        //                customtype.convertfloattodata(s, ba, address);
+                        //            else
+                        //                customtype.convertintegertodata(v, ba, address);
+                        //
+                        //            writeprocessmemory(processhandle, (pointer)(address), ba, customtype.bytesize, x);
+                        //        }
+                        //        //finally
+                        //        freememandnil(ba);
+                        //        //end;
+                        //    }
+                        //}
+                        break;
+                }
+            }
         }
         #endregion
     }
