@@ -1,9 +1,9 @@
 ﻿using System;
-using SputnikAsm.LGenerics;
+using Sputnik.LGenerics;
 
 namespace SputnikAsm.LCollections
 {
-    public class ACharArray : AArrayManager<Char>
+    public class ACharArray : UArrayManager<Char>
     {
         #region Constructor
         public ACharArray()

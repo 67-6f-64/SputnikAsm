@@ -384,7 +384,7 @@ namespace SputnikAsm.LUtils
                 aobStr += ' ';
                 for (i = 0; i < aobStr.Length; i++)
                 {
-                    if (AArrayUtils.InArray(aobStr[i], ' ', '-', ','))
+                    if (UArrayUtils.InArray(aobStr[i], ' ', '-', ','))
                     {
                         temp = Copy(aobStr, j, i - j);
                         j = i + 1;

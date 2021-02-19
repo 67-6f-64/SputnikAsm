@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using SputnikAsm.LGenerics;
+using Sputnik.LGenerics;
 using SputnikAsm.LString;
 
 namespace SputnikAsm.LCollections
 {
-    public class ARefStringArray : AArrayManager<ARefString>
+    public class ARefStringArray : UArrayManager<ARefString>
     {
         #region Constructor
         public ARefStringArray()

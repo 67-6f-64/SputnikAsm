@@ -1,9 +1,9 @@
 ﻿using SputnikAsm.LAssembler;
-using SputnikAsm.LGenerics;
+using Sputnik.LGenerics;
 
 namespace SputnikAsm.LCollections
 {
-    public class AIndexArray : AArrayManager<AIndex>
+    public class AIndexArray : UArrayManager<AIndex>
     {
         #region Constructor
         public AIndexArray()

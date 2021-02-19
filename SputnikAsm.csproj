@@ -102,7 +102,6 @@
     <Compile Include="LDisassembler\ALastDisassembleData.cs" />
     <Compile Include="LDisassembler\APrefix.cs" />
     <Compile Include="LExtensions\XPointerExt.cs" />
-    <Compile Include="LGenerics\AArrayManager.cs" />
     <Compile Include="LMemScan\LEnums\AVariableType.cs" />
     <Compile Include="LProcess\AProcessSharp.cs" />
     <Compile Include="LProcess\LApplied\AAppliedManager.cs" />

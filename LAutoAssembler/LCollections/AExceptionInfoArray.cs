@@ -1,8 +1,8 @@
-﻿using SputnikAsm.LGenerics;
+﻿using Sputnik.LGenerics;
 
 namespace SputnikAsm.LAutoAssembler.LCollections
 {
-    public class AExceptionInfoArray : AArrayManager<AExceptionInfo>
+    public class AExceptionInfoArray : UArrayManager<AExceptionInfo>
     {
         #region Constructor
         public AExceptionInfoArray()

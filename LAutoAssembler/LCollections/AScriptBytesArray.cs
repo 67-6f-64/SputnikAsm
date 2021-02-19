@@ -1,11 +1,11 @@
 ﻿using System;
 using SputnikAsm.LAutoAssembler.LEnums;
 using SputnikAsm.LCollections;
-using SputnikAsm.LGenerics;
+using Sputnik.LGenerics;
 
 namespace SputnikAsm.LAutoAssembler.LCollections
 {
-    public class AScriptBytesArray : AArrayManager<AScriptBytes>
+    public class AScriptBytesArray : UArrayManager<AScriptBytes>
     {
         #region Constructor
         public AScriptBytesArray()

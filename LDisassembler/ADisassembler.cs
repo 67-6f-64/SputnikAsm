@@ -9,7 +9,7 @@ using SputnikAsm.LAssembler.LEnums;
 using SputnikAsm.LBinary;
 using SputnikAsm.LDisassembler.LEnums;
 using SputnikAsm.LExtensions;
-using SputnikAsm.LGenerics;
+using Sputnik.LGenerics;
 using SputnikAsm.LMemScan.LEnums;
 using SputnikAsm.LProcess;
 using SputnikAsm.LProcess.LNative;
@@ -1934,7 +1934,7 @@ namespace SputnikAsm.LDisassembler
                 {
                     for (var i = result.Length - 1; i >= 0; i--)
                     {
-                        if (AArrayUtils.InArray(result[i], '-', '+') || (i == 1))
+                        if (UArrayUtils.InArray(result[i], '-', '+') || (i == 1))
                         {
                             if (i > 1)
                                 result = '"' + AStringUtils.Copy(result, 1, i - 1) + '"' + AStringUtils.Copy(result, i, result.Length);
@@ -2213,7 +2213,7 @@ namespace SputnikAsm.LDisassembler
         #region DecodeLastParametersToString
         public String DecodeLastParametersToString()
         {
-            var values = new AArrayManager<ADecodeValue>();
+            var values = new UArrayManager<ADecodeValue>();
             values.Inc();
             values.Inc();
             var bufferBack = UBinaryUtils.NewZeroByteArray(63);
@@ -2779,7 +2779,7 @@ namespace SputnikAsm.LDisassembler
                         try
                         {
                             using (var p1 = new UBytePtr(LastDisassembleData.Bytes.Buffer))
-                                AArrayUtils.CopyMemory(p1, k, Memory.ToIntPtr(), k, (int)td);
+                                UArrayUtils.CopyMemory(p1, k, Memory.ToIntPtr(), k, (int)td);
                         }
                         catch
                         {

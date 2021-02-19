@@ -1,9 +1,9 @@
 ﻿using System;
-using SputnikAsm.LGenerics;
+using Sputnik.LGenerics;
 
 namespace SputnikAsm.LCollections
 {
-    public class AByteArray : AArrayManager<Byte>
+    public class AByteArray : UArrayManager<Byte>
     {
         #region Constructor
         public AByteArray()

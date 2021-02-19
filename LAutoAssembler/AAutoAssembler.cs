@@ -2,6 +2,7 @@
 using System.Windows.Forms;
 using Sputnik.LDateTime;
 using Sputnik.LFileSystem;
+using Sputnik.LGenerics;
 using Sputnik.LString;
 using Sputnik.LUtils;
 using SputnikAsm.LAssembler;
@@ -11,7 +12,6 @@ using SputnikAsm.LAutoAssembler.LEnums;
 using SputnikAsm.LCollections;
 using SputnikAsm.LDisassembler;
 using SputnikAsm.LExtensions;
-using SputnikAsm.LGenerics;
 using SputnikAsm.LProcess;
 using SputnikAsm.LProcess.LNative.LTypes;
 using SputnikAsm.LProcess.Utilities;
@@ -774,7 +774,7 @@ namespace SputnikAsm.LAutoAssembler
         #region ParseTryExcept
         public void ParseTryExcept(ARefStringArray code, AExceptionInfoArray exceptionList)
         {
-            var tryList = new AArrayManager<ATryElem>();
+            var tryList = new UArrayManager<ATryElem>();
             var tryNr = 0;
             tryList.SetLength(0);
             for (var i = 0; i < code.Length; i++)
@@ -867,10 +867,10 @@ namespace SputnikAsm.LAutoAssembler
         private UIntPtr GetAddressFromScript(
             String name, 
             Boolean targetSelf, 
-            AArrayManager<ALabels> labels, 
+            UArrayManager<ALabels> labels, 
             AAllocArray allocs, 
             AAllocArray kallocs, 
-            AArrayManager<ADefines> defines
+            UArrayManager<ADefines> defines
             )
         {
             try
@@ -979,22 +979,22 @@ namespace SputnikAsm.LAutoAssembler
             int l;
             Boolean ok1;
             Boolean ok2;
-            var assembled = new AArrayManager<AAssembled>();
-            var loadBinary = new AArrayManager<ALoadLibrary>();
-            var readMems = new AArrayManager<AReadMems>();
+            var assembled = new UArrayManager<AAssembled>();
+            var loadBinary = new UArrayManager<ALoadLibrary>();
+            var readMems = new UArrayManager<AReadMems>();
             var globalAllocs = new AAllocArray();
             var allocs = new AAllocArray();
             var kAllocs = new AAllocArray();
             var sAllocs = new AAllocArray();
-            var labels = new AArrayManager<ALabels>();
-            var defines = new AArrayManager<ADefines>();
-            var fullAccess = new AArrayManager<AFullAccess>();
-            var dealloc = new AArrayManager<UIntPtr>();
+            var labels = new UArrayManager<ALabels>();
+            var defines = new UArrayManager<ADefines>();
+            var fullAccess = new UArrayManager<AFullAccess>();
+            var dealloc = new UArrayManager<UIntPtr>();
             var addSymbolList = new AStringArray();
             var deleteSymbolList = new AStringArray();
             var createThread = new AStringArray();
-            var createThreadAndWait = new AArrayManager<ACreateThreadAndWait>();
-            var assemblerLines = new AArrayManager<AAssemblerLine>();
+            var createThreadAndWait = new UArrayManager<ACreateThreadAndWait>();
+            var assemblerLines = new UArrayManager<AAssemblerLine>();
             var exceptionList = new AExceptionInfoArray();
             var potentialLabels = new AStringArray();
             var hasTryExcept = false;

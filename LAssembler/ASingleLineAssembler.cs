@@ -571,7 +571,7 @@ namespace SputnikAsm.LAssembler
         public void AddOpCode(AByteArray bytes, int i)
         {
             RexPrefixLocation = bytes.Length;
-            if (AArrayUtils.InArray(Assembler.OpCodes[i].Bt1, 0x66, 0xf2, 0xf3))
+            if (UArrayUtils.InArray(Assembler.OpCodes[i].Bt1, 0x66, 0xf2, 0xf3))
                 RexPrefixLocation += 1; //mandatory prefixes come before the rex byte
             Assembler.Add(bytes, Assembler.OpCodes[i].Bt1);
             if (Assembler.OpCodes[i].Bytes > 1)
@@ -603,9 +603,9 @@ namespace SputnikAsm.LAssembler
                     splitUp.Inc();
                     splitUp.Last = AStringUtils.Copy(address, start, (i + 1) - start);
                 }
-                else if (!AArrayUtils.InArray(address[i], '+', '-'))
+                else if (!UArrayUtils.InArray(address[i], '+', '-'))
                     go = true;
-                else if (AArrayUtils.InArray(address[i], '+', '-'))
+                else if (UArrayUtils.InArray(address[i], '+', '-'))
                 {
                     if (go)
                     {
@@ -623,7 +623,7 @@ namespace SputnikAsm.LAssembler
                 var increase = true;
                 for (j = 0; j < splitUp[i].Length; j++)
                 {
-                    if (j < splitUp[i].Length && AArrayUtils.InArray(splitUp[i][j], '+', '-'))
+                    if (j < splitUp[i].Length && UArrayUtils.InArray(splitUp[i][j], '+', '-'))
                     {
                         if (splitUp[i][j] == '-')
                             increase = !increase;
@@ -1124,7 +1124,7 @@ namespace SputnikAsm.LAssembler
                                 }
                                 else
                                 {    //db 00 00 ?? ?? ?? ?? 00 00
-                                    if ((tokens[i].Length >= 1 && (AArrayUtils.InArray(tokens[i][0], '?', '*'))) &&
+                                    if ((tokens[i].Length >= 1 && (UArrayUtils.InArray(tokens[i][0], '?', '*'))) &&
                                        (tokens[i].Length < 2 || (tokens[i].Length == 2 && tokens[i][1] == tokens[i][0])))
                                     {
                                         //wildcard
@@ -3842,7 +3842,7 @@ namespace SputnikAsm.LAssembler
                                 if ((Assembler.OpCodes[j].ParamType2 == AParam.None) && (parameter2 == ""))
                                 {
                                     //rel8
-                                    if (AArrayUtils.InArray(parameter1[0], '-', '+'))
+                                    if (UArrayUtils.InArray(parameter1[0], '-', '+'))
                                     {
                                         if (((!overrideShort) & (vType > 8)) | (overrideLong))
                                         {
@@ -3906,7 +3906,7 @@ namespace SputnikAsm.LAssembler
                             {
                                 if ((Assembler.OpCodes[j].ParamType2 == AParam.None) && (parameter2 == ""))
                                 {
-                                    if (AArrayUtils.InArray(parameter1[0], '-', '+'))
+                                    if (UArrayUtils.InArray(parameter1[0], '-', '+'))
                                     {
                                         //opcode rel32
                                         AddOpCode(bytes, j);

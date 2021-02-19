@@ -1,8 +1,8 @@
-﻿using SputnikAsm.LGenerics;
+﻿using Sputnik.LGenerics;
 
 namespace SputnikAsm.LAutoAssembler.LCollections
 {
-    public class AAllocArray : AArrayManager<AAlloc>
+    public class AAllocArray : UArrayManager<AAlloc>
     {
         #region Constructor
         public AAllocArray()

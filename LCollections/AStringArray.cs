@@ -1,10 +1,10 @@
 ﻿using System;
 using Sputnik.LUtils;
-using SputnikAsm.LGenerics;
+using Sputnik.LGenerics;
 
 namespace SputnikAsm.LCollections
 {
-    public class AStringArray : AArrayManager<String>
+    public class AStringArray : UArrayManager<String>
     {
         #region Constructor
         public AStringArray()

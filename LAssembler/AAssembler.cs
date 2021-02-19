@@ -928,7 +928,7 @@ namespace SputnikAsm.LAssembler
                         //don't uppercase empty strings, kernel_ strings or strings starting with $
                         if (tokens.Last.Length > 2)
                         {
-                            if (!AArrayUtils.InArray(tokens.Last[0], '\'', '"'))  //if not a quoted string then make it uppercase
+                            if (!UArrayUtils.InArray(tokens.Last[0], '\'', '"'))  //if not a quoted string then make it uppercase
                                 tokens.Last = tokens.Last.ToUpper();
                         }
                         else
@@ -1074,7 +1074,7 @@ namespace SputnikAsm.LAssembler
             var inQuote = false;
             while (i < token.Length)
             {
-                if (AArrayUtils.InArray(token[i], '\'', '"'))
+                if (UArrayUtils.InArray(token[i], '\'', '"'))
                 {
                     if (inQuote)
                     {
@@ -1090,7 +1090,7 @@ namespace SputnikAsm.LAssembler
                 }
                 if (!inQuote)
                 {
-                    if (AArrayUtils.InArray(token[i], '[', ']', '+', '-', ' ')) //6.8.4 (added ' ' for FAR, LONG, SHORT)
+                    if (UArrayUtils.InArray(token[i], '[', ']', '+', '-', ' ')) //6.8.4 (added ' ' for FAR, LONG, SHORT)
                     {
                         if (temp != "")
                         {
@@ -1098,7 +1098,7 @@ namespace SputnikAsm.LAssembler
                             tokens.Last = temp;
                             temp = "";
                         }
-                        if (tokens.Length > 0 && AArrayUtils.InArray(token[i], '+', '-') && (tokens[tokens.Length - 1] == " ")) //relative offset ' +xxx'
+                        if (tokens.Length > 0 && UArrayUtils.InArray(token[i], '+', '-') && (tokens[tokens.Length - 1] == " ")) //relative offset ' +xxx'
                         {
                             temp += token[i];
                             i++;
@@ -1121,7 +1121,7 @@ namespace SputnikAsm.LAssembler
             }
             for (i = 0; i < tokens.Length; i++)
             {
-                if (tokens[i].Length >= 1 && !AArrayUtils.InArray(tokens[i][0], '[', ']', '+', '-', '*', ' '))  //3/16/2011: 11:15 (replaced or with and)
+                if (tokens[i].Length >= 1 && !UArrayUtils.InArray(tokens[i][0], '[', ']', '+', '-', '*', ' '))  //3/16/2011: 11:15 (replaced or with and)
                 {
                     AStringUtils.Val("0x" + tokens[i], out Int64 _, out var err);
                     if (err != 0 && GetReg(tokens[i], false) == -1)     //not a hexadecimal value and not a register
@@ -1131,7 +1131,7 @@ namespace SputnikAsm.LAssembler
                             tokens[i] = temp; //can be rewritten as a hexadecimal
                         else
                         {
-                            if (tokens.Length > 0 && AArrayUtils.InArray(token[i], '+', '-') && tokens[tokens.Length - 1] == " ")  //relative offset ' +xxx'
+                            if (tokens.Length > 0 && UArrayUtils.InArray(token[i], '+', '-') && tokens[tokens.Length - 1] == " ")  //relative offset ' +xxx'
                             {
                                 temp += token[i];
                                 i++;
@@ -1140,13 +1140,13 @@ namespace SputnikAsm.LAssembler
                             var j = AStringUtils.Pos("*", tokens[i]);
                             if (j != -1)  //getreg failed, but could be it's the 'other' one
                             {
-                                if (tokens[i].Length > j && (AArrayUtils.InArray(AStringUtils.Copy(tokens[i], j + 1, 1)[0], '2', '4', '8')))
+                                if (tokens[i].Length > j && (UArrayUtils.InArray(AStringUtils.Copy(tokens[i], j + 1, 1)[0], '2', '4', '8')))
                                     continue; //reg*2 / *3, /*4
                             }
                             if (i < tokens.Length - 1)
                             {
                                 //perhaps it can be concatenated with the next one
-                                if (tokens[i + 1].Length > 0 && !AArrayUtils.InArray(tokens[i + 1][0], '\'', '"', '[', ']', '(', ')', ' '))  //not an invalid token char
+                                if (tokens[i + 1].Length > 0 && !UArrayUtils.InArray(tokens[i + 1][0], '\'', '"', '[', ']', '(', ')', ' '))  //not an invalid token char
                                 {
                                     tokens[i + 1] = tokens[i] + tokens[i + 1];
                                     tokens[i] = "";

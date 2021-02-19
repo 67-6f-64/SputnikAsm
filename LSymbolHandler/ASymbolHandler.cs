@@ -8,7 +8,7 @@ using Sputnik.LGenerics;
 using Sputnik.LUtils;
 using SputnikAsm.LCollections;
 using SputnikAsm.LExtensions;
-using SputnikAsm.LGenerics;
+using Sputnik.LGenerics;
 using SputnikAsm.LProcess;
 using SputnikAsm.LProcess.Utilities;
 using SputnikAsm.LUtils;
@@ -42,7 +42,7 @@ namespace SputnikAsm.LSymbolHandler
         }
         #endregion
         #region AModuleInfoArray
-        internal class AModuleInfoArray : AArrayManager<AModuleInfo>
+        internal class AModuleInfoArray : UArrayManager<AModuleInfo>
         {
             #region Constructor
             public AModuleInfoArray()
@@ -239,14 +239,14 @@ namespace SputnikAsm.LSymbolHandler
                 return processList;
             }
             #endregion
-            public AArrayManager<ASymbol> SymbolList;
+            public UArrayManager<ASymbol> SymbolList;
             public AProcessSharp Process;
             public Boolean IsLoading;
             public String CurrentModuleName;
             public Boolean Terminated;
             public ASymbolLoaderThread()
             {
-                SymbolList = new AArrayManager<ASymbol>();
+                SymbolList = new UArrayManager<ASymbol>();
                 Process = null;
                 IsLoading = false;
                 CurrentModuleName = "";
@@ -347,8 +347,8 @@ namespace SputnikAsm.LSymbolHandler
         #endregion
         #region Variables
         public AProcessSharp Process;
-        public AArrayManager<ASymbol> SymbolList;
-        public AArrayManager<AUserDefinedSymbol> UserDefinedSymbols;
+        public UArrayManager<ASymbol> SymbolList;
+        public UArrayManager<AUserDefinedSymbol> UserDefinedSymbols;
         private AModuleInfoArray _moduleList;
         private ASymbolLoaderThread _symbolLoaderThread;
         public Boolean ShowSymbols;
@@ -360,8 +360,8 @@ namespace SputnikAsm.LSymbolHandler
         {
             Process = null;
             _symbolLoaderThread = null;
-            SymbolList = new AArrayManager<ASymbol>();
-            UserDefinedSymbols = new AArrayManager<AUserDefinedSymbol>();
+            SymbolList = new UArrayManager<ASymbol>();
+            UserDefinedSymbols = new UArrayManager<AUserDefinedSymbol>();
             _moduleList = new AModuleInfoArray();
             ShowSymbols = false;
             ShowModules = false;
@@ -376,7 +376,7 @@ namespace SputnikAsm.LSymbolHandler
             var inQuote = false;
             for (var i = 0; i < s.Length; i++)
             {
-                if (!AArrayUtils.InArray(s[i], '"', '[', ']', '+', '-', '*'))
+                if (!UArrayUtils.InArray(s[i], '"', '[', ']', '+', '-', '*'))
                     continue;
                 if (s[i] == '"')
                 {
@@ -433,7 +433,7 @@ namespace SputnikAsm.LSymbolHandler
                 {
                     if (prolog)
                     {
-                        if (!AArrayUtils.InArray(s[i], '\t', ' '))   //no space or tab
+                        if (!UArrayUtils.InArray(s[i], '\t', ' '))   //no space or tab
                             prolog = false;
                     }
                     if (!prolog)
@@ -522,7 +522,7 @@ namespace SputnikAsm.LSymbolHandler
                 return result;
             }
             /*--if it starts with a * or ends with *, - or +, then it's a bad formula--*/
-            if (tokens[0][0] == '*' || AArrayUtils.InArray(tokens[tokens.Length - 1][0], '*', '+', '-'))
+            if (tokens[0][0] == '*' || UArrayUtils.InArray(tokens[tokens.Length - 1][0], '*', '+', '-'))
             {
                 hasError = true;
                 return result;
@@ -533,7 +533,7 @@ namespace SputnikAsm.LSymbolHandler
                 //try {tokens format ex.:=array('islandtribe.exe','+','AB754')}
                 for (i = 0; i < tokens.Length; i++)
                 {
-                    if (!AArrayUtils.InArray(tokens[i][0], '[', ']', '+', '-', '*'))
+                    if (!UArrayUtils.InArray(tokens[i][0], '[', ']', '+', '-', '*'))
                     {
                         AStringUtils.Val("0x" + tokens[i], out result, out j);
                         if (j <= 0)
@@ -714,7 +714,7 @@ namespace SputnikAsm.LSymbolHandler
         public UIntPtr GetAddressFromPointer(String s, out Boolean error)
         {
             error = true;
-            var offsets = new AArrayManager<Int32>();
+            var offsets = new UArrayManager<Int32>();
             var list = new AStringArray();
             if (!ParseAsPointer(s, list))
                 return UIntPtr.Zero;
