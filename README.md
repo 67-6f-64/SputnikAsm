@@ -6,6 +6,8 @@ The full assembler/disassembler is working is up to date with CE as of January 2
 
 Auto Assembler is mostly fully complete only aobscan/loadlibrary is missing but isnt hard to implement.
 
+Article that explains everything
+https://www.codeproject.com/script/Articles/ArticleVersion.aspx?waid=4247265&aid=5297337
 
 Example (The commented out stuff is stil stuff to use! Its all there for a reason I will make a proper doc at some ponit)
 
