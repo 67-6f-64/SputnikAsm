@@ -2,6 +2,9 @@ C# .NET port of the Cheat Engine Auto Assembler and Disassembler.
 
 For use in trainers/mods etc.
 
+The full assembler/disassembler is working is up to date with CE as of January 2021.
+
+Auto Assembler is mostly fully complete only aobscan/loadlibrary is missing but isnt hard to implement.
 
 
 Example (The commented out stuff is stil stuff to use! Its all there for a reason I will make a proper doc at some ponit)
