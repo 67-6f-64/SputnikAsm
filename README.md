@@ -80,9 +80,12 @@ This produces the following output
 0x0402369  33 c0                xor eax,eax  ;
 0x040236B  eb 09                jmp 00402376  ; ->
 0x040236D  3b d3                cmp edx,ebx  ;
+```
+
 Now lets assemble an instruction
 
-Copy Codevar a = AAsmTools.Assembler; // grab the assembler
+```
+var a = AAsmTools.Assembler; // grab the assembler
 var b1 = new AByteArray(); // an array to store the compiled bytes
 a.Assemble("mov eax, [edx+esi+66]", 0x400300, b1); // assemble the instruction
 Console.WriteLine(UBinaryUtils.Expand(b1.TakeAll())); // prints out 8B 44 32 66
