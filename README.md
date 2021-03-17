@@ -11,7 +11,7 @@ To begin using it you referance the SputnikAsm.dll and Sputnik.dll to a new C# p
 The most important step is to initiate the tools on the process we want to mess with in this case Pacwin.exe
 
 ```
-Copy Codevar m = new AProcessSharp(System.Diagnostics.Process.GetProcessesByName("pacwin")[0], AMemoryType.Remote);
+var m = new AProcessSharp(System.Diagnostics.Process.GetProcessesByName("pacwin")[0], AMemoryType.Remote);
 UTokenSp.Activate();
 AAsmTools.InitTools(new ASymbolHandler());
 AAsmTools.SymbolHandler.Process = m;
